@@ -5,6 +5,22 @@ import { createServer } from 'node:http';
 import { join } from 'node:path';
 import { createRepoFromFixture, runCLI, runCLIJsonAsync } from './fixtures.js';
 
+function npmPack(cwd) {
+  const npmCli = process.env.npm_execpath;
+  if (npmCli) {
+    return import('node:child_process').then(({ execFileSync }) => {
+      const tarballName = execFileSync(process.execPath, [npmCli, 'pack'], { cwd, encoding: 'utf-8' }).trim();
+      return readFileSync(join(cwd, tarballName));
+    });
+  }
+
+  const npmBinary = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  return import('node:child_process').then(({ execFileSync }) => {
+    const tarballName = execFileSync(npmBinary, ['pack'], { cwd, encoding: 'utf-8' }).trim();
+    return readFileSync(join(cwd, tarballName));
+  });
+}
+
 describe('agentpack skills install', () => {
   it('installs one packaged skill plus its dependency and materializes both', () => {
     const monorepo = createRepoFromFixture('monorepo', 'skills-install-source');
@@ -74,25 +90,17 @@ describe('agentpack skills install', () => {
     const tarballs = new Map();
     tarballs.set(
       '/tarballs/methodology-gary-provost-1.0.0.tgz',
-      await import('node:child_process').then(({ execFileSync }) => {
-        const cwd = join(
-          '/Users/alexandergirardet/alavida/knowledge-base/Alavida',
-          'workspace/active/architecture/intent-adoption/spike/packages/methodology-gary-provost'
-        );
-        const tarballName = execFileSync('npm', ['pack'], { cwd, encoding: 'utf-8' }).trim();
-        return readFileSync(join(cwd, tarballName));
-      })
+      await npmPack(join(
+        '/Users/alexandergirardet/alavida/knowledge-base/Alavida',
+        'workspace/active/architecture/intent-adoption/spike/packages/methodology-gary-provost'
+      ))
     );
     tarballs.set(
       '/tarballs/value-proof-points-1.0.1.tgz',
-      await import('node:child_process').then(({ execFileSync }) => {
-        const cwd = join(
-          '/Users/alexandergirardet/alavida/knowledge-base/Alavida',
-          'workspace/active/architecture/intent-adoption/spike/packages/value-proof-points'
-        );
-        const tarballName = execFileSync('npm', ['pack'], { cwd, encoding: 'utf-8' }).trim();
-        return readFileSync(join(cwd, tarballName));
-      })
+      await npmPack(join(
+        '/Users/alexandergirardet/alavida/knowledge-base/Alavida',
+        'workspace/active/architecture/intent-adoption/spike/packages/value-proof-points'
+      ))
     );
 
     const server = createServer((req, res) => {

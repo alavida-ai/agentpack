@@ -12,6 +12,12 @@ This lets the agent discover the packaged `agentpack` usage skill shipped with t
 
 Use the TanStack Intent CLI directly. This package ships `skills/`, but it does not replace the upstream `intent` command.
 
+## Install
+
+```bash
+npm install -g @alavida-ai/agentpack
+```
+
 The implemented CLI now goes beyond the original install-only slice. This repo supports packaged-skill authoring, local dev linking, plugin validation, and bundled plugin artifact builds.
 
 ## Current Direction

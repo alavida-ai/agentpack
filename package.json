@@ -1,10 +1,10 @@
 {
-  "name": "@alavida/agentpack",
+  "name": "@alavida-ai/agentpack",
   "version": "0.1.0",
   "description": "Package-backed skills lifecycle CLI for agent skills and plugins",
   "type": "module",
   "bin": {
-    "agentpack": "./bin/agentpack.js"
+    "agentpack": "bin/agentpack.js"
   },
   "files": [
     "bin",
@@ -33,6 +33,10 @@
     "url": "git+https://github.com/alavida-ai/agentpack.git"
   },
   "homepage": "https://github.com/alavida-ai/agentpack/tree/main/docs",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "intent": {
     "version": 1,
     "repo": "alavida-ai/agentpack",

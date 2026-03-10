@@ -16,7 +16,7 @@ sources:
 
 # Agentpack CLI
 
-Use this skill when the user is working with `@alavida/agentpack` and needs the right lifecycle framing, not just a command snippet.
+Use this skill when the user is working with `@alavida-ai/agentpack` and needs the right lifecycle framing, not just a command snippet.
 
 Agentpack is a lifecycle toolchain for agent artifacts:
 

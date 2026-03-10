@@ -1,0 +1,272 @@
+---
+title: "Architecture"
+description: "Four planes, domain model, and canonical files for skills and bundled plugins"
+---
+
+## Purpose
+
+Define the architecture for authored, versioned, distributed, installed, materialized, and governed skills and plugins in `agentpack`.
+
+## Goals
+
+- keep domain knowledge as the source of truth
+- make skill dependencies explicit and package-manager-compatible
+- make source-to-skill staleness visible and explainable
+- keep installed runtime skills legible to humans and agents
+- preserve compatibility with the Agent Skills filesystem model
+- minimize custom lifecycle machinery by building on npm
+
+## Four Planes
+
+### 1. Authoring Plane
+
+The knowledge base monorepo is the source of truth for:
+
+- domain knowledge
+- methodology skill sources
+- authored skills
+- authored reports
+- package definitions
+- generated authoring metadata
+
+This plane answers:
+
+- what is the current truth
+- which sources a skill was built from
+- which skills exist
+- which dependencies a skill declares
+
+### 2. Governance Plane
+
+`agentpack` provides deterministic, non-interactive lifecycle visibility and checks.
+
+This plane answers:
+
+- what a skill is
+- why a skill is stale
+- what changed
+- what depends on what
+- what is published, draft, or installed
+
+This plane does not author or rewrite content by itself.
+
+### 3. Distribution And Install Plane
+
+npm is the package-resolution substrate.
+
+agentpack layers on top of it to:
+
+- install requested skill packages
+- distinguish direct vs transitive installs
+- materialize resolved packages into agent-visible directories
+- reconcile runtime state on install, update, and uninstall
+
+### 4. Runtime Consumption Plane
+
+Agent runtimes consume skills from:
+
+- `.claude/skills/`
+- `.agents/skills/`
+- plugin-exposed skill directories
+
+Plugin boundaries are a delivery surface, not the architectural dependency boundary.
+
+For bundled plugins:
+
+- local plugin skill `requires` remain the authored dependency truth
+- standalone skill packages can be vendored into the plugin package at publish time
+- the consumer receives one self-contained plugin artifact
+
+## Core Domain Model
+
+### Source
+
+A governed knowledge file used to build a skill or report.
+
+Examples:
+
+- `domains/value/knowledge/selling-points.md`
+- `domains/value/knowledge/tone-of-voice.md`
+
+### Skill
+
+The logical artifact an agent uses.
+
+Properties:
+
+- instructions
+- metadata
+- declared `metadata.sources`
+- declared `requires`
+
+### Skill Package
+
+The versioned distributable form of exactly one skill.
+
+Properties:
+
+- npm package identity
+- package version
+- package dependencies
+- distributable files
+
+### Report
+
+A skill-shaped artifact whose purpose is explanation rather than execution.
+
+Mechanically, reports follow the same lifecycle model as skills.
+
+### Dependency
+
+Another skill required for a skill to be fully usable.
+
+Architectural rule:
+
+- `requires` is authored at the skill level
+- package dependencies are the install-time compiled form of `requires`
+
+### Build Metadata
+
+Generated provenance data that records what sources were used when a skill was last built or updated.
+
+Used for:
+
+- stale detection
+- explainable diffs
+- authoring-side lifecycle visibility
+
+### Install State
+
+Environment-local runtime state describing:
+
+- what is directly requested
+- what is transitively present
+- where it is materialized
+- whether materialization uses symlink or copy
+
+This state stays thin and does not replace the lockfile.
+
+### Catalog
+
+A generated authoring-side index of known skills and their summary metadata.
+
+Used for:
+
+- discovery
+- inspection
+- provenance queries
+- maintenance visibility
+
+## Canonical Files And Ownership
+
+### `SKILL.md`
+
+Owns authored skill metadata and instructions.
+
+Includes:
+
+- `name`
+- `description`
+- `metadata.sources`
+- `requires`
+
+Does not own:
+
+- package version
+- package publication config
+- install state
+
+### `package.json`
+
+Owns distributable package metadata.
+
+Includes:
+
+- package name
+- version
+- dependencies
+- publish config
+- repository metadata
+
+Does not own:
+
+- source staleness history
+- runtime materialization state
+
+For plugin packages it also owns:
+
+- the only plugin package version field
+- build-time `devDependencies` used to acquire standalone skill packages for vendoring
+
+### `.claude-plugin/plugin.json`
+
+Owns Claude plugin metadata only.
+
+Includes:
+
+- plugin name
+- description
+- Claude runtime/component declarations
+
+Does not own:
+
+- npm package version
+- bundle dependency truth
+
+### `.claude-plugin/bundled-skills.json`
+
+Owns bundled plugin provenance only.
+
+Includes:
+
+- which standalone skill packages were vendored
+- which versions were vendored
+- what the plugin artifact contains at publish time
+
+### `.agentpack/catalog.json`
+
+Owns generated authoring-side catalog information only.
+
+Includes:
+
+- skill identity
+- location
+- source summary
+- dependency summary
+- lifecycle summary
+
+### `.agentpack/build-state.json`
+
+Owns generated authoring provenance and stale-check state.
+
+Includes:
+
+- recorded source hashes
+- skill paths
+- package version snapshot
+- direct dependency snapshot
+
+### `.agentpack/install.json`
+
+Owns local runtime skill state only.
+
+Includes:
+
+- scope
+- direct vs transitive
+- materialized locations
+- materialization mode
+
+It must not duplicate:
+
+- the package dependency graph already in the lockfile
+- authoring catalog data
+
+## Hard Constraints
+
+- non-interactive only
+- deterministic output
+- read commands do not mutate state
+- installs are repo-only
+- no user-global install scope in v1
+- no agentpack dependency metadata added to `.claude-plugin/plugin.json`

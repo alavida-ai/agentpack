@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": {
+    "@alavida/methodology-gary-provost": {
+      "package_version": "1.0.0",
+      "skill_path": "domains/value/methodology/gary-provost",
+      "skill_file": "domains/value/methodology/gary-provost/SKILL.md",
+      "sources": {},
+      "requires": []
+    },
+    "@alavida/value-copywriting": {
+      "package_version": "1.2.0",
+      "skill_path": "domains/value/skills/copywriting",
+      "skill_file": "domains/value/skills/copywriting/SKILL.md",
+      "sources": {
+        "domains/value/knowledge/selling-points.md": {
+          "hash": "sha256:90a50b6afb5731102d02a59825d6d5f63abbc02d37706be763dd40e7f4060a32"
+        },
+        "domains/value/knowledge/tone-of-voice.md": {
+          "hash": "sha256:900b9b0ec69f2a2a1e2f8b101e4275343dc1780ae22157ad84a4ce0afb271a5e"
+        }
+      },
+      "requires": [
+        "@alavida/methodology-gary-provost"
+      ]
+    },
+    "@alavida/value-research": {
+      "package_version": "1.1.0",
+      "skill_path": "domains/value/skills/research",
+      "skill_file": "domains/value/skills/research/SKILL.md",
+      "sources": {
+        "domains/value/knowledge/research-principles.md": {
+          "hash": "sha256:5639334c105bf4bd556d8992939f8b8e454d2787d141d1d364898b5c9d413fd0"
+        }
+      },
+      "requires": [
+        "@alavida/methodology-gary-provost"
+      ]
+    }
+  }
+}

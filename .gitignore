@@ -1,0 +1,4 @@
+node_modules/
+package-lock.json
+.agentpack/install.json
+.agentpack/dist/

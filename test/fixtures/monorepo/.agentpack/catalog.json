@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "skills": {
+    "@alavida/methodology-gary-provost": {
+      "name": "gary-provost",
+      "description": "Sentence rhythm guidance from Gary Provost.",
+      "path": "domains/value/methodology/gary-provost",
+      "skill_file": "domains/value/methodology/gary-provost/SKILL.md",
+      "package_name": "@alavida/methodology-gary-provost",
+      "package_version": "1.0.0",
+      "sources": [],
+      "requires": []
+    },
+    "@alavida/value-copywriting": {
+      "name": "value-copywriting",
+      "description": "Write copy aligned with Alavida's value messaging and tone.",
+      "path": "domains/value/skills/copywriting",
+      "skill_file": "domains/value/skills/copywriting/SKILL.md",
+      "package_name": "@alavida/value-copywriting",
+      "package_version": "1.2.0",
+      "sources": [
+        "domains/value/knowledge/selling-points.md",
+        "domains/value/knowledge/tone-of-voice.md"
+      ],
+      "requires": [
+        "@alavida/methodology-gary-provost"
+      ]
+    },
+    "@alavida/value-research": {
+      "name": "value-research",
+      "description": "Run research aligned with Alavida context and writing standards.",
+      "path": "domains/value/skills/research",
+      "skill_file": "domains/value/skills/research/SKILL.md",
+      "package_name": "@alavida/value-research",
+      "package_version": "1.1.0",
+      "sources": [
+        "domains/value/knowledge/research-principles.md"
+      ],
+      "requires": [
+        "@alavida/methodology-gary-provost"
+      ]
+    }
+  }
+}

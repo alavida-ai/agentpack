@@ -1,0 +1,18 @@
+{
+  "name": "@alavida/value-copywriting",
+  "version": "1.2.0",
+  "description": "Write copy aligned with Alavida's value messaging and tone.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alavida/knowledge-base.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "files": [
+    "SKILL.md"
+  ],
+  "dependencies": {
+    "@alavida/methodology-gary-provost": "file:../../methodology/gary-provost"
+  }
+}

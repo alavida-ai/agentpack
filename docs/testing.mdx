@@ -1,0 +1,110 @@
+---
+title: "Testing"
+description: "Testing strategy with behavior-driven unit tests and fixture-driven integration tests"
+---
+
+## Goal
+
+Keep the replacement `agentpack` maintainable by testing behavior that matters, not private implementation details.
+
+## Decision
+
+Use:
+
+- behavior-driven unit tests for pure logic
+- fixture-driven integration tests for filesystem and package-manager behavior
+- one compact test monorepo fixture for realistic end-to-end flows
+- a short manual Claude Code compatibility checklist for runtime-specific behavior
+
+Do not use:
+
+- ultra-granular unit tests tied to private helper functions
+- mock-heavy tests that mostly restate the implementation
+- broad manual testing as the main safety net
+
+## Test Layers
+
+### Layer 1: High-Signal Unit Tests
+
+Use for:
+
+- frontmatter parsing
+- package metadata reading
+- stale comparison
+- source hashing
+- state reconciliation
+- catalog generation
+
+### Layer 2: Fixture-Driven Integration Tests
+
+Use for:
+
+- inspect plugin bundle closure
+- validate plugin bundleability from local skill `requires`
+- validate one packaged skill
+- validate release guidance for one packaged skill
+- show repo-local outdated packaged skills
+- surface consumer-safe remediation guidance for outdated skills
+- inspect consumer environment health
+- surface deprecated installed skills and replacement guidance
+- surface missing required skill dependencies in installed environments
+- inspect direct and reverse skill dependencies
+- inspect one real fixture skill
+- stale detection after a source file changes
+- install one direct skill plus one transitive dependency
+- materialize into `.claude/skills` and `.agents/skills`
+- inspect environment state
+- uninstall and reconcile state
+
+### Layer 3: Compact Monorepo Fixture
+
+Maintain one curated fixture that looks like the real architecture:
+
+- `knowledge/`
+- `skills/`
+- `methodology/`
+- `consumer/`
+- `plugin/`
+
+It should stay small and explainable.
+
+Current checked-in fixtures:
+
+- `test/fixtures/monorepo/`
+- `test/fixtures/consumer/`
+
+### Layer 4: Manual Runtime Compatibility Checks
+
+Only for behaviors the CLI cannot fully prove itself, such as:
+
+- plugin skill plus separately surfaced dependency skill in Claude Code
+- runtime discovery quirks
+- cache behavior in real sessions
+
+## TDD Style
+
+Use practical TDD:
+
+1. write or update a fixture
+2. write the failing behavior test
+3. implement the smallest real change
+4. verify output and side effects
+5. refactor only if clarity improves
+
+## Recommended First Test Set
+
+Start with these:
+
+1. inspect skill from a fixture package
+2. stale after one source file changes
+3. install direct skill plus dependency
+4. materialize into `.claude/skills`
+5. inspect environment
+6. uninstall and reconcile
+
+Current status:
+
+- all six behaviors above are now covered by integration tests
+- live validation is scripted in `scripts/live-validation.mjs`
+- Phase 2 visibility/validation coverage is green in the fixture suite
+- bundled plugin inspection and validation are covered in the fixture suite

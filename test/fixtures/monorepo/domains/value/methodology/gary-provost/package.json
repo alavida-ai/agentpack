@@ -1,0 +1,15 @@
+{
+  "name": "@alavida/methodology-gary-provost",
+  "version": "1.0.0",
+  "description": "Sentence rhythm guidance from Gary Provost.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alavida/knowledge-base.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "files": [
+    "SKILL.md"
+  ]
+}

@@ -1,0 +1,98 @@
+---
+title: "Distribution"
+description: "Package distribution through GitHub Packages and npm"
+---
+
+## Decision
+
+agentpack skills should distribute through a private npm-compatible registry.
+
+The first registry target is:
+
+- GitHub Packages npm registry
+
+This keeps the distribution model aligned with the architecture:
+
+- skill = package
+- npm resolves dependencies
+- agentpack stays thin
+
+## Package Policy
+
+- package scope: `@alavida/*`
+- each published skill is its own package
+- `repository` should point at the owning GitHub repo
+- `publishConfig.registry` should target `https://npm.pkg.github.com`
+
+Example:
+
+```json
+{
+  "name": "@alavida/value-copywriting",
+  "version": "1.2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alavida/knowledge-base.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}
+```
+
+## Consumer Policy
+
+Consumer repos that install private skill packages should route the `@alavida` scope through GitHub Packages.
+
+Example `.npmrc`:
+
+```ini
+@alavida:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
+always-auth=true
+```
+
+A template is available at `templates/consumer.npmrc.example`.
+
+## Auth Model
+
+For local CLI usage:
+
+- use a GitHub token with package read/write access as needed
+
+For CI:
+
+- prefer GitHub Actions tokens where supported
+- fall back to an explicit package token when necessary
+
+## agentpack Boundary
+
+agentpack does not become a package publisher or registry manager.
+
+**agentpack should:**
+
+- validate package/skill structure
+- validate GitHub Packages publish metadata for `@alavida/*`
+- inspect install state
+- inspect stale and affected state
+- materialize installed skills into runtime directories
+- eventually inspect registry-backed outdated state
+
+**agentpack should not:**
+
+- replace `npm publish`
+- replace npm auth
+- invent a separate package registry
+
+## Current State
+
+Implemented today:
+
+- local/package-path install flows
+- registry-backed outdated lookup when the repo is configured for a registry
+- fixture-driven repo-local outdated fallback visibility
+- repo-local registry inspection through `agentpack skills registry`
+
+Not yet implemented:
+
+- end-to-end private package publish/install docs in CI templates

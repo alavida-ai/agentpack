@@ -1,0 +1,92 @@
+---
+title: "Introduction"
+description: "Package-backed runtime and packaging CLI for agent skills and plugins"
+---
+
+# agentpack
+
+Package-backed runtime and packaging CLI for agent skills and plugins.
+
+## Core Direction
+
+- `skill = package`
+- `SKILL.md` is the authored skill artifact
+- `package.json` is the distribution artifact
+- npm resolves dependencies and versions
+- plugin packages can vendor standalone skill packages into self-contained plugin artifacts
+- agentpack owns install state, materialization, and plugin bundling validation
+- private package distribution targets GitHub Packages first
+
+## Command Surface
+
+### Skills commands
+
+1. `agentpack skills inspect`
+2. `agentpack skills validate`
+3. `agentpack skills dev`
+4. `agentpack skills unlink`
+5. `agentpack skills stale`
+6. `agentpack skills install`
+7. `agentpack skills env`
+8. `agentpack skills outdated`
+9. `agentpack skills dependencies`
+10. `agentpack skills registry`
+11. `agentpack skills status`
+12. `agentpack skills missing`
+13. `agentpack skills uninstall`
+
+### Plugin commands
+
+14. `agentpack plugin inspect`
+15. `agentpack plugin validate`
+16. `agentpack plugin build`
+17. `agentpack plugin dev`
+
+## Quick Start
+
+```bash
+# Install
+npm install -g @alavida/agentpack
+
+# In the authoring repo, inspect and validate a packaged skill
+agentpack skills inspect domains/operations/skills/agonda-prioritisation
+agentpack skills validate domains/operations/skills/agonda-prioritisation
+
+# Dev-link it into .claude/skills and .agents/skills for local testing
+agentpack skills dev domains/operations/skills/agonda-prioritisation
+
+# In a consumer repo, install a published skill package
+agentpack skills install @alavida-ai/agonda-prioritisation
+
+# View environment state
+agentpack skills env
+
+# Build or watch a plugin artifact
+agentpack plugin build path/to/plugin
+agentpack plugin dev path/to/plugin
+```
+
+## Repo-Root Rule
+
+For source-backed packaged skills, run authoring commands from the repo that owns the files referenced in `metadata.sources`.
+
+If a skill in your knowledge-base repo references `domains/.../knowledge/*.md`, run `skills validate`, `skills dev`, and `skills stale` from that knowledge-base repo root.
+
+## Read Order
+
+If you're new to agentpack, read the docs in this order:
+
+<CardGroup cols={2}>
+  <Card title="Overview" icon="eye" href="/overview">
+    Architecture decisions and lifecycle model
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture">
+    Four planes, domain model, and canonical files
+  </Card>
+  <Card title="Schemas" icon="database" href="/schemas">
+    File formats and schema shapes
+  </Card>
+  <Card title="Commands" icon="terminal" href="/commands">
+    Full CLI command reference
+  </Card>
+</CardGroup>

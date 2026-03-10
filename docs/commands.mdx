@@ -1,0 +1,396 @@
+---
+title: "Commands"
+description: "Full CLI command reference for agentpack"
+---
+
+## Purpose
+
+Define the current `agentpack` command surface for the replacement skills lifecycle.
+
+## UX Principles
+
+### No Interactive Modes
+
+All commands must run deterministically from explicit inputs and current repo state.
+
+The CLI must not:
+
+- prompt for confirmation
+- open selection menus
+- infer hidden next steps and execute them automatically
+
+### Optimize For Agent Readability
+
+Outputs should be:
+
+- concise
+- structured
+- concrete
+- easy to parse visually
+
+The CLI should prefer:
+
+- stable labels
+- explicit paths
+- explicit package names
+- explicit failure causes
+
+### No Hidden Mutation
+
+- `inspect` inspects
+- `validate` inspects release-readiness
+- `dev` creates local discovery links and watches for source edits
+- `unlink` removes local discovery links
+- `stale` reports stale state
+- `env` reports runtime state
+- `install` mutates install and materialization state
+- `inspect` reports plugin bundle closure
+- `validate` checks whether plugin vendoring can succeed
+- `build` writes a plugin artifact
+- `dev` writes and rebuilds a plugin artifact
+
+## Exit Codes
+
+- `0`: success
+- `1`: expected operational failure
+- `2`: usage or validation error
+
+## Ordering
+
+Lists should be sorted deterministically:
+
+- package name ascending
+- then path ascending if needed
+
+## Command Families
+
+### `agentpack skills dev`
+
+Question answered: how do I make one local packaged skill discoverable by Claude and Codex while I author it.
+
+Supported targets:
+
+- packaged skill directory path
+- `SKILL.md` path
+
+Behavior:
+
+- validates the target skill directory shape
+- optionally syncs managed `requires` into `package.json.dependencies`
+- links the skill into `.claude/skills/<name>`
+- links the skill into `.agents/skills/<name>`
+- watches the skill directory for changes until the process exits
+- removes the links when the process is stopped
+
+Notes:
+
+- source-backed validation resolves `metadata.sources` relative to the current repo root
+- unresolved `requires` are reported, but local linking still succeeds
+- if your current Claude Code or Codex session was already running, start a fresh session after linking so the runtime rescans `.claude/skills/` or `.agents/skills/`
+
+<Check>Implemented. Supports text and JSON output.</Check>
+
+### `agentpack skills unlink`
+
+Question answered: how do I remove one locally linked authored skill from repo-local discovery paths.
+
+Supported targets:
+
+- skill frontmatter `name`
+
+Behavior:
+
+- removes `.claude/skills/<name>`
+- removes `.agents/skills/<name>`
+
+<Check>Implemented. Supports text and JSON output.</Check>
+
+### `agentpack plugin inspect`
+
+Question answered: which standalone skill packages would be bundled into this plugin package from its local skill `requires` graph.
+
+Supported targets:
+
+- plugin directory path
+
+Behavior:
+
+- scans local plugin `skills/**/SKILL.md`
+- unions direct `requires`
+- resolves packaged skills from repo-local packages first, then plugin-local `node_modules`
+- computes transitive closure from packaged skill `requires`
+- reports direct vs transitive bundled skill packages
+- reports unresolved package requirements if any exist
+
+<Check>Implemented. Supports text and JSON output.</Check>
+
+### `agentpack plugin validate`
+
+Question answered: can this plugin package vendor the standalone skills required by its local plugin skills.
+
+Supported targets:
+
+- plugin directory path
+
+Checks:
+
+- plugin has `.claude-plugin/plugin.json`
+- plugin `package.json` has package `name` and `version`
+- local plugin skills parse successfully
+- every direct required standalone skill package is present in plugin `package.json.devDependencies`
+- every direct and transitive required skill package resolves
+- vendored skill names do not collide with local plugin skill directories or each other
+
+<Check>Implemented. Supports text and JSON output.</Check>
+
+### `agentpack plugin build`
+
+Question answered: can we produce a self-contained plugin artifact from this plugin package right now.
+
+Supported targets:
+
+- plugin directory path
+
+Behavior:
+
+- validates and syncs local plugin skill dependencies
+- computes the direct and transitive bundled package closure
+- vendors bundled packaged skills into the build artifact
+- writes output to `.agentpack/dist/plugins/<plugin-name>/`
+- records vendored provenance in `.claude-plugin/bundled-skills.json`
+
+<Check>Implemented. Supports text and JSON output.</Check>
+
+### `agentpack plugin dev`
+
+Question answered: how do I keep a built plugin artifact up to date while iterating locally.
+
+Supported targets:
+
+- plugin directory path
+
+Behavior:
+
+- performs an initial `plugin build`
+- watches the plugin source tree for changes
+- rebuilds the artifact on change
+- prints the `claude --plugin-dir` path to use
+
+<Check>Implemented. Supports text and JSON output.</Check>
+
+### `agentpack skills validate`
+
+Question answered: is this packaged skill structurally ready for release, or are all authored packaged skills structurally valid.
+
+Supported targets:
+
+- optional packaged skill directory path
+- optional `SKILL.md` path
+- optional package name
+- no target means validate all authored packaged skills in the repo
+
+Checks:
+
+- `SKILL.md` parses successfully
+- `package.json` has `name` and `version`
+- declared `sources` exist
+- every `requires` entry is compiled into `package.json.dependencies`
+- every declared `metadata.sources` entry exists
+- if `metadata.status` is present, it is `deprecated` or `retired`
+- if `metadata.replacement` is present, it is a package name
+- if `package.json.files` exists, it includes `SKILL.md`
+- `@alavida/*` packages include `repository`
+- `@alavida/*` packages set `publishConfig.registry` to `https://npm.pkg.github.com`
+
+Repo-root rule:
+
+- `metadata.sources` are checked relative to the current repo root
+- run this command from the repo that owns those source files
+
+<Check>Implemented. Supports validating one packaged skill and all authored packaged skills in the repo.</Check>
+
+### `agentpack skills outdated`
+
+Question answered: which installed packaged skills are outdated relative to newer versions available in the current discovery root.
+
+Behavior:
+
+- reads current runtime install state
+- compares installed versions against newer packaged versions from the configured registry when available
+- falls back to newer packaged versions discoverable in the current repo
+- supports an alternate discovery root through `AGENTPACK_DISCOVERY_ROOT`
+- reports update type as `patch`, `minor`, or `major`
+
+JSON shape:
+
+- `count`
+- `skills[]`
+  - `packageName`
+  - `currentVersion`
+  - `availableVersion`
+  - `updateType`
+  - `currentSourcePackagePath`
+- `availablePackagePath`
+- `source`
+- `recommendedCommand`
+
+<Check>Implemented. Supports text and JSON output with registry-backed lookup.</Check>
+
+### `agentpack skills dependencies`
+
+Question answered: what does this authored or installed skill depend on, and what other skills depend on it.
+
+Supported targets:
+
+- packaged skill directory path
+- `SKILL.md` path
+- package name
+
+Behavior:
+
+- resolves the target in the authored repo graph first, then the installed runtime graph
+- shows direct skill dependencies only
+- shows reverse dependencies within the selected graph
+- projects authored lifecycle status as `current`, `stale`, or `affected` when available
+- reports whether the target is a direct install when the graph is `installed`
+
+<Check>Implemented. Supports text and JSON output.</Check>
+
+### `agentpack skills registry`
+
+Question answered: is this repo configured to install private `@alavida/*` packages from GitHub Packages.
+
+Behavior:
+
+- reads repo-local `.npmrc`
+- inspects `@alavida:registry`
+- inspects GitHub Packages auth token wiring
+- reports whether `always-auth` is enabled
+
+<Check>Implemented. Supports text and JSON output.</Check>
+
+### `agentpack skills missing`
+
+Question answered: which installed skills are incomplete because required dependent skills are missing.
+
+Behavior:
+
+- reads installed runtime state
+- inspects each installed skill's declared `requires`
+- reports missing required skills per installed skill
+- recommends `agentpack skills install <package>` for consumer-safe remediation
+
+<Check>Implemented. Supports text and JSON output.</Check>
+
+### `agentpack skills inspect`
+
+Question answered: what is this skill package or local skill.
+
+Supported targets:
+
+- package directory path
+- `SKILL.md` path
+- package name if discoverable in the authoring catalog
+
+Examples:
+
+```bash
+agentpack skills inspect domains/value/skills/copywriting
+agentpack skills inspect domains/value/skills/copywriting/SKILL.md
+agentpack skills inspect @alavida/value-copywriting
+```
+
+Output:
+
+- skill name
+- description
+- package name if packaged
+- package version if present
+- skill file path
+- source paths
+- direct `requires`
+- lifecycle status, replacement, and message when authored
+
+<Check>Implemented.</Check>
+
+### `agentpack skills stale`
+
+Question answered: which skills are stale, and why.
+
+Modes:
+
+- **List mode**: package name, local path, changed source count
+- **Detail mode**: package name, skill path, each changed source with recorded and current hash
+
+<Check>Implemented. Reads `.agentpack/build-state.json` and compares recorded hashes.</Check>
+
+### `agentpack skills install`
+
+Question answered: what should be installed and materialized into this repo.
+
+Supported flows:
+
+- install one explicit skill package
+- install dependency roots implied by a selected workbench's local skills
+- reconcile after reinstall
+- reconcile after uninstall
+
+Behavior:
+
+- read install roots
+- call npm to resolve dependencies
+- materialize resolved packages into `.claude/skills/` and `.agents/skills/`
+- write `.agentpack/install.json`
+
+<Check>Implemented for explicit packaged skill targets and workbench-implied roots.</Check>
+
+### `agentpack skills env`
+
+Question answered: what skills are visible in this repo right now.
+
+Output:
+
+- visible installed skills
+- direct vs transitive
+- package version
+- lifecycle status, replacement, and message when available from installed `SKILL.md`
+- materialization mode
+- source package path
+- materialized locations
+
+<Check>Implemented.</Check>
+
+### `agentpack skills status`
+
+Question answered: is this consumer repo healthy from a skills lifecycle point of view.
+
+Behavior:
+
+- summarizes installed skill counts
+- surfaces outdated skills
+- surfaces registry readiness
+- surfaces deprecated or retired installed skills and replacement guidance when present
+- reports a simple health state
+
+<Check>Implemented. Supports text and JSON output.</Check>
+
+### `agentpack skills uninstall`
+
+Question answered: how do we remove a direct skill and reconcile the runtime graph.
+
+Behavior:
+
+- calls `npm uninstall` in the target repo
+- rebuilds runtime state from remaining resolved packages
+- removes dead materialized links
+- rewrites `.agentpack/install.json`
+
+<Check>Implemented. Supports uninstall by installed package name.</Check>
+
+## Current Constraints
+
+- JSON output exists for implemented commands
+- no marketplace orchestration
+- versioning is handled directly by npm
+- publishing is handled directly by npm
+- no automatic rebuild of stale skills

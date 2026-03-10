@@ -1,0 +1,62 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "agentpack",
+  "colors": {
+    "primary": "#6366F1",
+    "light": "#818CF8",
+    "dark": "#4F46E5"
+  },
+  "favicon": "/favicon.png",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": ["introduction", "overview"]
+          },
+          {
+            "group": "Architecture",
+            "pages": ["architecture", "build-lifecycle", "schemas"]
+          },
+          {
+            "group": "CLI Reference",
+            "pages": ["commands"]
+          },
+          {
+            "group": "Distribution",
+            "pages": ["distribution"]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "testing",
+              "fixtures",
+              "live-validation",
+              "implementation-plan"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": ["current-state", "production-readiness"]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/alavida/agentpack"
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/alavida"
+    }
+  }
+}

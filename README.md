@@ -39,13 +39,13 @@ Docs: https://docs.alavida.ai
 ## Install
 
 ```bash
-npm install -g @alavida-ai/agentpack
+npm install -g @alavida/agentpack
 ```
 
 Or without a global install:
 
 ```bash
-npx @alavida-ai/agentpack --help
+npx @alavida/agentpack --help
 ```
 
 ## Why It Exists
@@ -248,7 +248,7 @@ npm run intent:validate
 This package also ships an agent-facing skill under:
 
 ```text
-node_modules/@alavida-ai/agentpack/skills/agentpack-cli/SKILL.md
+node_modules/@alavida/agentpack/skills/agentpack-cli/SKILL.md
 ```
 
 If your repo uses TanStack Intent, you can map that shipped skill into your agent workflow so the agent knows how to use `agentpack` correctly inside downstream repos. This is optional. It is not required to use the CLI.

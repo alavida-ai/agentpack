@@ -47,7 +47,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           npm whoami
-          npm view @alavida-ai/agentpack version || true
+          npm view @alavida/agentpack version || true
           npm publish --access public --provenance
 
       - name: Create GitHub release

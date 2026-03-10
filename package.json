@@ -1,6 +1,6 @@
 {
   "name": "@alavida-ai/agentpack",
-  "version": "0.1.2",
+  "version": "0.1.1",
   "description": "Package-backed skills lifecycle CLI for agent skills and plugins",
   "type": "module",
   "bin": {
@@ -14,7 +14,7 @@
     "README.md"
   ],
   "scripts": {
-    "test": "node --test 'test/**/*.test.js'",
+    "test": "find test -name '*.test.js' -print0 | xargs -0 node --test",
     "validate:live": "node scripts/live-validation.mjs",
     "smoke:monorepo": "node scripts/smoke-monorepo.mjs",
     "docs:dev": "cd docs && mint dev",

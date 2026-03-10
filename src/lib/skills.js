@@ -1086,6 +1086,22 @@ export function validateSkills(target, { cwd = process.cwd() } = {}) {
   const validCount = skills.filter((skill) => skill.valid).length;
   const invalidCount = skills.length - validCount;
 
+  if (validCount > 0) {
+    const buildState = readBuildState(repoRoot);
+
+    for (const packageDir of packageDirs) {
+      const packageMetadata = readPackageMetadata(packageDir);
+      const result = skills.find((skill) => skill.packageName === packageMetadata.packageName);
+      if (!result?.valid) continue;
+
+      const { packageName, record } = buildStateRecordForPackageDir(repoRoot, packageDir);
+      if (!packageName) continue;
+      buildState.skills[packageName] = record;
+    }
+
+    writeBuildState(repoRoot, buildState);
+  }
+
   return {
     valid: invalidCount === 0,
     count: skills.length,
@@ -1112,6 +1128,11 @@ function readBuildState(repoRoot) {
   }
 
   return JSON.parse(readFileSync(buildStatePath, 'utf-8'));
+}
+
+function writeBuildState(repoRoot, state) {
+  mkdirSync(join(repoRoot, '.agentpack'), { recursive: true });
+  writeFileSync(join(repoRoot, '.agentpack', 'build-state.json'), JSON.stringify(state, null, 2) + '\n');
 }
 
 function readInstallState(repoRoot) {
@@ -1216,6 +1237,30 @@ function listAuthoredPackagedSkills(repoRoot) {
     })
     .filter(Boolean)
     .sort((a, b) => a.packageName.localeCompare(b.packageName));
+}
+
+function buildStateRecordForPackageDir(repoRoot, packageDir) {
+  const skillFile = join(packageDir, 'SKILL.md');
+  const metadata = parseSkillFrontmatterFile(skillFile);
+  const packageMetadata = readPackageMetadata(packageDir);
+  const sources = {};
+
+  for (const sourcePath of metadata.sources) {
+    sources[sourcePath] = {
+      hash: hashFile(join(repoRoot, sourcePath)),
+    };
+  }
+
+  return {
+    packageName: packageMetadata.packageName,
+    record: {
+      package_version: packageMetadata.packageVersion,
+      skill_path: normalizeDisplayPath(repoRoot, packageDir),
+      skill_file: normalizeDisplayPath(repoRoot, skillFile),
+      sources,
+      requires: metadata.requires,
+    },
+  };
 }
 
 export function generateSkillsCatalog({ cwd = process.cwd() } = {}) {

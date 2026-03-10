@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRepoFromFixture, createTempRepo, createValidateFixture, runCLI, runCLIJson } from './fixtures.js';
 
@@ -182,6 +182,82 @@ metadata:
       assert.equal(result.exitCode, 0, result.stderr);
       assert.equal(result.json.valid, true);
       assert.equal(packageJson.dependencies['@alavida-ai/agonda-prioritisation'], '*');
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('records build-state for valid source-backed skills so stale detection works', () => {
+    const repo = createTempRepo('skills-validate-build-state');
+
+    try {
+      mkdirSync(join(repo.root, 'domains', 'operations', 'knowledge'), { recursive: true });
+      mkdirSync(join(repo.root, 'domains', 'operations', 'skills', 'agonda-prioritisation'), { recursive: true });
+
+      writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'plan.yaml'), 'goal: ship\n');
+      writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'execution-methodology.md'), '# Execution\n');
+
+      writeFileSync(
+        join(repo.root, 'domains', 'operations', 'skills', 'agonda-prioritisation', 'SKILL.md'),
+        `---
+name: agonda-prioritisation
+description: Check whether work is aligned with the current plan.
+metadata:
+  sources:
+    - domains/operations/knowledge/plan.yaml
+    - domains/operations/knowledge/execution-methodology.md
+---
+
+# Agonda Prioritisation
+`
+      );
+
+      writeFileSync(
+        join(repo.root, 'domains', 'operations', 'skills', 'agonda-prioritisation', 'package.json'),
+        JSON.stringify(
+          {
+            name: '@alavida-ai/agonda-prioritisation',
+            version: '1.0.0',
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida-ai/alavida.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            files: ['SKILL.md'],
+            dependencies: {},
+          },
+          null,
+          2
+        ) + '\n'
+      );
+
+      const validateResult = runCLIJson(
+        ['skills', 'validate', 'domains/operations/skills/agonda-prioritisation'],
+        { cwd: repo.root }
+      );
+
+      const buildStatePath = join(repo.root, '.agentpack', 'build-state.json');
+      const buildState = JSON.parse(readFileSync(buildStatePath, 'utf-8'));
+
+      assert.equal(validateResult.exitCode, 0, validateResult.stderr);
+      assert.equal(validateResult.json.valid, true);
+      assert.equal(existsSync(buildStatePath), true);
+      assert.equal(
+        buildState.skills['@alavida-ai/agonda-prioritisation'].skill_path,
+        'domains/operations/skills/agonda-prioritisation'
+      );
+      assert.ok(
+        buildState.skills['@alavida-ai/agonda-prioritisation'].sources['domains/operations/knowledge/plan.yaml'].hash.startsWith('sha256:')
+      );
+
+      writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'plan.yaml'), 'goal: changed\n');
+
+      const staleResult = runCLI(['skills', 'stale'], { cwd: repo.root });
+      assert.equal(staleResult.exitCode, 0, staleResult.stderr);
+      assert.match(staleResult.stdout, /Stale Skills: 1/);
+      assert.match(staleResult.stdout, /@alavida-ai\/agonda-prioritisation/);
     } finally {
       repo.cleanup();
     }

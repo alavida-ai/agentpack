@@ -158,7 +158,9 @@ export function parseSkillFrontmatterFile(skillFilePath) {
     sources: Array.isArray(fields.metadata?.sources)
       ? fields.metadata.sources
       : (Array.isArray(fields.sources) ? fields.sources : []),
-    requires: Array.isArray(fields.requires) ? fields.requires : [],
+    requires: Array.isArray(fields.metadata?.requires)
+      ? fields.metadata.requires
+      : (Array.isArray(fields.requires) ? fields.requires : []),
     status: typeof fields.metadata?.status === 'string' ? fields.metadata.status : null,
     replacement: typeof fields.metadata?.replacement === 'string' ? fields.metadata.replacement : null,
     message: typeof fields.metadata?.message === 'string' ? fields.metadata.message : null,

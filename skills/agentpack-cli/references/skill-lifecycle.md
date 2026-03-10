@@ -45,6 +45,12 @@ What each step means:
 - `validate` checks package readiness and source existence
 - `dev` links the skill into `.claude/skills/` and `.agents/skills/` for local testing
 
+Important runtime behavior:
+
+- if the agent session was already running before `skills dev`, start a fresh session so the runtime can rescan the linked skill
+- the linked skill is the compiled artifact the runtime should use; do not separately load the source files unless you are editing the skill itself
+- once linked and picked up by the runtime, trigger the skill through the runtime's skill invocation path rather than reading `SKILL.md` manually
+
 ## Repo-Root Constraint
 
 Source-backed validation is relative to the current repo root.

@@ -1,7 +1,7 @@
 ---
 name: agentpack-cli
 description: Use the agentpack CLI correctly when treating knowledge as a package. Apply the authored skill lifecycle, plugin lifecycle, source-backed validation, install flow, and bundled plugin artifact flow without mixing those stages together.
-library_version: 0.1.0
+library_version: 0.1.1
 sources:
   - README.md
   - docs/introduction.mdx
@@ -62,6 +62,13 @@ Key idea:
 - `SKILL.md.requires` is the source of truth
 - `package.json.dependencies` is the compiled mirror
 - `validate` and `dev` sync dependencies automatically
+- `skills dev` materializes the compiled skill artifact for runtime use
+
+Runtime notes:
+
+- after `skills dev` writes to `.claude/skills/` or `.agents/skills/`, start a fresh agent session if the current one was already running
+- do not reload `metadata.sources` manually once the dev-linked skill exists; trust the compiled `SKILL.md` artifact unless you are explicitly updating the skill
+- invoke the resulting skill through the runtime's skill mechanism, not by opening the file and reading it as plain text
 
 Read [skill-lifecycle.md](references/skill-lifecycle.md) when the user needs the full methodology.
 

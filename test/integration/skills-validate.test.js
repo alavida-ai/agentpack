@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createRepoFromFixture, createValidateFixture, runCLI, runCLIJson } from './fixtures.js';
+import { createRepoFromFixture, createTempRepo, createValidateFixture, runCLI, runCLIJson } from './fixtures.js';
 
 describe('agentpack skills validate', () => {
   it('validates one packaged skill successfully', () => {
@@ -114,6 +114,74 @@ describe('agentpack skills validate', () => {
       assert.equal(result.json.packageName, '@alavida/value-copywriting');
       assert.equal(result.json.issues.length, 0);
       assert.equal(packageJson.dependencies['@alavida/methodology-gary-provost'], '*');
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('syncs managed dependencies from metadata.requires before validation', () => {
+    const repo = createTempRepo('skills-validate-metadata-requires');
+
+    try {
+      mkdirSync(join(repo.root, 'domains', 'operations', 'knowledge'), { recursive: true });
+      mkdirSync(
+        join(repo.root, 'domains', 'operations', 'workbenches', 'creator', 'execution-ops', 'skills', 'weekly-planner'),
+        { recursive: true }
+      );
+      writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'plan.yaml'), 'goal: ship\n');
+      writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'workspace-lifecycle.md'), '# Lifecycle\n');
+      writeFileSync(
+        join(repo.root, 'domains', 'operations', 'workbenches', 'creator', 'execution-ops', 'skills', 'weekly-planner', 'SKILL.md'),
+        `---
+name: weekly-planner
+description: Plan the upcoming week against the current plan.
+metadata:
+  sources:
+    - domains/operations/knowledge/plan.yaml
+    - domains/operations/knowledge/workspace-lifecycle.md
+  requires:
+    - "@alavida-ai/agonda-prioritisation"
+---
+
+# Weekly Planner
+`
+      );
+      writeFileSync(
+        join(repo.root, 'domains', 'operations', 'workbenches', 'creator', 'execution-ops', 'skills', 'weekly-planner', 'package.json'),
+        JSON.stringify(
+          {
+            name: '@alavida-ai/weekly-planner',
+            version: '1.0.0',
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida-ai/alavida.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            files: ['SKILL.md'],
+            dependencies: {},
+          },
+          null,
+          2
+        ) + '\n'
+      );
+
+      const result = runCLIJson(
+        ['skills', 'validate', 'domains/operations/workbenches/creator/execution-ops/skills/weekly-planner'],
+        { cwd: repo.root }
+      );
+
+      const packageJson = JSON.parse(
+        readFileSync(
+          join(repo.root, 'domains', 'operations', 'workbenches', 'creator', 'execution-ops', 'skills', 'weekly-planner', 'package.json'),
+          'utf-8'
+        )
+      );
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.equal(result.json.valid, true);
+      assert.equal(packageJson.dependencies['@alavida-ai/agonda-prioritisation'], '*');
     } finally {
       repo.cleanup();
     }

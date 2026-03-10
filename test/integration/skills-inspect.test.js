@@ -114,6 +114,43 @@ requires:
     }
   });
 
+  it('reads dependencies from metadata.requires', () => {
+    const repo = createTempRepo('skills-inspect-metadata-requires');
+
+    try {
+      addPackagedSkill(repo.root, 'skills/weekly-planner', {
+        skillMd: `---
+name: weekly-planner
+description: Plan the week against current operations priorities.
+metadata:
+  sources:
+    - domains/operations/knowledge/plan.yaml
+  requires:
+    - @alavida-ai/agonda-prioritisation
+---
+
+# Weekly Planner
+`,
+        packageJson: {
+          name: '@alavida-ai/weekly-planner',
+          version: '1.0.0',
+          files: ['SKILL.md'],
+          dependencies: {
+            '@alavida-ai/agonda-prioritisation': '^1.0.0',
+          },
+        },
+      });
+
+      const result = runCLI(['skills', 'inspect', 'skills/weekly-planner'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.match(result.stdout, /Requires:/);
+      assert.match(result.stdout, /@alavida-ai\/agonda-prioritisation/);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
   it('parses folded multiline descriptions from frontmatter', () => {
     const repo = createTempRepo('skills-inspect-folded-description');
 

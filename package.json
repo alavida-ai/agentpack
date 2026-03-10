@@ -32,7 +32,7 @@
     "type": "git",
     "url": "git+https://github.com/alavida-ai/agentpack.git"
   },
-  "homepage": "https://github.com/alavida-ai/agentpack/tree/main/docs",
+  "homepage": "https://docs.alavida.ai",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

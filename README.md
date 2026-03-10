@@ -1,48 +1,67 @@
 # agentpack
 
-`agentpack` is a CLI for treating agent skills as real packages.
+Your docs are good. Your agent still gets the tool wrong.
 
-It gives you a workflow for:
+That gap is what `agentpack` fixes.
 
-- authoring source-backed skills
-- validating skill packages before release
-- dev-linking skills into `.claude/skills/` and `.agents/skills/`
-- installing published skills into consumer repos
-- building self-contained plugin artifacts that vendor packaged skills
+If you are shipping a library, a plugin, or a repo full of domain knowledge, the problem is not usually missing documentation. The problem is that the knowledge your team already has does not travel to agents in a versioned, testable, installable form. Docs are written for humans. Types validate calls, not intent. Prompt snippets rot. Community rules files drift. Agents end up guessing.
 
-## Why
+`agentpack` turns knowledge into a package lifecycle:
 
-Most agent workflows stop at "write a `SKILL.md` file somewhere".
+- source docs and knowledge files stay authoritative
+- `SKILL.md` becomes the agent-facing artifact
+- `package.json` becomes the distribution contract
+- npm handles package resolution and versioning
+- `agentpack` handles validation, staleness, local linking, install flow, and plugin bundling
 
-`agentpack` takes the next step:
+This is for teams who want the agent to use the installed version of the tool, not whatever pattern it half-remembers from old training data.
 
-- source docs stay the truth
-- `SKILL.md` is the compiled agent-facing artifact
-- `package.json` is the distribution manifest
-- npm handles package resolution
-- `agentpack` handles validation, staleness, materialization, and plugin bundling
-
-In short: knowledge as package, not just knowledge as prompt.
+Docs: https://docs.alavida.ai
 
 ## Install
-
-Global CLI:
 
 ```bash
 npm install -g @alavida-ai/agentpack
 ```
 
-Or use it without a global install:
+Or without a global install:
 
 ```bash
 npx @alavida-ai/agentpack --help
 ```
 
+## Why It Exists
+
+Most agent workflows today still look like this:
+
+- copy a rules file from some repo
+- paste it into `CLAUDE.md` or `.cursorrules`
+- hope it matches the version you have installed
+- discover drift only when the agent writes subtly wrong code
+
+`agentpack` gives you a real lifecycle instead:
+
+1. Write and maintain source knowledge where your team already works.
+2. Derive a skill artifact from that knowledge.
+3. Validate it before release.
+4. Link it locally for testing.
+5. Publish it as a package.
+6. Install or bundle it wherever it needs to run.
+
+## What It Does
+
+`agentpack` covers four practical workflows:
+
+1. Author a packaged skill from source docs or knowledge files.
+2. Validate that skill before release.
+3. Link it locally into `.claude/skills/` and `.agents/skills/` for testing.
+4. Bundle packaged skills into self-contained plugin artifacts.
+
 ## Quick Start
 
-### Author a packaged skill
+### Author and test a packaged skill
 
-In the repo that owns the source docs:
+Run these commands from the repo that owns the source files referenced by `metadata.sources`:
 
 ```bash
 agentpack skills inspect domains/operations/skills/agonda-prioritisation
@@ -51,6 +70,8 @@ agentpack skills dev domains/operations/skills/agonda-prioritisation
 ```
 
 Use `skills dev` when you want the skill linked into `.claude/skills/` and `.agents/skills/` for local runtime testing.
+
+If your agent session was already running, start a fresh session after linking so the runtime can pick up the newly materialized skill.
 
 ### Install a published skill in another repo
 
@@ -67,31 +88,66 @@ agentpack plugin validate path/to/plugin
 agentpack plugin build path/to/plugin
 ```
 
-Use watch mode during iteration:
+For watch mode during development:
 
 ```bash
 agentpack plugin dev path/to/plugin
 ```
 
-## Core Model
+## The Model
 
-`agentpack` works best if you keep these boundaries clear:
+The most important distinction in `agentpack` is lifecycle stage.
 
-- packaged skill = reusable capability artifact
-- plugin = deployable runtime shell
-- `metadata.sources` = provenance and stale-check inputs
-- `requires` = authored dependency truth
-- `package.json.dependencies` = compiled dependency mirror
+### Packaged skills
 
-This means:
+A packaged skill is a reusable capability artifact.
 
-- local authoring uses `skills validate` and `skills dev`
-- consumer installation uses `skills install`
-- plugin delivery uses `plugin validate`, `plugin build`, and `plugin dev`
+- `metadata.sources` track provenance
+- `requires` define authored skill dependencies
+- `package.json.dependencies` are the compiled mirror of `requires`
+
+Typical local flow:
+
+- `skills inspect`
+- `skills validate`
+- `skills dev`
+
+### Consumer installs
+
+Consumer repos do not author the skill. They install the published package and materialize it into agent-visible directories.
+
+Typical consumer flow:
+
+- `skills install`
+- `skills env`
+
+### Plugins
+
+A plugin is a deployable runtime shell, not just another skill package.
+
+Plugin-local skills can declare `requires` on packaged skills. `agentpack` can then build a self-contained plugin artifact that vendors those packaged dependencies.
+
+Typical plugin flow:
+
+- `plugin inspect`
+- `plugin validate`
+- `plugin build`
+- `plugin dev`
+
+## Knowledge As A Package
+
+`agentpack` works best when you treat knowledge like software:
+
+- the source files explain the methodology or domain truth
+- the skill is the compiled agent-facing artifact
+- package metadata defines how the capability is distributed
+- validation and stale checks stop the artifact drifting from its sources
+
+That lets you manage agent behavior with the same discipline you already apply to code.
 
 ## Source-Backed Skills
 
-For packaged skills with `metadata.sources`, run authoring commands from the repo that owns those source files.
+For source-backed skills, run authoring commands from the repo that owns the source files.
 
 If a skill points at `domains/.../knowledge/*.md`, run:
 
@@ -100,31 +156,6 @@ If a skill points at `domains/.../knowledge/*.md`, run:
 - `agentpack skills stale`
 
 from that knowledge-base repo root, not from the `agentpack` repo.
-
-## Intent Integration
-
-This package also ships an Intent skill under `skills/agentpack-cli/`.
-
-That skill is for coding agents using [TanStack Intent](https://tanstack.com/intent/latest): it teaches the agent how to use `agentpack` correctly and how to distinguish:
-
-- authored skill lifecycle
-- consumer install lifecycle
-- plugin build lifecycle
-- source-backed staleness flow
-
-If your repo uses Intent, install the mapping helper:
-
-```bash
-npx @tanstack/intent@latest install
-```
-
-Then map the shipped skill from:
-
-```text
-node_modules/@alavida-ai/agentpack/skills/agentpack-cli/SKILL.md
-```
-
-`agentpack` does not replace the upstream `intent` CLI. It only ships a library skill for it.
 
 ## Commands
 
@@ -148,19 +179,19 @@ Implemented today:
 - `agentpack plugin build`
 - `agentpack plugin dev`
 
-## Documentation
+## Docs
 
-Docs live in [`docs/`](./docs).
+Hosted docs: https://docs.alavida.ai
 
-To preview them locally with Mintlify:
+Docs source: [`docs/`](./docs)
+
+For local docs preview as a contributor:
 
 ```bash
 npm i -g mint
 cd docs
 mint dev
 ```
-
-Then open `http://localhost:3000`.
 
 ## Development
 
@@ -170,11 +201,21 @@ Run the full test suite:
 npm test
 ```
 
-Validate the shipped Intent skill:
+Validate the shipped agent skill:
 
 ```bash
 npm run intent:validate
 ```
+
+## Optional Agent Integration
+
+This package also ships an agent-facing skill under:
+
+```text
+node_modules/@alavida-ai/agentpack/skills/agentpack-cli/SKILL.md
+```
+
+If your repo uses TanStack Intent, you can map that shipped skill into your agent workflow so the agent knows how to use `agentpack` correctly inside downstream repos. This is optional. It is not required to use the CLI.
 
 ## Metadata Policy
 

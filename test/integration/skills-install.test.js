@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, lstatSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
-import { createRepoFromFixture, runCLI, runCLIJsonAsync } from './fixtures.js';
+import { addPackagedSkill, createRepoFromFixture, createTempRepo, runCLI, runCLIJsonAsync } from './fixtures.js';
 
 function npmPack(cwd) {
   const npmCli = process.env.npm_execpath;
@@ -57,7 +57,48 @@ describe('agentpack skills install', () => {
   });
 
   it('installs a published package name from a configured registry and materializes its dependency chain', async () => {
+    const source = createTempRepo('skills-install-registry-source');
     const consumer = createRepoFromFixture('consumer', 'skills-install-registry-consumer');
+
+    addPackagedSkill(source.root, 'packages/methodology-gary-provost', {
+      skillMd: `---
+name: methodology-gary-provost
+description: Sentence rhythm guidance from Gary Provost.
+metadata:
+  sources: []
+requires: []
+---
+
+# Gary Provost
+`,
+      packageJson: {
+        name: '@alavida-ai/methodology-gary-provost',
+        version: '1.0.0',
+        files: ['SKILL.md'],
+      },
+    });
+
+    addPackagedSkill(source.root, 'packages/value-proof-points', {
+      skillMd: `---
+name: value-proof-points
+description: Evidence-backed proof points for value messaging.
+metadata:
+  sources: []
+requires:
+  - @alavida-ai/methodology-gary-provost
+---
+
+# Value Proof Points
+`,
+      packageJson: {
+        name: '@alavida-ai/value-proof-points',
+        version: '1.0.1',
+        files: ['SKILL.md'],
+        dependencies: {
+          '@alavida-ai/methodology-gary-provost': '^1.0.0',
+        },
+      },
+    });
 
     const metadataByPath = new Map([
       ['@alavida-ai/value-proof-points', {
@@ -90,17 +131,11 @@ describe('agentpack skills install', () => {
     const tarballs = new Map();
     tarballs.set(
       '/tarballs/methodology-gary-provost-1.0.0.tgz',
-      await npmPack(join(
-        '/Users/alexandergirardet/alavida/knowledge-base/Alavida',
-        'workspace/active/architecture/intent-adoption/spike/packages/methodology-gary-provost'
-      ))
+      await npmPack(join(source.root, 'packages', 'methodology-gary-provost'))
     );
     tarballs.set(
       '/tarballs/value-proof-points-1.0.1.tgz',
-      await npmPack(join(
-        '/Users/alexandergirardet/alavida/knowledge-base/Alavida',
-        'workspace/active/architecture/intent-adoption/spike/packages/value-proof-points'
-      ))
+      await npmPack(join(source.root, 'packages', 'value-proof-points'))
     );
 
     const server = createServer((req, res) => {
@@ -147,6 +182,7 @@ describe('agentpack skills install', () => {
       assert.ok(existsSync(join(consumer.root, '.claude', 'skills', 'methodology-gary-provost')));
     } finally {
       await new Promise((resolve) => server.close(resolve));
+      source.cleanup();
       consumer.cleanup();
     }
   });

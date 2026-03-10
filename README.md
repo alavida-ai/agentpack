@@ -251,7 +251,11 @@ This package also ships an agent-facing skill under:
 node_modules/@alavida/agentpack/skills/agentpack-cli/SKILL.md
 ```
 
-If your repo uses TanStack Intent, you can map that shipped skill into your agent workflow so the agent knows how to use `agentpack` correctly inside downstream repos. This is optional. It is not required to use the CLI.
+Consumers can use TanStack Intent in their repos to map that shipped skill into their agent workflow so the agent knows how to use `agentpack` correctly.
+
+This is recommended if you want downstream coding agents to follow the right `agentpack` lifecycle automatically.
+
+It is still optional. You do not need Intent to install or run the CLI itself.
 
 ## Metadata Policy
 

@@ -1,12 +1,30 @@
 # agentpack
 
-Your docs are good. Your agent still gets the tool wrong.
+You already know the feeling:
 
-That gap is what `agentpack` fixes.
+- the skill worked in one repo, but now it is copied into three places
+- a plugin depends on a skill, but nobody knows where that dependency truth lives
+- the source knowledge changed, but the shipped skill never got updated
+- the runtime still has a skill on disk, but nobody can tell whether it is current, stale, local, bundled, or installed transitively
+- the agent "knows" something, but you no longer trust where that knowledge came from
 
-If you are shipping a library, a plugin, or a repo full of domain knowledge, the problem is not usually missing documentation. The problem is that the knowledge your team already has does not travel to agents in a versioned, testable, installable form. Docs are written for humans. Types validate calls, not intent. Prompt snippets rot. Community rules files drift. Agents end up guessing.
+That is the problem `agentpack` is for.
 
-`agentpack` turns knowledge into a package lifecycle:
+The core failure mode is lifecycle collapse. Most teams flatten four different artifact types into one fuzzy thing called "a skill":
+
+- source knowledge
+- compiled skill artifact
+- runtime plugin
+- installed environment state
+
+Once those boundaries blur, everything gets worse:
+
+- authors do not know what to update
+- consumers do not know what to install
+- plugins become hidden dependency containers
+- agents end up running stale knowledge with no visible trust chain
+
+`agentpack` gives those artifacts their own lifecycle again:
 
 - source docs and knowledge files stay authoritative
 - `SKILL.md` becomes the agent-facing artifact
@@ -14,7 +32,7 @@ If you are shipping a library, a plugin, or a repo full of domain knowledge, the
 - npm handles package resolution and versioning
 - `agentpack` handles validation, staleness, local linking, install flow, and plugin bundling
 
-This is for teams who want the agent to use the installed version of the tool, not whatever pattern it half-remembers from old training data.
+This is for teams who want agent behavior to be packaged, inspectable, and updateable like software instead of copy-pasted prompt debris.
 
 Docs: https://docs.alavida.ai
 
@@ -32,12 +50,13 @@ npx @alavida-ai/agentpack --help
 
 ## Why It Exists
 
-Most agent workflows today still look like this:
+Most agent workflows still look like this:
 
-- copy a rules file from some repo
-- paste it into `CLAUDE.md` or `.cursorrules`
-- hope it matches the version you have installed
-- discover drift only when the agent writes subtly wrong code
+- write source knowledge in one place
+- hand-copy some of it into a skill
+- hand-copy that skill into a plugin or repo
+- lose track of what depends on what
+- discover drift only when the agent produces the wrong output
 
 `agentpack` gives you a real lifecycle instead:
 
@@ -105,6 +124,7 @@ A packaged skill is a reusable capability artifact.
 - `metadata.sources` track provenance
 - `requires` define authored skill dependencies
 - `package.json.dependencies` are the compiled mirror of `requires`
+- it is self-contained at runtime, not a pointer back to source files
 
 Typical local flow:
 
@@ -133,6 +153,22 @@ Typical plugin flow:
 - `plugin validate`
 - `plugin build`
 - `plugin dev`
+
+## What Agentpack Refuses To Blur
+
+These are deliberate boundaries:
+
+- Knowledge is the source of truth.
+- Skills are derived artifacts.
+- Plugins are runtime shells.
+- Installed state is repo-local runtime state.
+
+If you blur those together, you get the exact problems this tool exists to stop:
+
+- skills that silently depend on files they do not ship
+- plugins that hide reusable capability dependencies
+- repos that cannot explain why a skill is present
+- updates that change behavior without an explicit review step
 
 ## Knowledge As A Package
 

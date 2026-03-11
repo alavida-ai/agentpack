@@ -3,6 +3,12 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { findAllWorkbenches, findRepoRoot, findWorkbenchContext, resolveWorkbenchFlag } from './context.js';
 import {
+  buildReverseDependencies,
+  buildSkillGraph,
+  buildSkillStatusMap,
+  readNodeStatus,
+} from '../domain/skills/skill-graph.js';
+import {
   normalizeDisplayPath,
   normalizeRepoPath,
   parseSkillFrontmatterFile,
@@ -565,48 +571,16 @@ export function inspectSkill(target, { cwd = process.cwd() } = {}) {
   };
 }
 
-function readSkillGraphNode(repoRoot, packageDir, directInstallNames = new Set()) {
-  const skillFile = join(packageDir, 'SKILL.md');
-  if (!existsSync(skillFile)) return null;
-
-  const skillMetadata = parseSkillFrontmatterFile(skillFile);
-  const packageMetadata = readPackageMetadata(packageDir);
-  if (!packageMetadata.packageName) return null;
-
-  const dependencyNames = Object.keys(packageMetadata.dependencies || {})
-    .filter((dependencyName) => {
-      const localPackageDir = findPackageDirByName(repoRoot, dependencyName);
-      if (localPackageDir && existsSync(join(localPackageDir, 'SKILL.md'))) return true;
-      const installedPackageDir = join(repoRoot, 'node_modules', ...dependencyName.split('/'));
-      return existsSync(join(installedPackageDir, 'SKILL.md'));
-    })
-    .sort((a, b) => a.localeCompare(b));
-
-  return {
-    name: skillMetadata.name,
-    packageName: packageMetadata.packageName,
-    packageVersion: packageMetadata.packageVersion,
-    skillPath: normalizeDisplayPath(repoRoot, packageDir),
-    skillFile: normalizeDisplayPath(repoRoot, skillFile),
-    direct: directInstallNames.has(packageMetadata.packageName),
-    dependencies: dependencyNames,
-  };
-}
-
 function buildAuthoredSkillGraph(repoRoot) {
-  const nodes = new Map();
-
-  for (const packageDir of listPackagedSkillDirs(repoRoot)) {
-    const node = readSkillGraphNode(repoRoot, packageDir);
-    if (!node) continue;
-    nodes.set(node.packageName, node);
-  }
-
-  return nodes;
+  return buildSkillGraph(repoRoot, listPackagedSkillDirs(repoRoot), {
+    parseSkillFrontmatterFile,
+    readPackageMetadata,
+    findPackageDirByName,
+    normalizeDisplayPath,
+  });
 }
 
 function buildInstalledSkillGraph(repoRoot) {
-  const nodes = new Map();
   const installState = readInstallState(repoRoot);
   const directInstallNames = new Set(
     Object.entries(installState.installs || {})
@@ -614,73 +588,19 @@ function buildInstalledSkillGraph(repoRoot) {
       .map(([packageName]) => packageName)
   );
 
-  for (const packageDir of listInstalledPackageDirs(join(repoRoot, 'node_modules'))) {
-    const node = readSkillGraphNode(repoRoot, packageDir, directInstallNames);
-    if (!node) continue;
-    nodes.set(node.packageName, node);
-  }
-
-  return nodes;
+  return buildSkillGraph(repoRoot, listInstalledPackageDirs(join(repoRoot, 'node_modules')), {
+    directInstallNames,
+    parseSkillFrontmatterFile,
+    readPackageMetadata,
+    findPackageDirByName,
+    normalizeDisplayPath,
+  });
 }
 
-function buildReverseDependencies(nodes) {
-  const reverse = new Map();
-  for (const packageName of nodes.keys()) reverse.set(packageName, []);
-
-  for (const node of nodes.values()) {
-    for (const dependencyName of node.dependencies) {
-      if (!reverse.has(dependencyName)) continue;
-      reverse.get(dependencyName).push(node.packageName);
-    }
-  }
-
-  for (const values of reverse.values()) values.sort((a, b) => a.localeCompare(b));
-  return reverse;
-}
-
-function buildSkillStatusMap(repoRoot) {
+function buildSkillStatusMapForRepo(repoRoot) {
   const nodes = buildAuthoredSkillGraph(repoRoot);
   const staleSkills = new Set(listStaleSkills({ cwd: repoRoot }).map((skill) => skill.packageName));
-  const cache = new Map();
-
-  function resolveStatus(packageName, seen = new Set()) {
-    if (cache.has(packageName)) return cache.get(packageName);
-    if (staleSkills.has(packageName)) {
-      cache.set(packageName, 'stale');
-      return 'stale';
-    }
-
-    if (seen.has(packageName)) return 'current';
-    seen.add(packageName);
-
-    const node = nodes.get(packageName);
-    if (!node) {
-      cache.set(packageName, null);
-      return null;
-    }
-
-    const dependencyStatuses = node.dependencies
-      .map((dependencyName) => resolveStatus(dependencyName, new Set(seen)))
-      .filter(Boolean);
-
-    const status = dependencyStatuses.some((value) => value === 'stale' || value === 'affected')
-      ? 'affected'
-      : 'current';
-
-    cache.set(packageName, status);
-    return status;
-  }
-
-  for (const packageName of nodes.keys()) {
-    resolveStatus(packageName);
-  }
-
-  return cache;
-}
-
-function readNodeStatus(statusMap, packageName) {
-  if (!statusMap) return null;
-  return statusMap.get(packageName) || null;
+  return buildSkillStatusMap(nodes, staleSkills);
 }
 
 export function inspectSkillDependencies(target, {
@@ -691,7 +611,7 @@ export function inspectSkillDependencies(target, {
   const authoredNodes = buildAuthoredSkillGraph(repoRoot);
   const installedNodes = buildInstalledSkillGraph(repoRoot);
   const statusRoot = discoveryRoot ? resolve(discoveryRoot) : repoRoot;
-  const statusMap = buildSkillStatusMap(statusRoot);
+  const statusMap = buildSkillStatusMapForRepo(statusRoot);
 
   const authoredTarget = authoredNodes.get(target) || null;
   const installedTarget = installedNodes.get(target) || null;

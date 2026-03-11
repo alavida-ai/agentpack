@@ -1,6 +1,7 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, watch, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
+import { resolveDependencyClosure } from '../domain/skills/skill-graph.js';
 import { normalizeRepoPath, parseSkillFrontmatterFile, readPackageMetadata } from '../domain/skills/skill-model.js';
 import {
   findPackageDirByName,
@@ -74,50 +75,30 @@ function collectPluginLocalSkillDirs(pluginDir) {
 }
 
 function resolveBundleClosure(repoRoot, pluginDir, directRequires) {
-  const seen = new Set();
-  const queue = [...directRequires];
-  const bundled = [];
-  const unresolved = [];
+  const { resolved, unresolved } = resolveDependencyClosure(directRequires, {
+    resolveNode(packageName) {
+      const resolvedPackage = resolvePackageDir(repoRoot, pluginDir, packageName);
+      if (!resolvedPackage) return null;
 
-  while (queue.length > 0) {
-    const packageName = queue.shift();
-    if (seen.has(packageName)) continue;
-    seen.add(packageName);
+      const skillFile = join(resolvedPackage.packageDir, 'SKILL.md');
+      if (!existsSync(skillFile)) return null;
 
-    const resolvedPackage = resolvePackageDir(repoRoot, pluginDir, packageName);
-    if (!resolvedPackage) {
-      unresolved.push(packageName);
-      continue;
-    }
+      const metadata = parseSkillFrontmatterFile(skillFile);
+      const packageMetadata = readPackageMetadata(resolvedPackage.packageDir);
 
-    const skillFile = join(resolvedPackage.packageDir, 'SKILL.md');
-    if (!existsSync(skillFile)) {
-      unresolved.push(packageName);
-      continue;
-    }
+      return {
+        packageName,
+        packageVersion: packageMetadata.packageVersion,
+        skillName: metadata.name,
+        skillFile,
+        packageDir: resolvedPackage.packageDir,
+        source: resolvedPackage.source,
+        requires: metadata.requires,
+      };
+    },
+  });
 
-    const metadata = parseSkillFrontmatterFile(skillFile);
-    const packageMetadata = readPackageMetadata(resolvedPackage.packageDir);
-
-    bundled.push({
-      packageName,
-      packageVersion: packageMetadata.packageVersion,
-      skillName: metadata.name,
-      skillFile,
-      packageDir: resolvedPackage.packageDir,
-      source: resolvedPackage.source,
-      requires: metadata.requires,
-    });
-
-    for (const requirement of metadata.requires) {
-      if (!seen.has(requirement)) queue.push(requirement);
-    }
-  }
-
-  bundled.sort((a, b) => a.packageName.localeCompare(b.packageName));
-  unresolved.sort();
-
-  return { bundled, unresolved };
+  return { bundled: resolved, unresolved };
 }
 
 function stagePluginRuntimeFiles(pluginDir, stageDir) {

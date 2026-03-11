@@ -336,7 +336,7 @@ export function addPackagedSkill(root, relPath, { skillMd, packageJson }) {
 export function runCLI(args, { cwd, env = {} } = {}) {
   const result = spawnSync('node', [CLI_PATH, ...args], {
     cwd,
-    env: { ...process.env, ...env },
+    env: { ...process.env, AGENTPACK_DISABLE_BROWSER: '1', ...env },
     encoding: 'utf-8',
     timeout: 10000,
   });
@@ -351,7 +351,7 @@ export function runCLIAsync(args, { cwd, env = {} } = {}) {
   return new Promise((resolve) => {
     const child = spawn('node', [CLI_PATH, ...args], {
       cwd,
-      env: { ...process.env, ...env },
+      env: { ...process.env, AGENTPACK_DISABLE_BROWSER: '1', ...env },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
@@ -379,7 +379,7 @@ export function runCLIAsync(args, { cwd, env = {} } = {}) {
 export function startCLI(args, { cwd, env = {} } = {}) {
   const child = spawn('node', [CLI_PATH, ...args], {
     cwd,
-    env: { ...process.env, ...env },
+    env: { ...process.env, AGENTPACK_DISABLE_BROWSER: '1', ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 

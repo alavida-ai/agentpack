@@ -88,7 +88,9 @@ agentpack skills validate domains/operations/skills/agonda-prioritisation
 agentpack skills dev domains/operations/skills/agonda-prioritisation
 ```
 
-Use `skills dev` when you want the skill linked into `.claude/skills/` and `.agents/skills/` for local runtime testing.
+Use `skills dev` when you want the skill linked into `.claude/skills/` and `.agents/skills/` for local runtime testing. It now also starts a localhost development workbench by default for one selected skill, showing immediate provenance sources, direct required skills, lifecycle state, and workbench actions such as validation and stale checks.
+
+Pass `--no-dashboard` if you want the original CLI-only linking workflow without the local dashboard.
 
 If your agent session was already running, start a fresh session after linking so the runtime can pick up the newly materialized skill.
 
@@ -218,6 +220,12 @@ Implemented today:
 ## Docs
 
 Hosted docs: https://docs.alavida.ai
+
+For a repo-local demo and manual testing target, initialize submodules and use [sandbox/acme-demo/README.md](/Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/sandbox/acme-demo/README.md).
+
+```bash
+git submodule update --init --recursive
+```
 
 Docs source: [`docs/`](./docs)
 

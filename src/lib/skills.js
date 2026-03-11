@@ -29,6 +29,7 @@ import {
   readBuildState,
   writeBuildState,
 } from '../domain/skills/skill-provenance.js';
+import { startSkillDevWorkbench } from '../application/skills/start-skill-dev-workbench.js';
 import { AgentpackError, EXIT_CODES, NetworkError, NotFoundError, ValidationError } from '../utils/errors.js';
 
 const GITHUB_PACKAGES_REGISTRY = 'https://npm.pkg.github.com';
@@ -263,6 +264,7 @@ export function devSkill(target, {
 export function startSkillDev(target, {
   cwd = process.cwd(),
   sync = true,
+  dashboard = true,
   onStart = () => {},
   onRebuild = () => {},
 } = {}) {
@@ -272,12 +274,14 @@ export function startSkillDev(target, {
   let timer = null;
   let currentNames = [];
   let watcher = null;
+  let workbench = null;
 
   const cleanup = () => {
     if (closed) return { name: currentNames[0] || null, unlinked: false, removed: [] };
     closed = true;
     clearTimeout(timer);
     if (watcher) watcher.close();
+    if (workbench) workbench.close();
     const removed = removeSkillLinksByNames(repoRoot, currentNames, normalizeDisplayPath);
     detachProcessCleanup();
     return {
@@ -305,7 +309,7 @@ export function startSkillDev(target, {
     processCleanupHandlers.clear();
   };
 
-  const run = () => {
+  const run = async () => {
     const result = devSkill(target, { cwd, sync });
     const nextNames = result.linkedSkills.map((entry) => entry.name);
     const staleNames = currentNames.filter((name) => !nextNames.includes(name));
@@ -313,11 +317,35 @@ export function startSkillDev(target, {
       removeSkillLinksByNames(repoRoot, staleNames, normalizeDisplayPath);
     }
     currentNames = nextNames;
-    return result;
+    if (dashboard && !workbench) {
+      workbench = await startSkillDevWorkbench({
+        repoRoot,
+        skillDir,
+        open: true,
+        disableBrowser: process.env.AGENTPACK_DISABLE_BROWSER === '1',
+      });
+    } else if (workbench) {
+      workbench.refresh();
+    }
+    return {
+      ...result,
+      workbench: workbench
+        ? {
+          enabled: true,
+          url: workbench.url,
+          port: workbench.port,
+        }
+        : {
+          enabled: false,
+          url: null,
+          port: null,
+        },
+    };
   };
 
-  const initialResult = run();
-  onStart(initialResult);
+  Promise.resolve(run()).then(onStart).catch((error) => {
+    throw error;
+  });
 
   attachProcessCleanup();
 
@@ -327,7 +355,9 @@ export function startSkillDev(target, {
     timer = setTimeout(() => {
       try {
         const result = run();
-        onRebuild(result);
+        Promise.resolve(result).then(onRebuild).catch((error) => {
+          onRebuild({ error });
+        });
       } catch (error) {
         onRebuild({ error });
       }
@@ -335,7 +365,7 @@ export function startSkillDev(target, {
   });
 
   return {
-    initialResult,
+    initialResult: null,
     close() {
       return cleanup();
     },

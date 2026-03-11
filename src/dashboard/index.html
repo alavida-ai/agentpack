@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Skill Dev Workbench</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07121d;
+        --panel: rgba(11, 22, 35, 0.9);
+        --text: #eef4ff;
+        --muted: #90a4c4;
+        --line: rgba(255, 255, 255, 0.08);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top, rgba(91, 140, 255, 0.15), transparent 32rem), linear-gradient(180deg, #03080d 0%, var(--bg) 100%);
+        color: var(--text);
+      }
+
+      #app {
+        min-height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" data-app-root></div>
+    <script type="module" src="/assets/dashboard.js"></script>
+  </body>
+</html>

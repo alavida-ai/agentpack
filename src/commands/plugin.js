@@ -1,5 +1,8 @@
 import { Command } from 'commander';
-import { buildPlugin, inspectPluginBundle, startPluginDev, validatePluginBundle } from '../lib/plugins.js';
+import { buildPluginUseCase } from '../application/plugins/build-plugin.js';
+import { inspectPluginBundleUseCase } from '../application/plugins/inspect-plugin-bundle.js';
+import { validatePluginBundleUseCase } from '../application/plugins/validate-plugin-bundle.js';
+import { startPluginDev } from '../lib/plugins.js';
 import { output } from '../utils/output.js';
 import { EXIT_CODES } from '../utils/errors.js';
 
@@ -13,7 +16,7 @@ export function pluginCommand() {
     .argument('<target>', 'Plugin directory path')
     .action((target, opts, command) => {
       const globalOpts = command.optsWithGlobals();
-      const result = inspectPluginBundle(target);
+      const result = inspectPluginBundleUseCase(target);
 
       if (globalOpts.json) {
         output.json(result);
@@ -76,7 +79,7 @@ export function pluginCommand() {
     .argument('<target>', 'Plugin directory path')
     .action((target, opts, command) => {
       const globalOpts = command.optsWithGlobals();
-      const result = validatePluginBundle(target);
+      const result = validatePluginBundleUseCase(target);
 
       if (globalOpts.json) {
         output.json(result);
@@ -114,7 +117,7 @@ export function pluginCommand() {
     .argument('<target>', 'Plugin directory path')
     .action((target, opts, command) => {
       const globalOpts = command.optsWithGlobals();
-      const result = buildPlugin(target, { clean: opts.clean });
+      const result = buildPluginUseCase(target, { clean: opts.clean });
 
       if (globalOpts.json) {
         output.json(result);

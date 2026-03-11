@@ -1,20 +1,19 @@
 import { Command } from 'commander';
+import { inspectSkillUseCase } from '../application/skills/inspect-skill.js';
+import { inspectStaleSkillUseCase, listStaleSkillsUseCase } from '../application/skills/list-stale-skills.js';
+import { validateSkillsUseCase } from '../application/skills/validate-skills.js';
 import {
   inspectSkillDependencies,
   inspectMissingSkillDependencies,
   inspectSkillsStatus,
   inspectRegistryConfig,
-  inspectSkill,
   inspectSkillsEnv,
-  inspectStaleSkill,
   installSkills,
   listOutdatedSkills,
-  listStaleSkills,
   resolveInstallTargets,
   startSkillDev,
   unlinkSkill,
   uninstallSkills,
-  validateSkills,
 } from '../lib/skills.js';
 import { output } from '../utils/output.js';
 import { EXIT_CODES } from '../utils/errors.js';
@@ -250,7 +249,7 @@ export function skillsCommand() {
     .argument('<target>', 'Skill directory, SKILL.md path, or package name')
     .action((target, opts, command) => {
       const globalOpts = command.optsWithGlobals();
-      const result = inspectSkill(target);
+      const result = inspectSkillUseCase(target);
 
       if (globalOpts.json) {
         output.json(result);
@@ -291,7 +290,7 @@ export function skillsCommand() {
       const globalOpts = command.optsWithGlobals();
 
       if (target) {
-        const result = inspectStaleSkill(target);
+        const result = inspectStaleSkillUseCase(target);
 
         if (globalOpts.json) {
           output.json(result);
@@ -310,7 +309,7 @@ export function skillsCommand() {
         return;
       }
 
-      const results = listStaleSkills();
+      const results = listStaleSkillsUseCase();
 
       if (globalOpts.json) {
         output.json({
@@ -337,7 +336,7 @@ export function skillsCommand() {
     .argument('[target]', 'Optional packaged skill directory, SKILL.md path, or package name')
     .action((target, opts, command) => {
       const globalOpts = command.optsWithGlobals();
-      const result = validateSkills(target);
+      const result = validateSkillsUseCase(target);
 
       if (globalOpts.json) {
         output.json(

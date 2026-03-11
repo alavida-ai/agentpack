@@ -14,18 +14,31 @@ export const EXIT_CODES = {
  * Carries a machine-readable code and mapped exit code.
  */
 export class AgentpackError extends Error {
-  constructor(message, { code, exitCode = EXIT_CODES.GENERAL, suggestion } = {}) {
+  constructor(message, {
+    code,
+    exitCode = EXIT_CODES.GENERAL,
+    suggestion,
+    path,
+    nextSteps,
+    details,
+  } = {}) {
     super(message);
     this.name = 'AgentpackError';
     this.code = code || 'general_error';
     this.exitCode = exitCode;
     this.suggestion = suggestion;
+    this.path = path;
+    this.nextSteps = nextSteps || [];
+    this.details = details || {};
   }
 
   toJSON() {
     return {
       error: this.code,
       message: this.message,
+      ...(this.path && { path: this.path }),
+      ...(this.nextSteps.length > 0 && { nextSteps: this.nextSteps }),
+      ...(Object.keys(this.details).length > 0 && { details: this.details }),
       ...(this.suggestion && { suggestion: this.suggestion }),
     };
   }
@@ -58,6 +71,25 @@ export class NotFoundError extends AgentpackError {
 export function formatError(err) {
   if (err instanceof AgentpackError) {
     let msg = `Error: ${err.message}`;
+    if (err.path) {
+      msg += `\nPath: ${err.path}`;
+    }
+    if (err.nextSteps?.length) {
+      for (const step of err.nextSteps) {
+        const actionLabel = step.action === 'create_file'
+          ? `Create ${step.path}`
+          : step.action === 'edit_file'
+            ? `Edit ${step.path}`
+            : step.reason;
+        msg += `\nNext: ${actionLabel}`;
+        if (step.reason && step.reason !== actionLabel) {
+          msg += `\nWhy: ${step.reason}`;
+        }
+        if (step.example) {
+          msg += `\nExample:\n${JSON.stringify(step.example, null, 2)}`;
+        }
+      }
+    }
     if (err.suggestion) {
       msg += `\n\nSuggestion: ${err.suggestion}`;
     }

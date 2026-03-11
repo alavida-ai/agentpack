@@ -16,6 +16,19 @@ Define the architecture for authored, versioned, distributed, installed, materia
 - preserve compatibility with the Agent Skills filesystem model
 - minimize custom lifecycle machinery by building on npm
 
+## Internal Module Shape
+
+The CLI now follows an explicit internal split:
+
+- `src/commands/` provides the command-line interface layer
+- `src/application/` provides workflow entrypoints for user-facing use cases
+- `src/domain/skills/` owns shared packaged-skill concepts such as model, graph, and provenance
+- `src/infrastructure/` owns file-backed repositories and runtime side effects
+
+This keeps packaged skills as the first-class domain concept.
+
+Plugins are implemented as workflows over that shared skill domain rather than as a parallel lifecycle system.
+
 ## Four Planes
 
 ### 1. Authoring Plane
@@ -50,6 +63,12 @@ This plane answers:
 
 This plane does not author or rewrite content by itself.
 
+Internally, this plane now primarily lives in:
+
+- `src/domain/skills/skill-provenance.js`
+- `src/domain/skills/skill-graph.js`
+- `src/application/skills/validate-skills.js`
+
 ### 3. Distribution And Install Plane
 
 npm is the package-resolution substrate.
@@ -60,6 +79,11 @@ agentpack layers on top of it to:
 - distinguish direct vs transitive installs
 - materialize resolved packages into agent-visible directories
 - reconcile runtime state on install, update, and uninstall
+
+Internally, this plane now primarily lives in:
+
+- `src/infrastructure/fs/install-state-repository.js`
+- `src/infrastructure/runtime/materialize-skills.js`
 
 ### 4. Runtime Consumption Plane
 
@@ -76,6 +100,8 @@ For bundled plugins:
 - local plugin skill `requires` remain the authored dependency truth
 - standalone skill packages can be vendored into the plugin package at publish time
 - the consumer receives one self-contained plugin artifact
+
+Internally, plugin build/dev now reuses shared skill model and graph logic, while plugin-specific runtime concerns remain in plugin workflows and runtime infrastructure.
 
 ## Core Domain Model
 

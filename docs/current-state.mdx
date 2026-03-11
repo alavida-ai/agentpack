@@ -7,6 +7,14 @@ description: "What the replacement slice actually implements today"
 
 Describe what the replacement slice actually does today, separate from the broader architecture intent.
 
+The current implementation is no longer only a command-oriented replacement slice. It now has explicit internal boundaries for:
+
+- shared skill model parsing
+- shared skill graph and lifecycle-status reasoning
+- shared provenance/build-state ownership
+- application-level workflow entrypoints
+- file-backed state repositories and runtime materialization helpers
+
 ## Implemented Commands
 
 ### `agentpack plugin inspect`
@@ -102,6 +110,10 @@ This slice is real and working, but still intentionally focused on repo-local au
 - multiple direct roots across separate installs
 - shared-dependency preservation when one direct root is removed
 - workbench bootstrap from multiple local skills with root union and deduplication
+- layered internal architecture for skill-domain reuse across `skills` and `plugin`
+- dedicated domain modules for skill model, graph, and provenance
+- application entrypoints for inspect/validate/stale and plugin bundle workflows
+- dedicated infrastructure modules for build/install state and runtime materialization/watch behavior
 
 **Metadata policy:**
 

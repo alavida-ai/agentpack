@@ -268,8 +268,9 @@ export function startSkillDev(target, {
   onStart = () => {},
   onRebuild = () => {},
 } = {}) {
-  const repoRoot = findRepoRoot(cwd);
-  const { skillDir } = resolveLocalPackagedSkillDir(repoRoot, target);
+  const outerRepoRoot = findRepoRoot(cwd);
+  const { skillDir } = resolveLocalPackagedSkillDir(outerRepoRoot, target);
+  const repoRoot = findRepoRoot(skillDir);
   let closed = false;
   let timer = null;
   let currentNames = [];

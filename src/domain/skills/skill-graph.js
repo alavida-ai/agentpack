@@ -26,6 +26,7 @@ export function readSkillGraphNode(repoRoot, packageDir, {
 
   return {
     name: skillMetadata.name,
+    description: skillMetadata.description,
     packageName: packageMetadata.packageName,
     packageVersion: packageMetadata.packageVersion,
     skillPath: normalizeDisplayPath(repoRoot, packageDir),

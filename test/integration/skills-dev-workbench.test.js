@@ -134,7 +134,7 @@ requires:
       assert.match(html, /\/assets\/dashboard\.js/);
 
       const asset = await fetch(`${workbenchUrl}/assets/dashboard.js`).then((response) => response.text());
-      assert.match(asset, /Skill Dev Workbench/);
+      assert.match(asset, /Skill Graph/);
 
       const model = await fetch(`${workbenchUrl}/api/model`).then((response) => response.json());
       assert.equal(model.selected.packageName, '@alavida/value-copywriting');

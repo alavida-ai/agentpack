@@ -19,11 +19,11 @@ The current implementation is no longer only a command-oriented replacement slic
 
 ### `agentpack plugin inspect`
 
-Implemented and tested. Computes direct and transitive bundle closure for a plugin package from local skill `requires`.
+Implemented and tested. Computes direct and transitive bundle closure for a plugin package from local skill `requires`, and returns actionable diagnostics when plugin definition files are missing or malformed.
 
 ### `agentpack plugin validate`
 
-Implemented and tested. Verifies that plugin-local skill dependencies can be vendored successfully.
+Implemented and tested. Verifies that plugin-local skill dependencies can be vendored successfully, with the same structured diagnostics for missing `package.json` or `.claude-plugin/plugin.json`.
 
 ### `agentpack plugin build`
 

@@ -275,6 +275,7 @@ export function startSkillDev(target, {
   let currentNames = [];
   let watcher = null;
   let workbench = null;
+  let initialResult = null;
 
   const cleanup = () => {
     if (closed) return { name: currentNames[0] || null, unlinked: false, removed: [] };
@@ -309,14 +310,32 @@ export function startSkillDev(target, {
     processCleanupHandlers.clear();
   };
 
-  const run = async () => {
-    const result = devSkill(target, { cwd, sync });
+  const enrichResult = (result) => ({
+    ...result,
+    workbench: workbench
+      ? {
+        enabled: true,
+        url: workbench.url,
+        port: workbench.port,
+      }
+      : {
+        enabled: false,
+        url: null,
+        port: null,
+      },
+  });
+
+  const applyDevResult = (result) => {
     const nextNames = result.linkedSkills.map((entry) => entry.name);
     const staleNames = currentNames.filter((name) => !nextNames.includes(name));
     if (staleNames.length > 0) {
       removeSkillLinksByNames(repoRoot, staleNames, normalizeDisplayPath);
     }
     currentNames = nextNames;
+    return result;
+  };
+
+  const startOrRefreshWorkbench = async () => {
     if (dashboard && !workbench) {
       workbench = await startSkillDevWorkbench({
         repoRoot,
@@ -327,25 +346,20 @@ export function startSkillDev(target, {
     } else if (workbench) {
       workbench.refresh();
     }
-    return {
-      ...result,
-      workbench: workbench
-        ? {
-          enabled: true,
-          url: workbench.url,
-          port: workbench.port,
-        }
-        : {
-          enabled: false,
-          url: null,
-          port: null,
-        },
-    };
   };
 
-  Promise.resolve(run()).then(onStart).catch((error) => {
-    throw error;
-  });
+  initialResult = enrichResult(applyDevResult(devSkill(target, { cwd, sync })));
+  const ready = Promise.resolve(startOrRefreshWorkbench())
+    .then(() => {
+      const result = enrichResult(initialResult);
+      initialResult = result;
+      onStart(result);
+      return result;
+    })
+    .catch((error) => {
+      cleanup();
+      throw error;
+    });
 
   attachProcessCleanup();
 
@@ -353,19 +367,22 @@ export function startSkillDev(target, {
     if (closed) return;
     clearTimeout(timer);
     timer = setTimeout(() => {
-      try {
-        const result = run();
-        Promise.resolve(result).then(onRebuild).catch((error) => {
+      Promise.resolve()
+        .then(() => applyDevResult(devSkill(target, { cwd, sync })))
+        .then(async (result) => {
+          await startOrRefreshWorkbench();
+          return enrichResult(result);
+        })
+        .then(onRebuild)
+        .catch((error) => {
           onRebuild({ error });
         });
-      } catch (error) {
-        onRebuild({ error });
-      }
     }, 100);
   });
 
   return {
-    initialResult: null,
+    initialResult,
+    ready,
     close() {
       return cleanup();
     },

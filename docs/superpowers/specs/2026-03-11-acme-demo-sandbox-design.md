@@ -118,12 +118,11 @@ sandbox/acme-demo/
     brand/
       knowledge/
       skills/
+      workbenches/
     research/
       skills/
     methodology/
       skills/
-  workbenches/
-    website-dev/
   package.json
   README.md
 ```
@@ -148,12 +147,14 @@ This gives the selected skill:
 Include one small consumer/workbench shell such as:
 
 ```text
-workbenches/website-dev/
+domains/brand/workbenches/website-dev/
 ```
 
 This gives the sandbox enough realism to support install and workbench-related flows without expanding into a large plugin showcase.
 
 The workbench should include local workbench skills that reference packaged skills from the domain skill directories via `requires`.
+
+Do not add the legacy workbench config file to the sandbox. The goal here is a domain-scoped content layout for demo and authoring flows, not a legacy workbench-config surface.
 
 That matters because the sandbox should demonstrate both layers clearly:
 
@@ -187,7 +188,7 @@ This path should make the value of the graph/workbench obvious.
 
 For that reason, the hero path should include:
 
-- a local workbench skill inside `workbenches/website-dev/skills/...`
+- a local workbench skill inside `domains/brand/workbenches/website-dev/skills/...`
 - a packaged domain skill that the workbench skill requires
 - at least one supporting packaged dependency skill
 - at least two source files attached to the selected packaged skill

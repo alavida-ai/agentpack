@@ -55,11 +55,9 @@
   Supporting packaged methodology skill.
 - `domains/methodology/skills/editorial-principles/package.json`
   Package metadata for the methodology skill.
-- `workbenches/website-dev/workbench.json`
-  Minimal workbench shell.
-- `workbenches/website-dev/skills/copywriter/SKILL.md`
+- `domains/brand/workbenches/website-dev/skills/copywriter/SKILL.md`
   Local workbench skill requiring the packaged hero skill.
-- `workbenches/website-dev/skills/landing-page-auditor/SKILL.md`
+- `domains/brand/workbenches/website-dev/skills/landing-page-auditor/SKILL.md`
   Optional second local workbench skill requiring packaged skills.
 
 ## Chunk 1: Wire The Submodule Into `agentpack`
@@ -329,16 +327,15 @@ git commit -m "feat: add acme packaged skills"
 ### Task 6: Add local workbench skills that point at packaged skills
 
 **Files:**
-- Create in submodule: `workbenches/website-dev/workbench.json`
-- Create in submodule: `workbenches/website-dev/skills/copywriter/SKILL.md`
-- Create in submodule: `workbenches/website-dev/skills/landing-page-auditor/SKILL.md`
+- Create in submodule: `domains/brand/workbenches/website-dev/skills/copywriter/SKILL.md`
+- Create in submodule: `domains/brand/workbenches/website-dev/skills/landing-page-auditor/SKILL.md`
 
 - [ ] **Step 1: Write the failing local skill inspect expectation**
 
 Run:
 
 ```bash
-node bin/agentpack.js skills inspect sandbox/acme-demo/workbenches/website-dev/skills/copywriter
+node bin/agentpack.js skills inspect sandbox/acme-demo/domains/brand/workbenches/website-dev/skills/copywriter
 ```
 
 Expected: FAIL before the local workbench skills exist
@@ -355,7 +352,7 @@ Requirements:
 Run:
 
 ```bash
-node bin/agentpack.js skills inspect sandbox/acme-demo/workbenches/website-dev/skills/copywriter
+node bin/agentpack.js skills inspect sandbox/acme-demo/domains/brand/workbenches/website-dev/skills/copywriter
 ```
 
 Expected: PASS and shows packaged `requires`
@@ -364,7 +361,7 @@ Expected: PASS and shows packaged `requires`
 
 ```bash
 cd sandbox/acme-demo
-git add workbenches/website-dev
+git add domains/brand/workbenches/website-dev
 git commit -m "feat: add acme website-dev workbench skills"
 ```
 
@@ -498,7 +495,7 @@ Run:
 cd sandbox/acme-demo && node ../../bin/agentpack.js skills inspect domains/brand/skills/copywriting
 cd sandbox/acme-demo && node ../../bin/agentpack.js skills dependencies @acme/brand-copywriting
 cd sandbox/acme-demo && node ../../bin/agentpack.js skills stale
-cd sandbox/acme-demo && node ../../bin/agentpack.js skills inspect workbenches/website-dev/skills/copywriter
+cd sandbox/acme-demo && node ../../bin/agentpack.js skills inspect domains/brand/workbenches/website-dev/skills/copywriter
 ```
 
 Expected:

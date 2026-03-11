@@ -1,27 +1,29 @@
 import http from 'node:http';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { build } from 'esbuild';
+import { AgentpackError } from '../../utils/errors.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '..', '..', '..');
 const htmlPath = join(projectRoot, 'src', 'dashboard', 'index.html');
-const bundlePath = join(projectRoot, 'src', 'dashboard', 'dist', 'dashboard.js');
+const bundlePath = process.env.AGENTPACK_DASHBOARD_BUNDLE_PATH
+  ? resolve(process.cwd(), process.env.AGENTPACK_DASHBOARD_BUNDLE_PATH)
+  : join(projectRoot, 'src', 'dashboard', 'dist', 'dashboard.js');
 
-async function ensureDashboardBundle() {
-  await build({
-    entryPoints: [join(projectRoot, 'src', 'dashboard', 'main.jsx')],
-    bundle: true,
-    format: 'esm',
-    outfile: bundlePath,
-    jsx: 'automatic',
+function ensureDashboardBundle() {
+  if (existsSync(bundlePath)) return;
+
+  throw new AgentpackError('Skill workbench bundle is missing from this install', {
+    code: 'missing_skill_workbench_bundle',
+    suggestion: 'Reinstall agentpack or rebuild the dashboard bundle before starting skills dev.',
+    path: 'src/dashboard/dist/dashboard.js',
   });
 }
 
 export async function startSkillDevWorkbenchServer({ model, onAction = null }) {
   let currentModel = model;
-  await ensureDashboardBundle();
+  ensureDashboardBundle();
 
   const server = http.createServer(async (req, res) => {
     if (!req.url) {

@@ -118,12 +118,17 @@ Supported targets:
 
 Behavior:
 
+- validates plugin package metadata early and reports exact missing files or fields
 - scans local plugin `skills/**/SKILL.md`
 - unions direct `requires`
 - resolves packaged skills from repo-local packages first, then plugin-local `node_modules`
 - computes transitive closure from packaged skill `requires`
 - reports direct vs transitive bundled skill packages
 - reports unresolved package requirements if any exist
+
+Failure mode:
+
+- missing or invalid plugin definition files return actionable diagnostics with `path`, `details`, and `nextSteps`
 
 <Check>Implemented. Supports text and JSON output.</Check>
 
@@ -143,6 +148,10 @@ Checks:
 - every direct required standalone skill package is present in plugin `package.json.devDependencies`
 - every direct and transitive required skill package resolves
 - vendored skill names do not collide with local plugin skill directories or each other
+
+Failure mode:
+
+- missing plugin files or package metadata return the same actionable structured diagnostics as `plugin inspect`
 
 <Check>Implemented. Supports text and JSON output.</Check>
 

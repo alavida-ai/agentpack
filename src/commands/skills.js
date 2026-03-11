@@ -28,7 +28,7 @@ export function skillsCommand() {
     .option('--no-sync', 'Skip syncing managed package dependencies from requires')
     .option('--no-dashboard', 'Skip starting the local skill development workbench')
     .argument('<target>', 'Packaged skill directory or SKILL.md path')
-    .action((target, opts, command) => {
+    .action(async (target, opts, command) => {
       const globalOpts = command.optsWithGlobals();
       const session = startSkillDev(target, {
         sync: opts.sync,
@@ -77,6 +77,7 @@ export function skillsCommand() {
 
       process.once('SIGTERM', stop);
       process.once('SIGINT', stop);
+      await session.ready;
     });
 
   cmd

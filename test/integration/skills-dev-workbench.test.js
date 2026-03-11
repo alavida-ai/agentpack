@@ -224,6 +224,105 @@ requires: []
     }
   });
 
+  it('rewatches source files added after skills dev has already started', async () => {
+    const repo = createTempRepo('skills-dev-workbench-dynamic-sources');
+    let session;
+
+    try {
+      mkdirSync(join(repo.root, 'domains', 'value', 'knowledge'), { recursive: true });
+      writeFileSync(join(repo.root, 'domains', 'value', 'knowledge', 'tone-of-voice.md'), '# Voice\n');
+      writeFileSync(join(repo.root, 'domains', 'value', 'knowledge', 'proof-points.md'), '# Proof\n');
+      mkdirSync(join(repo.root, '.agentpack'), { recursive: true });
+
+      addPackagedSkill(repo.root, 'skills/copywriting', {
+        skillMd: `---
+name: value-copywriting
+description: Copy.
+metadata:
+  sources:
+    - domains/value/knowledge/tone-of-voice.md
+requires: []
+---
+
+# Copy
+`,
+        packageJson: {
+          name: '@alavida/value-copywriting',
+          version: '1.0.0',
+          files: ['SKILL.md'],
+        },
+      });
+
+      writeFileSync(
+        join(repo.root, '.agentpack', 'build-state.json'),
+        JSON.stringify(
+          {
+            version: 1,
+            skills: {
+              '@alavida/value-copywriting': {
+                package_version: '1.0.0',
+                skill_path: 'skills/copywriting',
+                skill_file: 'skills/copywriting/SKILL.md',
+                sources: {
+                  'domains/value/knowledge/tone-of-voice.md': {
+                    hash: hashFile(join(repo.root, 'domains', 'value', 'knowledge', 'tone-of-voice.md')),
+                  },
+                  'domains/value/knowledge/proof-points.md': {
+                    hash: hashFile(join(repo.root, 'domains', 'value', 'knowledge', 'proof-points.md')),
+                  },
+                },
+                requires: [],
+              },
+            },
+          },
+          null,
+          2
+        ) + '\n'
+      );
+
+      session = startCLI(['skills', 'dev', 'skills/copywriting'], {
+        cwd: repo.root,
+        env: {
+          AGENTPACK_DISABLE_BROWSER: '1',
+        },
+      });
+
+      const output = await session.waitForOutput(/Workbench URL: http:\/\/127\.0\.0\.1:\d+/);
+      const workbenchUrl = extractWorkbenchUrl(output);
+
+      writeFileSync(
+        join(repo.root, 'skills', 'copywriting', 'SKILL.md'),
+        `---
+name: value-copywriting
+description: Copy.
+metadata:
+  sources:
+    - domains/value/knowledge/tone-of-voice.md
+    - domains/value/knowledge/proof-points.md
+requires: []
+---
+
+# Copy
+`
+      );
+
+      await session.waitForOutput(/Reloaded Skill: value-copywriting/);
+
+      writeFileSync(join(repo.root, 'domains', 'value', 'knowledge', 'proof-points.md'), '# Proof changed\n');
+
+      let model;
+      await waitUntil(async () => {
+        model = await fetch(`${workbenchUrl}/api/model`).then((response) => response.json());
+        return model.selected.status === 'stale';
+      });
+
+      assert.equal(model.selected.status, 'stale');
+    } finally {
+      if (session) await session.stop();
+      repo.cleanup();
+    }
+  });
+
   it('runs validate-skill through a workbench action endpoint', async () => {
     const repo = createTempRepo('skills-dev-workbench-action');
     let session;

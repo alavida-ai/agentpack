@@ -4,7 +4,8 @@
   "description": "Package-backed skills lifecycle CLI for agent skills and plugins",
   "type": "module",
   "bin": {
-    "agentpack": "bin/agentpack.js"
+    "agentpack": "bin/agentpack.js",
+    "intent": "./bin/intent.js"
   },
   "files": [
     "bin",

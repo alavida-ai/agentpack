@@ -109,6 +109,8 @@ agentpack plugin validate path/to/plugin
 agentpack plugin build path/to/plugin
 ```
 
+`plugin inspect` and `plugin validate` now emit actionable structured diagnostics when a plugin target is missing required files such as `package.json` or `.claude-plugin/plugin.json`.
+
 For watch mode during development:
 
 ```bash
@@ -221,7 +223,7 @@ Implemented today:
 
 Hosted docs: https://docs.alavida.ai
 
-For a repo-local demo and manual testing target, initialize submodules and use [sandbox/acme-demo/README.md](/Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/sandbox/acme-demo/README.md).
+For a repo-local demo and manual testing target, initialize submodules and use [`sandbox/acme-demo/`](./sandbox/acme-demo).
 
 ```bash
 git submodule update --init --recursive

@@ -55,6 +55,9 @@ agentpack skills validate domains/operations/skills/agonda-prioritisation
 # Dev-link it into .claude/skills and .agents/skills for local testing
 agentpack skills dev domains/operations/skills/agonda-prioritisation
 
+# Skip the localhost workbench if you only want CLI linking
+agentpack skills dev --no-dashboard domains/operations/skills/agonda-prioritisation
+
 # In a consumer repo, install a published skill package
 agentpack skills install @alavida-ai/agonda-prioritisation
 
@@ -62,6 +65,8 @@ agentpack skills install @alavida-ai/agonda-prioritisation
 agentpack skills env
 
 # Build or watch a plugin artifact
+agentpack plugin inspect path/to/plugin
+agentpack plugin validate path/to/plugin
 agentpack plugin build path/to/plugin
 agentpack plugin dev path/to/plugin
 ```

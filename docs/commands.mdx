@@ -79,13 +79,16 @@ Behavior:
 - optionally syncs managed `requires` into `package.json.dependencies`
 - links the skill into `.claude/skills/<name>`
 - links the skill into `.agents/skills/<name>`
-- watches the skill directory for changes until the process exits
+- starts a localhost workbench by default unless `--no-dashboard` is passed
+- serves a single-skill dashboard with a focused DAG, inspector, and lifecycle action buttons
+- watches the skill directory plus direct `metadata.sources` for changes until the process exits
 - removes the links when the process is stopped
 
 Notes:
 
 - source-backed validation resolves `metadata.sources` relative to the current repo root
 - unresolved `requires` are reported, but local linking still succeeds
+- the dashboard is a visibility workbench, not the primary skill authoring surface
 - if your current Claude Code or Codex session was already running, start a fresh session after linking so the runtime rescans `.claude/skills/` or `.agents/skills/`
 
 <Check>Implemented. Supports text and JSON output.</Check>

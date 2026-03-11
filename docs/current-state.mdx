@@ -43,7 +43,7 @@ Implemented and tested. Supports validating one packaged skill or all authored p
 
 ### `agentpack skills dev`
 
-Implemented and tested. Links one packaged skill into `.claude/skills/` and `.agents/skills/` for local runtime testing.
+Implemented and tested. Links one packaged skill into `.claude/skills/` and `.agents/skills/` for local runtime testing, starts a single-skill localhost workbench by default, and refreshes that workbench when the selected skill or direct sources change.
 
 ### `agentpack skills unlink`
 
@@ -96,6 +96,7 @@ This slice is real and working, but still intentionally focused on repo-local au
 - plugin artifact build and dev watch
 - package validation for release-readiness
 - local packaged-skill dev linking and unlinking
+- single-skill local workbench visibility during `skills dev`
 - registry-backed and repo-local available update visibility for installed skills
 - repo-local private registry configuration visibility
 - environment-level health overview for consumer repos

@@ -3,6 +3,12 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { findAllWorkbenches, findRepoRoot, findWorkbenchContext, resolveWorkbenchFlag } from './context.js';
 import {
+  normalizeDisplayPath,
+  normalizeRepoPath,
+  parseSkillFrontmatterFile,
+  readPackageMetadata,
+} from '../domain/skills/skill-model.js';
+import {
   buildStateRecordForPackageDir,
   compareRecordedSources,
   hashFile,
@@ -21,160 +27,6 @@ function isManagedPackageName(packageName) {
 
 function inferManagedScope(packageName) {
   return MANAGED_PACKAGE_SCOPES.find((scope) => packageName?.startsWith(`${scope}/`)) || null;
-}
-
-function parseScalar(value) {
-  const trimmed = value.trim();
-  if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed;
-}
-
-function foldBlockScalar(lines, startIndex, baseIndent) {
-  const values = [];
-  let index = startIndex + 1;
-
-  while (index < lines.length) {
-    const rawLine = lines[index];
-    if (!rawLine.trim()) {
-      values.push('');
-      index += 1;
-      continue;
-    }
-
-    const indentMatch = rawLine.match(/^(\s*)/);
-    const indent = indentMatch ? indentMatch[1].length : 0;
-    if (indent <= baseIndent) break;
-
-    values.push(rawLine.slice(baseIndent + 2).trimEnd());
-    index += 1;
-  }
-
-  const folded = values
-    .join('\n')
-    .split('\n\n')
-    .map((chunk) => chunk.split('\n').join(' ').trim())
-    .filter((chunk, idx, arr) => chunk.length > 0 || idx < arr.length - 1)
-    .join('\n\n')
-    .trim();
-
-  return { value: folded, nextIndex: index };
-}
-
-function ensureContainer(target, key) {
-  if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
-    target[key] = {};
-  }
-  return target[key];
-}
-
-export function parseSkillFrontmatterFile(skillFilePath) {
-  if (!existsSync(skillFilePath)) {
-    throw new NotFoundError(`skill file not found: ${skillFilePath}`, { code: 'skill_not_found' });
-  }
-
-  const content = readFileSync(skillFilePath, 'utf-8');
-  if (!content.startsWith('---\n')) {
-    throw new ValidationError('SKILL.md missing frontmatter', { code: 'missing_frontmatter' });
-  }
-
-  const fmEnd = content.indexOf('\n---', 4);
-  if (fmEnd === -1) {
-    throw new ValidationError('SKILL.md has unclosed frontmatter', { code: 'unclosed_frontmatter' });
-  }
-
-  const lines = content.slice(4, fmEnd).split('\n');
-  const fields = {};
-  let activeArrayKey = null;
-  let activeArrayTarget = null;
-  let activeParentKey = null;
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const rawLine = lines[index];
-    const line = rawLine.trimEnd();
-    if (!line.trim()) continue;
-
-    const listMatch = rawLine.match(/^(\s*)-\s+(.+)$/);
-    if (listMatch && activeArrayKey && activeArrayTarget) {
-      activeArrayTarget[activeArrayKey].push(parseScalar(listMatch[2]));
-      continue;
-    }
-
-    const nestedKeyMatch = rawLine.match(/^\s{2}([A-Za-z][\w-]*):\s*(.*)$/);
-    if (nestedKeyMatch && activeParentKey) {
-      const [, key, value] = nestedKeyMatch;
-      const parent = ensureContainer(fields, activeParentKey);
-      if (value === '') {
-        parent[key] = [];
-        activeArrayKey = key;
-        activeArrayTarget = parent;
-        continue;
-      }
-
-      parent[key] = parseScalar(value);
-      activeArrayKey = null;
-      activeArrayTarget = null;
-      continue;
-    }
-
-    const keyMatch = rawLine.match(/^([A-Za-z][\w-]*):\s*(.*)$/);
-    if (!keyMatch) continue;
-
-    const [, key, value] = keyMatch;
-    if (value === '>' || value === '|') {
-      const { value: blockValue, nextIndex } = foldBlockScalar(lines, index, 0);
-      fields[key] = blockValue;
-      activeParentKey = null;
-      activeArrayKey = null;
-      activeArrayTarget = null;
-      index = nextIndex - 1;
-      continue;
-    }
-
-    if (value === '') {
-      fields[key] = fields[key] && typeof fields[key] === 'object' && !Array.isArray(fields[key])
-        ? fields[key]
-        : [];
-      activeParentKey = key;
-      activeArrayKey = Array.isArray(fields[key]) ? key : null;
-      activeArrayTarget = Array.isArray(fields[key]) ? fields : null;
-      continue;
-    }
-
-    fields[key] = parseScalar(value);
-    activeParentKey = null;
-    activeArrayKey = null;
-    activeArrayTarget = null;
-  }
-
-  if (!fields.name) {
-    throw new ValidationError('SKILL.md frontmatter missing "name" field', { code: 'missing_name' });
-  }
-  if (!fields.description) {
-    throw new ValidationError('SKILL.md frontmatter missing "description" field', { code: 'missing_description' });
-  }
-
-  return {
-    name: fields.name,
-    description: fields.description,
-    sources: Array.isArray(fields.metadata?.sources)
-      ? fields.metadata.sources
-      : (Array.isArray(fields.sources) ? fields.sources : []),
-    requires: Array.isArray(fields.metadata?.requires)
-      ? fields.metadata.requires
-      : (Array.isArray(fields.requires) ? fields.requires : []),
-    status: typeof fields.metadata?.status === 'string' ? fields.metadata.status : null,
-    replacement: typeof fields.metadata?.replacement === 'string' ? fields.metadata.replacement : null,
-    message: typeof fields.metadata?.message === 'string' ? fields.metadata.message : null,
-  };
-}
-
-function normalizeDisplayPath(repoRoot, absolutePath) {
-  return relative(repoRoot, absolutePath).split('\\').join('/');
 }
 
 function ensureDir(pathValue) {
@@ -300,32 +152,6 @@ export function findPackageDirByName(repoRoot, packageName) {
   }
 
   return null;
-}
-
-export function readPackageMetadata(packageDir) {
-  const packageJsonPath = join(packageDir, 'package.json');
-  if (!existsSync(packageJsonPath)) {
-    return {
-      packageName: null,
-      packageVersion: null,
-      dependencies: {},
-      devDependencies: {},
-      files: null,
-      repository: null,
-      publishConfigRegistry: null,
-    };
-  }
-
-  const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-  return {
-    packageName: pkg.name || null,
-    packageVersion: pkg.version || null,
-    dependencies: pkg.dependencies || {},
-    devDependencies: pkg.devDependencies || {},
-    files: Array.isArray(pkg.files) ? pkg.files : null,
-    repository: pkg.repository || null,
-    publishConfigRegistry: pkg.publishConfig?.registry || null,
-  };
 }
 
 function readPackageJson(packageDir) {
@@ -557,10 +383,6 @@ export function unlinkSkill(name, { cwd = process.cwd() } = {}) {
     unlinked: true,
     removed,
   };
-}
-
-export function normalizeRepoPath(repoRoot, absolutePath) {
-  return normalizeDisplayPath(repoRoot, absolutePath);
 }
 
 function buildValidateNextSteps(packageMetadata, valid) {

@@ -1,11 +1,9 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, watch, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
+import { normalizeRepoPath, parseSkillFrontmatterFile, readPackageMetadata } from '../domain/skills/skill-model.js';
 import {
   findPackageDirByName,
-  normalizeRepoPath,
-  parseSkillFrontmatterFile,
-  readPackageMetadata,
   syncSkillDependencies,
 } from './skills.js';
 import { findRepoRoot } from './context.js';

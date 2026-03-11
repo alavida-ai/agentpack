@@ -1,6 +1,10 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+  readBuildState as readBuildStateRecord,
+  writeBuildState as writeBuildStateRecord,
+} from '../../infrastructure/fs/build-state-repository.js';
 
 export function hashFile(filePath) {
   const digest = createHash('sha256').update(readFileSync(filePath)).digest('hex');
@@ -8,17 +12,11 @@ export function hashFile(filePath) {
 }
 
 export function readBuildState(repoRoot) {
-  const buildStatePath = join(repoRoot, '.agentpack', 'build-state.json');
-  if (!existsSync(buildStatePath)) {
-    return { version: 1, skills: {} };
-  }
-
-  return JSON.parse(readFileSync(buildStatePath, 'utf-8'));
+  return readBuildStateRecord(repoRoot);
 }
 
 export function writeBuildState(repoRoot, state) {
-  mkdirSync(join(repoRoot, '.agentpack'), { recursive: true });
-  writeFileSync(join(repoRoot, '.agentpack', 'build-state.json'), JSON.stringify(state, null, 2) + '\n');
+  writeBuildStateRecord(repoRoot, state);
 }
 
 export function compareRecordedSources(repoRoot, record) {

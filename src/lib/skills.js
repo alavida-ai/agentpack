@@ -8,6 +8,7 @@ import {
   buildSkillStatusMap,
   readNodeStatus,
 } from '../domain/skills/skill-graph.js';
+import { readInstallState, writeInstallState } from '../infrastructure/fs/install-state-repository.js';
 import {
   normalizeDisplayPath,
   normalizeRepoPath,
@@ -864,20 +865,6 @@ export function validateSkills(target, { cwd = process.cwd() } = {}) {
 }
 function normalizeRelativePath(pathValue) {
   return pathValue.split('\\').join('/');
-}
-
-function readInstallState(repoRoot) {
-  const installStatePath = join(repoRoot, '.agentpack', 'install.json');
-  if (!existsSync(installStatePath)) {
-    return { version: 1, installs: {} };
-  }
-
-  return JSON.parse(readFileSync(installStatePath, 'utf-8'));
-}
-
-function writeInstallState(repoRoot, state) {
-  mkdirSync(join(repoRoot, '.agentpack'), { recursive: true });
-  writeFileSync(join(repoRoot, '.agentpack', 'install.json'), JSON.stringify(state, null, 2) + '\n');
 }
 
 function normalizeRequestedTarget(target, cwd = process.cwd()) {

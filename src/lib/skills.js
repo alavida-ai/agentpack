@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, watch, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, watch, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { findAllWorkbenches, findRepoRoot, findWorkbenchContext, resolveWorkbenchFlag } from './context.js';
@@ -8,7 +8,14 @@ import {
   buildSkillStatusMap,
   readNodeStatus,
 } from '../domain/skills/skill-graph.js';
-import { readInstallState, writeInstallState } from '../infrastructure/fs/install-state-repository.js';
+import { readInstallState } from '../infrastructure/fs/install-state-repository.js';
+import {
+  ensureSkillLink,
+  rebuildInstallState,
+  removePathIfExists,
+  removeSkillLinks,
+  removeSkillLinksByNames,
+} from '../infrastructure/runtime/materialize-skills.js';
 import {
   normalizeDisplayPath,
   normalizeRepoPath,
@@ -34,19 +41,6 @@ function isManagedPackageName(packageName) {
 
 function inferManagedScope(packageName) {
   return MANAGED_PACKAGE_SCOPES.find((scope) => packageName?.startsWith(`${scope}/`)) || null;
-}
-
-function ensureDir(pathValue) {
-  mkdirSync(pathValue, { recursive: true });
-}
-
-function ensureSkillLink(repoRoot, baseDir, skillName, skillDir) {
-  const skillsDir = join(repoRoot, baseDir, 'skills');
-  ensureDir(skillsDir);
-  const linkPath = join(skillsDir, skillName);
-  removePathIfExists(linkPath);
-  symlinkSync(skillDir, linkPath, 'dir');
-  return normalizeDisplayPath(repoRoot, linkPath);
 }
 
 function resolveDevLinkedSkills(repoRoot, rootSkillDir) {
@@ -237,8 +231,8 @@ export function devSkill(target, {
     const links = [];
 
     for (const linkedSkill of linkedSkills) {
-      links.push(ensureSkillLink(repoRoot, '.claude', linkedSkill.name, linkedSkill.skillDir));
-      links.push(ensureSkillLink(repoRoot, '.agents', linkedSkill.name, linkedSkill.skillDir));
+      links.push(ensureSkillLink(repoRoot, '.claude', linkedSkill.name, linkedSkill.skillDir, normalizeDisplayPath));
+      links.push(ensureSkillLink(repoRoot, '.agents', linkedSkill.name, linkedSkill.skillDir, normalizeDisplayPath));
     }
 
     return {
@@ -266,27 +260,6 @@ export function devSkill(target, {
   }
 }
 
-function removeSkillLinks(repoRoot, name) {
-  const removed = [];
-  for (const pathValue of [
-    join(repoRoot, '.claude', 'skills', name),
-    join(repoRoot, '.agents', 'skills', name),
-  ]) {
-    if (!existsSync(pathValue)) continue;
-    removePathIfExists(pathValue);
-    removed.push(normalizeDisplayPath(repoRoot, pathValue));
-  }
-  return removed;
-}
-
-function removeSkillLinksByNames(repoRoot, names) {
-  const removed = [];
-  for (const name of names) {
-    removed.push(...removeSkillLinks(repoRoot, name));
-  }
-  return [...new Set(removed)];
-}
-
 export function startSkillDev(target, {
   cwd = process.cwd(),
   sync = true,
@@ -305,7 +278,7 @@ export function startSkillDev(target, {
     closed = true;
     clearTimeout(timer);
     if (watcher) watcher.close();
-    const removed = removeSkillLinksByNames(repoRoot, currentNames);
+    const removed = removeSkillLinksByNames(repoRoot, currentNames, normalizeDisplayPath);
     detachProcessCleanup();
     return {
       name: currentNames[0] || null,
@@ -337,7 +310,7 @@ export function startSkillDev(target, {
     const nextNames = result.linkedSkills.map((entry) => entry.name);
     const staleNames = currentNames.filter((name) => !nextNames.includes(name));
     if (staleNames.length > 0) {
-      removeSkillLinksByNames(repoRoot, staleNames);
+      removeSkillLinksByNames(repoRoot, staleNames, normalizeDisplayPath);
     }
     currentNames = nextNames;
     return result;
@@ -383,7 +356,7 @@ export function unlinkSkill(name, { cwd = process.cwd() } = {}) {
     });
   }
 
-  const removed = removeSkillLinks(repoRoot, name);
+  const removed = removeSkillLinks(repoRoot, name, normalizeDisplayPath);
 
   return {
     name,
@@ -1105,73 +1078,6 @@ function resolveNpmInstallTargets(directTargetMap) {
   return [...new Set(npmInstallTargets)];
 }
 
-function ensureSymlink(targetPath, linkPath) {
-  rmSync(linkPath, { recursive: true, force: true });
-  mkdirSync(dirname(linkPath), { recursive: true });
-  symlinkSync(targetPath, linkPath, 'dir');
-}
-
-function removePathIfExists(pathValue) {
-  rmSync(pathValue, { recursive: true, force: true });
-}
-
-function buildInstallRecord(repoRoot, packageDir, directTargetMap) {
-  const packageMetadata = readPackageMetadata(packageDir);
-  if (!packageMetadata.packageName) return null;
-
-  const skillMetadata = parseSkillFrontmatterFile(join(packageDir, 'SKILL.md'));
-  const skillDirName = skillMetadata.name;
-  const materializations = [];
-
-  const claudeTargetAbs = join(repoRoot, '.claude', 'skills', skillDirName);
-  ensureSymlink(packageDir, claudeTargetAbs);
-  materializations.push({
-    target: normalizeRelativePath(relative(repoRoot, claudeTargetAbs)),
-    mode: 'symlink',
-  });
-
-  const agentsTargetAbs = join(repoRoot, '.agents', 'skills', skillDirName);
-  ensureSymlink(packageDir, agentsTargetAbs);
-  materializations.push({
-    target: normalizeRelativePath(relative(repoRoot, agentsTargetAbs)),
-    mode: 'symlink',
-  });
-
-  return {
-    packageName: packageMetadata.packageName,
-    direct: directTargetMap.has(packageMetadata.packageName),
-    requestedTarget: directTargetMap.get(packageMetadata.packageName) || null,
-    packageVersion: packageMetadata.packageVersion,
-    sourcePackagePath: normalizeRelativePath(relative(repoRoot, packageDir)),
-    materializations,
-  };
-}
-
-function rebuildInstallState(repoRoot, directTargetMap) {
-  const packageDirs = listInstalledPackageDirs(join(repoRoot, 'node_modules'));
-  const installs = {};
-
-  for (const packageDir of packageDirs) {
-    const skillFile = join(packageDir, 'SKILL.md');
-    if (!existsSync(skillFile)) continue;
-
-    const record = buildInstallRecord(repoRoot, packageDir, directTargetMap);
-    if (!record) continue;
-
-    installs[record.packageName] = {
-      direct: record.direct,
-      requested_target: record.requestedTarget,
-      package_version: record.packageVersion,
-      source_package_path: record.sourcePackagePath,
-      materializations: record.materializations,
-    };
-  }
-
-  const state = { version: 1, installs };
-  writeInstallState(repoRoot, state);
-  return state;
-}
-
 export function installSkills(targets, { cwd = process.cwd() } = {}) {
   const repoRoot = findRepoRoot(cwd);
   const previousState = readInstallState(repoRoot);
@@ -1211,7 +1117,12 @@ export function installSkills(targets, { cwd = process.cwd() } = {}) {
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 
-  return rebuildInstallState(repoRoot, directTargetMap);
+  return rebuildInstallState(repoRoot, directTargetMap, {
+    listInstalledPackageDirs,
+    parseSkillFrontmatterFile,
+    readPackageMetadata,
+    normalizeRelativePath,
+  });
 }
 
 export function inspectSkillsEnv({ cwd = process.cwd() } = {}) {
@@ -1527,7 +1438,12 @@ export function uninstallSkills(target, { cwd = process.cwd() } = {}) {
     });
   }
 
-  const nextState = rebuildInstallState(repoRoot, nextDirectTargetMap);
+  const nextState = rebuildInstallState(repoRoot, nextDirectTargetMap, {
+    listInstalledPackageDirs,
+    parseSkillFrontmatterFile,
+    readPackageMetadata,
+    normalizeRelativePath,
+  });
   const remainingTargets = new Set(
     Object.values(nextState.installs)
       .flatMap((install) => (install.materializations || []).map((entry) => entry.target))

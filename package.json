@@ -1,6 +1,6 @@
 {
   "name": "@alavida/agentpack",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Package-backed skills lifecycle CLI for agent skills and plugins",
   "type": "module",
   "bin": {

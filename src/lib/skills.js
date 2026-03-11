@@ -1,8 +1,14 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, watch, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { findAllWorkbenches, findRepoRoot, findWorkbenchContext, resolveWorkbenchFlag } from './context.js';
+import {
+  buildStateRecordForPackageDir,
+  compareRecordedSources,
+  hashFile,
+  readBuildState,
+  writeBuildState,
+} from '../domain/skills/skill-provenance.js';
 import { AgentpackError, EXIT_CODES, NetworkError, NotFoundError, ValidationError } from '../utils/errors.js';
 
 const GITHUB_PACKAGES_REGISTRY = 'https://npm.pkg.github.com';
@@ -1094,7 +1100,11 @@ export function validateSkills(target, { cwd = process.cwd() } = {}) {
       const result = skills.find((skill) => skill.packageName === packageMetadata.packageName);
       if (!result?.valid) continue;
 
-      const { packageName, record } = buildStateRecordForPackageDir(repoRoot, packageDir);
+      const { packageName, record } = buildStateRecordForPackageDir(repoRoot, packageDir, {
+        parseSkillFrontmatterFile,
+        readPackageMetadata,
+        normalizeDisplayPath,
+      });
       if (!packageName) continue;
       buildState.skills[packageName] = record;
     }
@@ -1110,29 +1120,8 @@ export function validateSkills(target, { cwd = process.cwd() } = {}) {
     skills,
   };
 }
-
-
-function hashFile(filePath) {
-  const digest = createHash('sha256').update(readFileSync(filePath)).digest('hex');
-  return `sha256:${digest}`;
-}
-
 function normalizeRelativePath(pathValue) {
   return pathValue.split('\\').join('/');
-}
-
-function readBuildState(repoRoot) {
-  const buildStatePath = join(repoRoot, '.agentpack', 'build-state.json');
-  if (!existsSync(buildStatePath)) {
-    return { version: 1, skills: {} };
-  }
-
-  return JSON.parse(readFileSync(buildStatePath, 'utf-8'));
-}
-
-function writeBuildState(repoRoot, state) {
-  mkdirSync(join(repoRoot, '.agentpack'), { recursive: true });
-  writeFileSync(join(repoRoot, '.agentpack', 'build-state.json'), JSON.stringify(state, null, 2) + '\n');
 }
 
 function readInstallState(repoRoot) {
@@ -1153,27 +1142,6 @@ function normalizeRequestedTarget(target, cwd = process.cwd()) {
   if (typeof target !== 'string') return target;
   if (target.startsWith('@')) return target;
   return normalizeRelativePath(resolve(cwd, target));
-}
-
-function compareRecordedSources(repoRoot, record) {
-  const changes = [];
-  const recordedSources = record.sources || {};
-
-  for (const [sourcePath, sourceRecord] of Object.entries(recordedSources)) {
-    const absoluteSourcePath = join(repoRoot, sourcePath);
-    const currentHash = hashFile(absoluteSourcePath);
-    const recordedHash = sourceRecord.hash;
-
-    if (currentHash !== recordedHash) {
-      changes.push({
-        path: sourcePath,
-        recorded: recordedHash,
-        current: currentHash,
-      });
-    }
-  }
-
-  return changes;
 }
 
 function listPackagedSkillDirs(repoRoot) {
@@ -1237,30 +1205,6 @@ function listAuthoredPackagedSkills(repoRoot) {
     })
     .filter(Boolean)
     .sort((a, b) => a.packageName.localeCompare(b.packageName));
-}
-
-function buildStateRecordForPackageDir(repoRoot, packageDir) {
-  const skillFile = join(packageDir, 'SKILL.md');
-  const metadata = parseSkillFrontmatterFile(skillFile);
-  const packageMetadata = readPackageMetadata(packageDir);
-  const sources = {};
-
-  for (const sourcePath of metadata.sources) {
-    sources[sourcePath] = {
-      hash: hashFile(join(repoRoot, sourcePath)),
-    };
-  }
-
-  return {
-    packageName: packageMetadata.packageName,
-    record: {
-      package_version: packageMetadata.packageVersion,
-      skill_path: normalizeDisplayPath(repoRoot, packageDir),
-      skill_file: normalizeDisplayPath(repoRoot, skillFile),
-      sources,
-      requires: metadata.requires,
-    },
-  };
 }
 
 export function generateSkillsCatalog({ cwd = process.cwd() } = {}) {

@@ -191,8 +191,33 @@ metadata:
     const repo = createTempRepo('skills-validate-build-state');
 
     try {
+      mkdirSync(join(repo.root, '.agentpack'), { recursive: true });
       mkdirSync(join(repo.root, 'domains', 'operations', 'knowledge'), { recursive: true });
       mkdirSync(join(repo.root, 'domains', 'operations', 'skills', 'agonda-prioritisation'), { recursive: true });
+
+      writeFileSync(
+        join(repo.root, '.agentpack', 'build-state.json'),
+        JSON.stringify(
+          {
+            version: 1,
+            skills: {
+              '@alavida-ai/existing-skill': {
+                package_version: '9.9.9',
+                skill_path: 'domains/existing/skills/existing-skill',
+                skill_file: 'domains/existing/skills/existing-skill/SKILL.md',
+                sources: {
+                  'domains/existing/knowledge/source.md': {
+                    hash: 'sha256:existing',
+                  },
+                },
+                requires: ['@alavida-ai/other-skill'],
+              },
+            },
+          },
+          null,
+          2
+        ) + '\n'
+      );
 
       writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'plan.yaml'), 'goal: ship\n');
       writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'execution-methodology.md'), '# Execution\n');
@@ -245,11 +270,27 @@ metadata:
       assert.equal(validateResult.json.valid, true);
       assert.equal(existsSync(buildStatePath), true);
       assert.equal(
+        buildState.skills['@alavida-ai/agonda-prioritisation'].package_version,
+        '1.0.0'
+      );
+      assert.equal(
         buildState.skills['@alavida-ai/agonda-prioritisation'].skill_path,
         'domains/operations/skills/agonda-prioritisation'
       );
+      assert.equal(
+        buildState.skills['@alavida-ai/agonda-prioritisation'].skill_file,
+        'domains/operations/skills/agonda-prioritisation/SKILL.md'
+      );
       assert.ok(
         buildState.skills['@alavida-ai/agonda-prioritisation'].sources['domains/operations/knowledge/plan.yaml'].hash.startsWith('sha256:')
+      );
+      assert.deepEqual(
+        buildState.skills['@alavida-ai/agonda-prioritisation'].requires,
+        []
+      );
+      assert.equal(
+        buildState.skills['@alavida-ai/existing-skill'].package_version,
+        '9.9.9'
       );
 
       writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'plan.yaml'), 'goal: changed\n');

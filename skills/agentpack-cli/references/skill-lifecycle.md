@@ -42,8 +42,14 @@ Use this when the user is creating or changing a packaged skill in the same repo
 What each step means:
 
 - `inspect` explains what the skill currently is
-- `validate` checks package readiness and source existence
+- `validate` checks package readiness, source existence, and records the validated source snapshot in `.agentpack/build-state.json`
 - `dev` links the skill into `.claude/skills/` and `.agents/skills/` for local testing
+
+Important persistence behavior:
+
+- commit `.agentpack/build-state.json` if you want `skills stale` to work across GitHub, CI, and teammate machines
+- commit `.agentpack/catalog.json` in authoring repos
+- do not commit `.agentpack/install.json`
 
 Important runtime behavior:
 
@@ -76,3 +82,17 @@ Consumption stage:
 - `skills env`
 
 Do not substitute one for the other.
+
+## Stale Detection Contract
+
+`skills stale` is not comparing against memory or local runtime state.
+
+It compares current source hashes against the last validated snapshot recorded in `.agentpack/build-state.json`.
+
+That means:
+
+1. run `agentpack skills validate <skill-dir>`
+2. commit the updated `.agentpack/build-state.json`
+3. later source changes can be detected by `agentpack skills stale`
+
+If the build-state file is not committed, stale detection will only work on the machine where validation was last run.

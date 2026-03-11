@@ -62,7 +62,14 @@ Key idea:
 - `SKILL.md.requires` is the source of truth
 - `package.json.dependencies` is the compiled mirror
 - `validate` and `dev` sync dependencies automatically
+- `skills validate` records the current source-hash snapshot in `.agentpack/build-state.json`
 - `skills dev` materializes the compiled skill artifact for runtime use
+
+Persistence rule:
+
+- commit `.agentpack/build-state.json` so stale detection works across GitHub, CI, and teammate machines
+- commit `.agentpack/catalog.json` in authoring repos
+- do not commit `.agentpack/install.json`
 
 Runtime notes:
 
@@ -111,6 +118,11 @@ Default flow:
 - `agentpack skills stale`
 - `agentpack skills stale <skill>`
 - `agentpack skills validate <skill>`
+
+Key idea:
+
+- `skills stale` compares current source hashes to the last validated snapshot in `.agentpack/build-state.json`
+- if that file is not committed, stale detection will not persist across clones or CI runs
 
 ## Conceptual Frame
 

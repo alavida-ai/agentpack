@@ -207,6 +207,12 @@ Repo-root rule:
 - `metadata.sources` are checked relative to the current repo root
 - run this command from the repo that owns those source files
 
+Persistence rule:
+
+- successful validation updates `.agentpack/build-state.json`
+- commit that file if you want `skills stale` to work across GitHub, CI, and teammate machines
+- do not treat `.agentpack/install.json` as a substitute for build-state
+
 <Check>Implemented. Supports validating one packaged skill and all authored packaged skills in the repo.</Check>
 
 ### `agentpack skills outdated`
@@ -321,6 +327,11 @@ Modes:
 
 - **List mode**: package name, local path, changed source count
 - **Detail mode**: package name, skill path, each changed source with recorded and current hash
+
+Operational note:
+
+- this command compares current source hashes to the last validated snapshot in `.agentpack/build-state.json`
+- stale detection only persists across clones and CI if that file was committed after validation
 
 <Check>Implemented. Reads `.agentpack/build-state.json` and compares recorded hashes.</Check>
 

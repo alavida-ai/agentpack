@@ -23,7 +23,9 @@ describe('release contract', () => {
 
     assert.match(workflow, /branches:\s*\n\s*-\s*main/);
     assert.match(workflow, /changesets\/action@/);
+    assert.match(workflow, /commit:\s*"chore: version packages"/);
     assert.doesNotMatch(workflow, /tags:\s*\n\s*-\s*'v\*'/);
+    assert.doesNotMatch(workflow, /commit:\s*chore:\s*version packages/);
 
     assert.equal(packageJson.scripts.changeset, 'changeset');
     assert.equal(packageJson.scripts['version-packages'], 'changeset version');

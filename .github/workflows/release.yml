@@ -40,7 +40,7 @@ jobs:
           version: npm run version-packages
           publish: npm run release
           title: Version Packages
-          commit: chore: version packages
+          commit: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

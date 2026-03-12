@@ -1,10 +1,11 @@
 {
   "name": "@alavida/agentpack",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Package-backed skills lifecycle CLI for agent skills and plugins",
   "type": "module",
   "bin": {
-    "agentpack": "bin/agentpack.js"
+    "agentpack": "bin/agentpack.js",
+    "intent": "./bin/intent.js"
   },
   "files": [
     "bin",
@@ -18,7 +19,8 @@
     "validate:live": "node scripts/live-validation.mjs",
     "smoke:monorepo": "node scripts/smoke-monorepo.mjs",
     "docs:dev": "cd docs && mint dev",
-    "intent:validate": "npx @tanstack/intent validate"
+    "intent:validate": "npx @tanstack/intent validate",
+    "build:dashboard": "node scripts/build-dashboard.mjs"
   },
   "keywords": [
     "agentpack",
@@ -43,10 +45,14 @@
     "docs": "https://github.com/alavida-ai/agentpack/tree/main/docs"
   },
   "dependencies": {
-    "commander": "^13.0.0"
+    "commander": "^13.0.0",
+    "d3": "^7.9.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
   },
   "devDependencies": {
-    "@tanstack/intent": "^0.0.14"
+    "@tanstack/intent": "^0.0.14",
+    "esbuild": "^0.25.10"
   },
   "engines": {
     "node": ">=20.0.0"

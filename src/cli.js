@@ -68,7 +68,7 @@ export function run(argv) {
     if (err instanceof AgentpackError) {
       const opts = program.opts?.() || {};
       if (opts.json) {
-        output.json({ error: err.code, message: err.message });
+        output.json(err.toJSON());
       } else {
         output.error(formatError(err));
       }

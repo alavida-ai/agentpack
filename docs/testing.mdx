@@ -15,6 +15,7 @@ Use:
 - fixture-driven integration tests for filesystem and package-manager behavior
 - one compact test monorepo fixture for realistic end-to-end flows
 - a short manual Claude Code compatibility checklist for runtime-specific behavior
+- one standalone Acme sandbox submodule for human demos and exploratory testing
 
 Do not use:
 
@@ -51,6 +52,9 @@ Use for:
 - inspect direct and reverse skill dependencies
 - inspect one real fixture skill
 - stale detection after a source file changes
+- start the `skills dev` local workbench by default
+- suppress browser launch in test harnesses while keeping workbench startup coverage
+- refresh the workbench model after a selected source file changes
 - install one direct skill plus one transitive dependency
 - materialize into `.claude/skills` and `.agents/skills`
 - inspect environment state
@@ -72,6 +76,10 @@ Current checked-in fixtures:
 
 - `test/fixtures/monorepo/`
 - `test/fixtures/consumer/`
+
+Manual demo sandbox:
+
+- `sandbox/acme-demo/` (git submodule)
 
 ### Layer 4: Manual Runtime Compatibility Checks
 

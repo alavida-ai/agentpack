@@ -1,0 +1,3 @@
+[submodule "sandbox/acme-demo"]
+	path = sandbox/acme-demo
+	url = git@github.com:alavida-ai/acme-demo.git

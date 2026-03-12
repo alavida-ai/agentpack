@@ -3,6 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { resolveDependencyClosure } from '../domain/skills/skill-graph.js';
 import { normalizeRepoPath, parseSkillFrontmatterFile, readPackageMetadata } from '../domain/skills/skill-model.js';
+import { loadPluginDefinition } from '../domain/plugins/load-plugin-definition.js';
 import { watchDirectoryTree } from '../infrastructure/runtime/watch-tree.js';
 import {
   findPackageDirByName,
@@ -216,27 +217,16 @@ export function startPluginDev(target, {
 }
 
 export function inspectPluginBundle(target, { cwd = process.cwd() } = {}) {
-  const repoRoot = findRepoRoot(cwd);
-  const pluginDir = resolvePluginDir(repoRoot, target);
-  const pluginManifestPath = join(pluginDir, '.claude-plugin', 'plugin.json');
-  const pluginManifest = existsSync(pluginManifestPath)
-    ? JSON.parse(readFileSync(pluginManifestPath, 'utf-8'))
-    : null;
-
-  const packageMetadata = readPackageMetadata(pluginDir);
-  if (!packageMetadata.packageName || !packageMetadata.packageVersion) {
-    throw new ValidationError('plugin package.json missing name or version', {
-      code: 'missing_plugin_package_metadata',
-      suggestion: normalizeRepoPath(repoRoot, join(pluginDir, 'package.json')),
-    });
-  }
-
-  if (!pluginManifest) {
-    throw new ValidationError('plugin missing .claude-plugin/plugin.json', {
-      code: 'missing_plugin_manifest',
-      suggestion: normalizeRepoPath(repoRoot, join(pluginDir, '.claude-plugin', 'plugin.json')),
-    });
-  }
+  const definition = loadPluginDefinition(target, { cwd, requirementLevel: 'inspect' });
+  const {
+    repoRoot,
+    pluginDir,
+    packageJson,
+    packageName,
+    packageVersion,
+    pluginManifest,
+    pluginManifestPath,
+  } = definition;
 
   const localSkills = collectPluginLocalSkills(pluginDir);
   const directRequires = [...new Set(localSkills.flatMap((skill) => skill.requires))].sort();
@@ -244,9 +234,9 @@ export function inspectPluginBundle(target, { cwd = process.cwd() } = {}) {
   const directPackageSet = new Set(directRequires);
 
   return {
-    pluginName: pluginManifest.name || packageMetadata.packageName,
-    packageName: packageMetadata.packageName,
-    packageVersion: packageMetadata.packageVersion,
+    pluginName: pluginManifest.name || packageName,
+    packageName,
+    packageVersion,
     pluginPath: normalizeRepoPath(repoRoot, pluginDir),
     pluginManifestPath: normalizeRepoPath(repoRoot, pluginManifestPath),
     localSkills: localSkills.map((skill) => ({
@@ -279,10 +269,11 @@ export function inspectPluginBundle(target, { cwd = process.cwd() } = {}) {
 }
 
 export function validatePluginBundle(target, { cwd = process.cwd() } = {}) {
-  const repoRoot = findRepoRoot(cwd);
-  const pluginDir = resolvePluginDir(repoRoot, target);
+  const { repoRoot, pluginDir, packageJson } = loadPluginDefinition(target, {
+    cwd,
+    requirementLevel: 'validate',
+  });
   const result = inspectPluginBundle(target, { cwd });
-  const packageMetadata = readPackageMetadata(pluginDir);
   const issues = [];
   const localSkillNames = new Set(result.localSkills.map((skill) => skill.localName));
   const bundledSkillNames = new Map();
@@ -299,7 +290,7 @@ export function validatePluginBundle(target, { cwd = process.cwd() } = {}) {
 
   for (const localSkill of result.localSkills) {
     for (const packageName of localSkill.requires) {
-      const declared = packageMetadata.devDependencies[packageName];
+      const declared = packageJson.devDependencies?.[packageName];
       const resolvedPackage = resolvePackageDir(repoRoot, pluginDir, packageName);
       if (!declared || !resolvedPackage) {
         coveredPackages.add(packageName);

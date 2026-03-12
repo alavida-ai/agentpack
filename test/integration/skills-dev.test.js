@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { addPackagedSkill, createTempRepo, runCLI, startCLI } from './fixtures.js';
+import { startSkillDev } from '../../src/lib/skills.js';
 
 async function waitUntil(predicate, timeoutMs = 1000) {
   const start = Date.now();
@@ -235,6 +236,76 @@ requires:
       assert.deepEqual(pkg.dependencies, {});
 
       await session.stop();
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('returns the initial linked result to programmatic callers', () => {
+    const repo = createTempRepo('skills-dev-initial-result');
+
+    try {
+      addPackagedSkill(repo.root, 'skills/copywriting', {
+        skillMd: `---
+name: value-copywriting
+description: Copy.
+requires: []
+---
+
+# Copy
+`,
+        packageJson: {
+          name: '@alavida/value-copywriting',
+          version: '1.0.0',
+          files: ['SKILL.md'],
+        },
+      });
+
+      const session = startSkillDev('skills/copywriting', {
+        cwd: repo.root,
+        dashboard: false,
+      });
+
+      assert.equal(session.initialResult?.name, 'value-copywriting');
+      assert.equal(session.initialResult?.workbench?.enabled, false);
+      session.close();
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('reports startup failures through the normal CLI error path', () => {
+    const repo = createTempRepo('skills-dev-dashboard-startup-error');
+
+    try {
+      addPackagedSkill(repo.root, 'skills/copywriting', {
+        skillMd: `---
+name: value-copywriting
+description: Copy.
+requires: []
+---
+
+# Copy
+`,
+        packageJson: {
+          name: '@alavida/value-copywriting',
+          version: '1.0.0',
+          files: ['SKILL.md'],
+        },
+      });
+
+      const result = runCLI(['skills', 'dev', 'skills/copywriting'], {
+        cwd: repo.root,
+        env: {
+          AGENTPACK_DASHBOARD_BUNDLE_PATH: join(repo.root, 'missing-dashboard.js'),
+          AGENTPACK_DISABLE_BROWSER: '1',
+        },
+      });
+
+      assert.equal(result.exitCode, 1);
+      assert.match(result.stderr, /Skill workbench bundle is missing/i);
+      assert.match(result.stderr, /Path: .*dashboard\.js/i);
+      assert.doesNotMatch(result.stderr, /UnhandledPromiseRejection|uncaught/i);
     } finally {
       repo.cleanup();
     }

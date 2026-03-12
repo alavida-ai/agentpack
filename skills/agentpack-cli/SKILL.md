@@ -1,7 +1,7 @@
 ---
 name: agentpack-cli
 description: Use the agentpack CLI correctly when treating knowledge as a package. Apply the authored skill lifecycle, plugin lifecycle, source-backed validation, install flow, and bundled plugin artifact flow without mixing those stages together.
-library_version: 0.1.1
+library_version: 0.1.2
 sources:
   - README.md
   - docs/introduction.mdx
@@ -56,6 +56,7 @@ Default flow:
 - `agentpack skills inspect <skill-dir>`
 - `agentpack skills validate <skill-dir>`
 - `agentpack skills dev <skill-dir>` if local runtime testing is needed
+- `agentpack skills dev --no-dashboard <skill-dir>` if the user wants to skip the local workbench
 
 Key idea:
 
@@ -74,6 +75,7 @@ Persistence rule:
 Runtime notes:
 
 - after `skills dev` writes to `.claude/skills/` or `.agents/skills/`, start a fresh agent session if the current one was already running
+- `skills dev` starts a localhost workbench by default for one selected skill, with provenance edges, direct required skills, and actions like validate or stale checks
 - do not reload `metadata.sources` manually once the dev-linked skill exists; trust the compiled `SKILL.md` artifact unless you are explicitly updating the skill
 - invoke the resulting skill through the runtime's skill mechanism, not by opening the file and reading it as plain text
 
@@ -106,6 +108,7 @@ Key idea:
 - plugin-local `requires` remain the dependency truth
 - packaged skills are vendored into the built artifact
 - the plugin artifact is the thing consumers run
+- `plugin inspect` and `plugin validate` can return structured diagnostics with `path`, `nextSteps`, and example fixes when plugin definition files are missing or malformed
 
 Read [plugin-lifecycle.md](references/plugin-lifecycle.md) when the user needs the full artifact flow.
 

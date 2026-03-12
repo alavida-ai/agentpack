@@ -58,6 +58,18 @@ Checked-in fixtures make it easier to:
 - review test changes in diffs
 - debug regressions without reconstructing repo shape in code
 
+## Demo Sandbox
+
+`sandbox/acme-demo/` is not part of the primary automated fixture layer.
+
+It is a git submodule pointing at a standalone demo repo used for:
+
+- manual product demos
+- local exploratory testing
+- walkthroughs of `skills dev`, DAG visibility, and stale-state behavior
+
+Fixtures remain the automated safety net. The Acme sandbox is the human-facing demo surface.
+
 ## Update Rules
 
 When a command starts depending on new runtime or authoring state, update fixtures intentionally:

@@ -26,11 +26,13 @@ export function skillsCommand() {
     .command('dev')
     .description('Link one local packaged skill for local Claude and agent discovery')
     .option('--no-sync', 'Skip syncing managed package dependencies from requires')
+    .option('--no-dashboard', 'Skip starting the local skill development workbench')
     .argument('<target>', 'Packaged skill directory or SKILL.md path')
-    .action((target, opts, command) => {
+    .action(async (target, opts, command) => {
       const globalOpts = command.optsWithGlobals();
       const session = startSkillDev(target, {
         sync: opts.sync,
+        dashboard: opts.dashboard,
         onStart(result) {
           if (globalOpts.json) {
             output.json(result);
@@ -44,6 +46,9 @@ export function skillsCommand() {
           output.write(`Linked Skills: ${result.linkedSkills.length}`);
           for (const link of result.links) {
             output.write(`Linked: ${link}`);
+          }
+          if (result.workbench?.enabled) {
+            output.write(`Workbench URL: ${result.workbench.url}`);
           }
           output.write('Note: if your current agent session was already running, start a fresh session to pick up newly linked skills.');
           if (result.unresolved.length > 0) {
@@ -72,6 +77,7 @@ export function skillsCommand() {
 
       process.once('SIGTERM', stop);
       process.once('SIGINT', stop);
+      await session.ready;
     });
 
   cmd

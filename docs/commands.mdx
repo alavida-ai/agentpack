@@ -79,13 +79,16 @@ Behavior:
 - optionally syncs managed `requires` into `package.json.dependencies`
 - links the skill into `.claude/skills/<name>`
 - links the skill into `.agents/skills/<name>`
-- watches the skill directory for changes until the process exits
+- starts a localhost workbench by default unless `--no-dashboard` is passed
+- serves a single-skill dashboard with a focused DAG, inspector, and lifecycle action buttons
+- watches the skill directory plus direct `metadata.sources` for changes until the process exits
 - removes the links when the process is stopped
 
 Notes:
 
 - source-backed validation resolves `metadata.sources` relative to the current repo root
 - unresolved `requires` are reported, but local linking still succeeds
+- the dashboard is a visibility workbench, not the primary skill authoring surface
 - if your current Claude Code or Codex session was already running, start a fresh session after linking so the runtime rescans `.claude/skills/` or `.agents/skills/`
 
 <Check>Implemented. Supports text and JSON output.</Check>
@@ -115,12 +118,17 @@ Supported targets:
 
 Behavior:
 
+- validates plugin package metadata early and reports exact missing files or fields
 - scans local plugin `skills/**/SKILL.md`
 - unions direct `requires`
 - resolves packaged skills from repo-local packages first, then plugin-local `node_modules`
 - computes transitive closure from packaged skill `requires`
 - reports direct vs transitive bundled skill packages
 - reports unresolved package requirements if any exist
+
+Failure mode:
+
+- missing or invalid plugin definition files return actionable diagnostics with `path`, `details`, and `nextSteps`
 
 <Check>Implemented. Supports text and JSON output.</Check>
 
@@ -140,6 +148,10 @@ Checks:
 - every direct required standalone skill package is present in plugin `package.json.devDependencies`
 - every direct and transitive required skill package resolves
 - vendored skill names do not collide with local plugin skill directories or each other
+
+Failure mode:
+
+- missing plugin files or package metadata return the same actionable structured diagnostics as `plugin inspect`
 
 <Check>Implemented. Supports text and JSON output.</Check>
 

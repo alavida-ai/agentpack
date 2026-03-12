@@ -29,6 +29,7 @@ import {
   readBuildState,
   writeBuildState,
 } from '../domain/skills/skill-provenance.js';
+import { startSkillDevWorkbench } from '../application/skills/start-skill-dev-workbench.js';
 import { AgentpackError, EXIT_CODES, NetworkError, NotFoundError, ValidationError } from '../utils/errors.js';
 
 const GITHUB_PACKAGES_REGISTRY = 'https://npm.pkg.github.com';
@@ -263,21 +264,26 @@ export function devSkill(target, {
 export function startSkillDev(target, {
   cwd = process.cwd(),
   sync = true,
+  dashboard = true,
   onStart = () => {},
   onRebuild = () => {},
 } = {}) {
-  const repoRoot = findRepoRoot(cwd);
-  const { skillDir } = resolveLocalPackagedSkillDir(repoRoot, target);
+  const outerRepoRoot = findRepoRoot(cwd);
+  const { skillDir } = resolveLocalPackagedSkillDir(outerRepoRoot, target);
+  const repoRoot = findRepoRoot(skillDir);
   let closed = false;
   let timer = null;
   let currentNames = [];
   let watcher = null;
+  let workbench = null;
+  let initialResult = null;
 
   const cleanup = () => {
     if (closed) return { name: currentNames[0] || null, unlinked: false, removed: [] };
     closed = true;
     clearTimeout(timer);
     if (watcher) watcher.close();
+    if (workbench) workbench.close();
     const removed = removeSkillLinksByNames(repoRoot, currentNames, normalizeDisplayPath);
     detachProcessCleanup();
     return {
@@ -305,8 +311,22 @@ export function startSkillDev(target, {
     processCleanupHandlers.clear();
   };
 
-  const run = () => {
-    const result = devSkill(target, { cwd, sync });
+  const enrichResult = (result) => ({
+    ...result,
+    workbench: workbench
+      ? {
+        enabled: true,
+        url: workbench.url,
+        port: workbench.port,
+      }
+      : {
+        enabled: false,
+        url: null,
+        port: null,
+      },
+  });
+
+  const applyDevResult = (result) => {
     const nextNames = result.linkedSkills.map((entry) => entry.name);
     const staleNames = currentNames.filter((name) => !nextNames.includes(name));
     if (staleNames.length > 0) {
@@ -316,8 +336,31 @@ export function startSkillDev(target, {
     return result;
   };
 
-  const initialResult = run();
-  onStart(initialResult);
+  const startOrRefreshWorkbench = async () => {
+    if (dashboard && !workbench) {
+      workbench = await startSkillDevWorkbench({
+        repoRoot,
+        skillDir,
+        open: true,
+        disableBrowser: process.env.AGENTPACK_DISABLE_BROWSER === '1',
+      });
+    } else if (workbench) {
+      workbench.refresh();
+    }
+  };
+
+  initialResult = enrichResult(applyDevResult(devSkill(target, { cwd, sync })));
+  const ready = Promise.resolve(startOrRefreshWorkbench())
+    .then(() => {
+      const result = enrichResult(initialResult);
+      initialResult = result;
+      onStart(result);
+      return result;
+    })
+    .catch((error) => {
+      cleanup();
+      throw error;
+    });
 
   attachProcessCleanup();
 
@@ -325,17 +368,22 @@ export function startSkillDev(target, {
     if (closed) return;
     clearTimeout(timer);
     timer = setTimeout(() => {
-      try {
-        const result = run();
-        onRebuild(result);
-      } catch (error) {
-        onRebuild({ error });
-      }
+      Promise.resolve()
+        .then(() => applyDevResult(devSkill(target, { cwd, sync })))
+        .then(async (result) => {
+          await startOrRefreshWorkbench();
+          return enrichResult(result);
+        })
+        .then(onRebuild)
+        .catch((error) => {
+          onRebuild({ error });
+        });
     }, 100);
   });
 
   return {
     initialResult,
+    ready,
     close() {
       return cleanup();
     },

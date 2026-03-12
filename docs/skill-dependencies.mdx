@@ -1,0 +1,245 @@
+---
+title: "Skill Dependencies"
+description: "Declare dependencies between skills and let agentpack manage the dependency graph"
+---
+
+## What you'll learn
+
+You'll add a dependency from one skill to another, see how agentpack auto-syncs that dependency into `package.json`, and visualize the dependency graph in both the dashboard and CLI.
+
+**Scenario:** Your copywriting skill (from the previous tutorial) needs agents to look up product data before writing. You have a `research` skill that handles that. You want the copywriting skill to declare that it *requires* the research skill.
+
+## Prerequisites
+
+- Completed [Create Your First Skill](/first-skill)
+- A `research` skill package in your repo (we'll create one below)
+
+<Steps>
+
+<Step title="Create the research skill">
+
+First, create the skill that `copywriting` will depend on. This is a standalone skill with its own knowledge source.
+
+```bash
+mkdir -p domains/brand/knowledge
+mkdir -p domains/brand/skills/research
+```
+
+```markdown domains/brand/knowledge/research-principles.md
+# Research Principles
+
+- Always cite the primary source, not a summary
+- Verify claims against at least two independent sources
+- Prefer recent data (< 2 years old) for market claims
+```
+
+```markdown domains/brand/skills/research/SKILL.md
+---
+name: research
+description: Product and market research using company research standards
+metadata:
+  sources:
+    - domains/brand/knowledge/research-principles.md
+requires: []
+---
+
+## Instructions
+
+When researching for content, follow these principles:
+
+1. Start with primary sources. Never cite a summary without checking the original.
+2. Cross-reference claims against at least two independent sources.
+3. Flag any data older than two years as potentially outdated.
+```
+
+```json domains/brand/skills/research/package.json
+{
+  "name": "@alavida/research",
+  "version": "1.0.0",
+  "description": "Product and market research using company research standards",
+  "files": ["SKILL.md"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/knowledge-base.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}
+```
+
+</Step>
+
+<Step title="Add the requires declaration">
+
+Open your copywriting skill's `SKILL.md` and add the research skill to `requires`:
+
+```markdown domains/brand/skills/copywriting/SKILL.md
+---
+name: copywriting
+description: Brand-consistent copywriting using company tone and voice principles
+metadata:
+  sources:
+    - domains/brand/knowledge/tone-of-voice.md
+requires:
+  - "@alavida/research"
+---
+
+## Instructions
+
+When writing copy for the brand, follow these guidelines:
+
+1. Use the research skill to verify any product claims before writing.
+2. Read and internalize the tone-of-voice principles before drafting.
+3. Use active voice throughout. Address the reader as "you."
+4. Avoid jargon unless you explain it in the same sentence.
+```
+
+The `requires` array takes npm package names -- the same names from each dependency's `package.json`.
+
+</Step>
+
+<Step title="Watch agentpack sync the dependency">
+
+Run `agentpack skills dev` on the copywriting skill:
+
+```bash
+agentpack skills dev domains/brand/skills/copywriting
+```
+
+```
+Linked Skill: copywriting
+Path: domains/brand/skills/copywriting
+Synced Added: 1
+Synced Removed: 0
+Linked Skills: 1
+Linked: .claude/skills/copywriting
+Workbench URL: http://localhost:3000
+```
+
+Notice `Synced Added: 1`. agentpack detected the new `requires` entry and automatically added `@alavida/research` to `package.json.dependencies`.
+
+Check your `package.json` -- it now has a `dependencies` field:
+
+```json domains/brand/skills/copywriting/package.json
+{
+  "name": "@alavida/copywriting",
+  "version": "0.1.0",
+  "description": "Brand-consistent copywriting using company tone and voice principles",
+  "files": ["SKILL.md"],
+  "dependencies": {
+    "@alavida/research": "*"
+  }
+}
+```
+
+<Note>
+This is the **go mod tidy** pattern. `SKILL.md.requires` is the single source of truth. `package.json.dependencies` is always a compiled mirror -- fully derived, never manually edited. Add a requires entry and the dependency appears. Remove it and the dependency disappears. You never manage `package.json.dependencies` by hand.
+</Note>
+
+</Step>
+
+<Step title="View the dependency graph in the dashboard">
+
+Open the dashboard URL from the dev output. You'll see two types of edges:
+
+- **Source provenance edges** connecting the copywriting skill to `tone-of-voice.md`
+- **Dependency edges** connecting the copywriting skill to the research skill
+
+{/* Screenshot: dashboard showing the copywriting skill node with a provenance edge to tone-of-voice.md AND a dependency edge to @alavida/research */}
+
+</Step>
+
+<Step title="Inspect dependencies via CLI">
+
+Use `agentpack skills dependencies` to see the graph from the terminal:
+
+```bash
+agentpack skills dependencies domains/brand/skills/copywriting
+```
+
+```
+Skill: @alavida/copywriting
+Graph: authored
+Version: 0.1.0
+Path: domains/brand/skills/copywriting/SKILL.md
+
+Direct Dependencies:
+- @alavida/research
+
+Reverse Dependencies:
+- none
+```
+
+Now check the research skill:
+
+```bash
+agentpack skills dependencies domains/brand/skills/research
+```
+
+```
+Skill: @alavida/research
+Graph: authored
+Version: 1.0.0
+Path: domains/brand/skills/research/SKILL.md
+
+Direct Dependencies:
+- none
+
+Reverse Dependencies:
+- @alavida/copywriting
+```
+
+The reverse dependency shows that `research` knows it is depended upon by `copywriting`.
+
+</Step>
+
+</Steps>
+
+## Direct vs transitive dependencies
+
+Dependencies form a graph. Consider this chain:
+
+| Skill | Requires |
+|---|---|
+| `@alavida/copywriting` | `@alavida/research` |
+| `@alavida/research` | `@alavida/methodology-gary-provost` |
+| `@alavida/methodology-gary-provost` | (nothing) |
+
+From the perspective of `copywriting`:
+
+- `@alavida/research` is a **direct** dependency (declared in its own `requires`)
+- `@alavida/methodology-gary-provost` is a **transitive** dependency (pulled in by research, not by copywriting)
+
+When a consumer runs `agentpack skills install @alavida/copywriting`, npm resolves the full graph. agentpack materializes every skill in the closure into `.claude/skills/` so agents can discover them all.
+
+<Warning>
+**Circular dependencies are not allowed.** If skill A requires skill B and skill B requires skill A, validation will fail. Design your skills as a directed acyclic graph (DAG) -- each skill should have a clear "upstream" direction.
+</Warning>
+
+## How the sync works under the hood
+
+Every agentpack command that touches dependencies (`dev`, `validate`, `plugin build`) performs a total bidirectional sync:
+
+```
+1. Read SKILL.md.requires         → ["@alavida/research"]
+2. Read package.json.dependencies → {}
+3. Add anything in requires but missing from dependencies
+4. Remove anything in dependencies no longer in requires
+5. Write package.json
+```
+
+The result: `package.json.dependencies` always exactly mirrors `SKILL.md.requires`. No drift, no stale deps, no manual management.
+
+## Next steps
+
+Skills are reusable libraries. In the next tutorial, you'll bundle multiple skills into a **plugin** -- a self-contained deployable artifact that ships as one unit.
+
+<CardGroup cols={2}>
+  <Card title="Building Plugins" icon="cube" href="/building-plugins">
+    Bundle skills into a self-contained plugin artifact
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture">
+    Deeper dive into the four-plane architecture model
+  </Card>
+</CardGroup>

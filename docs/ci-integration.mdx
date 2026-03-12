@@ -1,0 +1,160 @@
+---
+title: "CI/CD Integration"
+description: "Run agentpack validation, stale detection, and publish workflows in your CI pipeline."
+---
+
+agentpack commands are designed for CI. Every command runs non-interactively, returns structured output, and uses deterministic exit codes. Wire them into your pipeline to catch problems before they ship.
+
+## What to run in CI
+
+| Check | Command | When to run |
+|---|---|---|
+| Skill structure is valid | `agentpack skills validate` | Every PR |
+| No stale skills | `agentpack skills stale` | Every PR |
+| No missing dependencies | `agentpack skills missing` | Every PR |
+| Publish on merge | `npm publish` | On merge to main |
+
+## Validation in CI
+
+Run `agentpack skills validate` on every pull request to catch broken skills early. It checks SKILL.md parsing, source file existence, dependency sync, and package metadata.
+
+```yaml
+- name: Validate skills
+  run: agentpack skills validate
+```
+
+When run without a target, it validates every authored skill in the repository. Exit code `0` means all skills pass. Exit code `1` means at least one skill has issues.
+
+## Stale detection in CI
+
+Run `agentpack skills stale` to catch cases where source knowledge docs changed but the skills built from them have not been updated.
+
+```yaml
+- name: Check for stale skills
+  run: agentpack skills stale
+```
+
+This is especially powerful on PRs that modify knowledge docs. If a PR updates `domains/brand/knowledge/tone-of-voice.md`, the stale check will flag every skill that lists it as a source.
+
+<Note>
+  Stale detection requires `.agentpack/build-state.json` to be committed to the repo. Without it, there are no recorded hashes to compare against.
+</Note>
+
+## Missing dependency check
+
+Run `agentpack skills missing` to verify that every installed skill has its required dependencies present.
+
+```yaml
+- name: Check for missing dependencies
+  run: agentpack skills missing
+```
+
+This catches cases where a skill was installed but one of its transitive dependencies was not resolved.
+
+## Complete GitHub Actions workflow
+
+This workflow validates skills on every PR and publishes on merge to main.
+
+```yaml .github/workflows/skills.yml
+name: Skills CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://npm.pkg.github.com
+          scope: '@acme'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate all skills
+        run: agentpack skills validate
+
+      - name: Check for stale skills
+        run: agentpack skills stale
+
+      - name: Check for missing dependencies
+        run: agentpack skills missing
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://npm.pkg.github.com
+          scope: '@acme'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish changed skills
+        run: npm publish -w domains/brand/skills/copywriting
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## JSON output for machine parsing
+
+Every agentpack command supports `--json` for structured output. Use this when you need to parse results programmatically in CI.
+
+<Tip>
+  Use `--json` output to build custom CI logic. For example, parse the stale check output to post a PR comment listing affected skills and their changed sources.
+</Tip>
+
+```yaml
+- name: Check stale skills (JSON)
+  run: |
+    STALE_OUTPUT=$(agentpack skills stale --json)
+    echo "$STALE_OUTPUT" | jq '.count'
+```
+
+## Exit codes
+
+All agentpack commands use consistent exit codes:
+
+| Code | Meaning |
+|---|---|
+| `0` | Success — all checks pass |
+| `1` | Operational failure — issues found (stale skills, validation errors, missing deps) |
+| `2` | Usage error — bad arguments or invalid command |
+
+Use exit codes directly in CI `if` conditions or shell scripts.
+
+## Recommended PR checks
+
+<AccordionGroup>
+  <Accordion title="Required: validate">
+    Block merge if any skill fails structural validation. This catches missing fields, broken source references, and dependency drift.
+  </Accordion>
+  <Accordion title="Recommended: stale">
+    Warn (or block) when a PR modifies source docs without updating the skills built from them. Prevents knowledge drift from shipping.
+  </Accordion>
+  <Accordion title="Recommended: missing">
+    Warn when installed skills have unresolved dependencies. Catches incomplete installs before agents encounter missing capabilities.
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  The publish step should only run on merge to main, not on PRs. Use the `if` condition in the workflow to gate it.
+</Warning>

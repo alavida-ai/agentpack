@@ -1,0 +1,96 @@
+---
+title: "How agentpack Works"
+description: "Understand the mental model behind agentpack: a compiler toolchain that turns domain knowledge into versioned, distributable agent skills."
+---
+
+## The Compiler Analogy
+
+agentpack treats agent skills the same way a compiler toolchain treats source code. The lifecycle stages are familiar if you have ever shipped a library.
+
+| Compiler concept | Code (TypeScript) | agentpack |
+|---|---|---|
+| Source files | `.ts` files | knowledge docs (`.md` files referenced as sources) |
+| Compiled output | `.js` files | `SKILL.md` (the authored skill artifact) |
+| Dependency manifest | `package.json` | `package.json` (compiled from `requires`) |
+| Lint / type-check | `tsc --noEmit`, eslint | `agentpack skills validate` |
+| Build metadata | `.tsbuildinfo` | `.agentpack/build-state.json` (source hashes) |
+| Stale detection | "source changed, rebuild" | `agentpack skills stale` |
+| Publish | `npm publish` | `npm publish` |
+| Install + resolve | `npm install` | `agentpack skills install` |
+| Module resolution | Node resolves from `node_modules/` | materialization into `.claude/skills/` |
+
+The key difference: the "compiler" for skills is a human or an agent, not a deterministic transform. But the lifecycle around it -- dependency resolution, staleness tracking, validation, packaging, distribution -- follows the same pipeline every compiler needs.
+
+<Note>
+You do not need to understand compilers to use agentpack. The analogy is here to ground the mental model: agentpack is the toolchain that wraps around the creative act of skill authoring, the same way `tsc` + `npm` wrap around the creative act of writing code.
+</Note>
+
+## The Lifecycle
+
+A skill moves through five stages from authoring to agent discovery.
+
+```
+  Author         Validate        Publish         Install         Discover
+ ────────►     ────────►      ────────►       ────────►       ────────►
+ knowledge →   structure →    npm package →   resolved into   agent sees
+ SKILL.md      checks pass    on registry     consumer repo   the skill
+```
+
+<Steps>
+  <Step title="Author">
+    You write domain knowledge in source documents. Then you (or an agent) distill that knowledge into a `SKILL.md` file that captures what the agent should know and do. The `SKILL.md` frontmatter declares which source files it was built from (`metadata.sources`) and which other skills it depends on (`requires`).
+  </Step>
+  <Step title="Validate">
+    Run `agentpack skills validate` to check that everything is structurally sound: the SKILL.md parses correctly, declared sources exist, dependencies are synced into `package.json`, and package metadata is complete. Validation also records source file hashes so that future staleness detection works.
+  </Step>
+  <Step title="Publish">
+    The skill directory is already a publishable npm package. Run `npm publish` to push it to your registry (GitHub Packages for private skills). Each skill is its own versioned package with its own semver timeline.
+  </Step>
+  <Step title="Install">
+    In a consumer repo, run `agentpack skills install @scope/skill-name`. This resolves the package and its transitive dependencies through npm, then materializes the resolved skills into `.claude/skills/` and `.agents/skills/` where agents can discover them.
+  </Step>
+  <Step title="Agent uses it">
+    The agent reads skills from `.claude/skills/` at session start. It sees the SKILL.md, understands the capability, and applies it during work. The agent does not know or care how the skill was packaged -- it just reads the file.
+  </Step>
+</Steps>
+
+## Why This Matters
+
+Without agentpack, skills are copy-pasted markdown files with no version history, no dependency tracking, and no way to know whether the knowledge they contain is current. A skill written six months ago from a process document that has since been rewritten three times will silently give the agent outdated instructions.
+
+With agentpack, skills are versioned packages with tracked provenance. You know exactly which source documents a skill was built from, whether those sources have changed, and which other skills depend on it. When something drifts, the toolchain tells you -- before the agent ever sees stale knowledge.
+
+## Materialization: The Missing Step
+
+In Node.js, `require('lodash')` works because Node resolves it from `node_modules/`. The package being in `node_modules/` is what makes it usable at runtime.
+
+For agents, the equivalent is `.claude/skills/`. A skill sitting in an npm registry or in `node_modules/` is invisible to the agent. **Materialization** is the step that copies resolved skill packages into `.claude/skills/` and `.agents/skills/` where the agent can actually discover and read them.
+
+This happens automatically during `agentpack skills install` (for published packages) and `agentpack skills dev` (for local authoring). You rarely need to think about it, but it explains why agentpack exists as a layer on top of plain npm -- npm handles resolution, agentpack handles the last mile of making skills visible to agents.
+
+## Local Development
+
+During authoring, you do not need to publish to test a skill. Run `agentpack skills dev path/to/skill` to link it directly into the agent's discovery directories and open a [live dashboard](/dashboard) that shows the skill graph, source provenance, and lifecycle status in real time.
+
+Edit a source file, and the dashboard updates immediately. You can see staleness as it happens, validate on the fly, and iterate without leaving your editor.
+
+## How Dependencies Work
+
+Skills can depend on other skills. When your SKILL.md declares `requires: ["@scope/other-skill"]`, agentpack automatically syncs that into `package.json` dependencies -- the same way Go's `go mod tidy` keeps `go.mod` in sync with import statements.
+
+You never manually edit `package.json` dependencies for skills. The `requires` list in SKILL.md is the single source of truth. See [The Skill Graph](/skill-graph) for more on how dependencies create a directed graph of skills.
+
+## What agentpack Does Not Do
+
+agentpack stays deliberately thin. It handles the toolchain -- not the authoring, not the registry, not the agent runtime.
+
+- It does not rewrite stale skills automatically -- a human or agent re-authors the skill from updated sources
+- It does not replace npm for publishing or version resolution
+- It does not embed AI reasoning into the CLI
+- It does not invent a custom registry -- it builds on npm and GitHub Packages
+
+## Related Pages
+
+- [The Dev Dashboard](/dashboard) -- the visual interface for exploring skills during development
+- [The Skill Graph](/skill-graph) -- how dependencies and provenance form a directed graph
+- [Staleness Detection](/staleness) -- how agentpack knows when skills need updating

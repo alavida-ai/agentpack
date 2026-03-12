@@ -1,0 +1,98 @@
+---
+title: "Quickstart"
+description: "Install agentpack and see the skill dashboard in under 5 minutes."
+---
+
+Go from zero to a running skill with the visual dashboard open in under 5 minutes. You need Node.js 18+, npm 9+, and a git repository.
+
+<Steps>
+  <Step title="Install agentpack">
+    ```bash
+    npm install -g @alavida/agentpack
+    agentpack --version
+    ```
+  </Step>
+
+  <Step title="Create a skill">
+    A packaged skill is a directory with two files: `SKILL.md` and `package.json`.
+
+    **`skills/hello-world/SKILL.md`**
+    ```markdown
+    ---
+    name: hello-world
+    description: A minimal skill to verify agentpack is working.
+    metadata:
+      sources: []
+    requires: []
+    ---
+
+    When the user asks you to say hello, respond with a friendly greeting
+    and mention that this skill was delivered by agentpack.
+    ```
+
+    **`skills/hello-world/package.json`**
+    ```json
+    {
+      "name": "@my-org/hello-world",
+      "version": "0.1.0"
+    }
+    ```
+  </Step>
+
+  <Step title="Run dev mode">
+    From your repo root, point `skills dev` at the skill directory:
+
+    ```bash
+    agentpack skills dev skills/hello-world
+    ```
+
+    You will see output like this:
+
+    ```
+    Linked Skill: hello-world
+    Path: skills/hello-world
+    Synced Added: 0
+    Synced Removed: 0
+    Linked Skills: 1
+    Linked: .claude/skills/hello-world
+    Workbench URL: http://localhost:5174
+    ```
+
+    agentpack links the skill into `.claude/skills/` so your agent can discover it, then opens the dashboard in your browser.
+  </Step>
+
+  <Step title="Explore the dashboard">
+    The dashboard renders your skill graph as an interactive DAG. Click the node to open the inspector panel showing sources, dependencies, and lifecycle status. Use the action buttons to validate or check staleness.
+
+    {/* Screenshot: the dashboard with a single "hello-world" node selected, inspector panel open showing name, description, and "current" status */}
+  </Step>
+</Steps>
+
+<Tip>
+  If you prefer a CLI-only workflow, pass `--no-dashboard` to skip the browser:
+
+  ```bash
+  agentpack skills dev --no-dashboard skills/hello-world
+  ```
+
+  The skill is still linked and watched for changes. You just won't get the visual graph.
+</Tip>
+
+## What just happened?
+
+- **Install** gave you the `agentpack` CLI -- the compiler toolchain for skills and plugins.
+- **Create a skill** produced the two required files: `SKILL.md` (authored artifact) and `package.json` (distribution artifact).
+- **Dev mode** synced `requires` into `package.json` dependencies, linked the skill into `.claude/skills/`, and started a file watcher that reloads on edits.
+- **The dashboard** rendered the skill graph with lifecycle status. As you add skills with dependencies, the graph shows the full DAG with staleness propagation.
+
+<Note>
+  The dev session is live -- edit `SKILL.md` and the dashboard updates. When you stop the process (Ctrl+C), links are cleaned up automatically.
+</Note>
+
+## Next steps
+
+Now that you have agentpack running, build a real skill backed by your team's docs.
+
+<Card title="Build your first skill" icon="hammer" href="/first-skill">
+  Turn existing knowledge docs into a versioned skill with source tracking and dependency declarations.
+</Card>

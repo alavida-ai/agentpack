@@ -1,0 +1,146 @@
+---
+title: "The Skill Graph"
+description: "How provenance and dependency relationships between skills form a directed graph, and how to explore it in the CLI and dashboard."
+---
+
+Every skill exists in a web of relationships. Source documents feed into skills. Skills depend on other skills. Those dependencies have their own dependencies. Together, these relationships form a directed acyclic graph -- the skill graph.
+
+Understanding the skill graph helps you reason about what a skill is built from, what it depends on, and what will be affected when something changes.
+
+## Two Kinds of Relationships
+
+The skill graph has two types of edges, each representing a different kind of relationship.
+
+### Provenance: where knowledge comes from
+
+A skill's `metadata.sources` field lists the documents it was authored from. These create **provenance edges** -- they record the trail from source knowledge to compiled skill.
+
+```
+  ◆ process-guide.md ─ ─ ─ ─ ─ ─ ─ ┐
+                                     │  provenance
+  ◆ best-practices.md ─ ─ ─ ─ ─ ─ ─┤  (dashed)
+                                     ▼
+                              ● my-skill
+```
+
+Provenance edges answer the question: "What knowledge was this skill built from?" They are the basis of [staleness detection](/staleness) -- when a source changes, the skills that reference it become stale.
+
+### Requires: what a skill depends on
+
+A skill's `requires` field lists other skill packages it needs at runtime. These create **dependency edges** -- they record which skills must be present for this skill to work correctly.
+
+```
+  ● my-skill ──────────────► ● @scope/methodology
+                 requires         │
+                 (solid)          │ requires
+                                  ▼
+                            ● @scope/foundations
+```
+
+Dependency edges answer the question: "What other skills does this skill need?" They drive npm package resolution and determine what gets installed when a consumer adds your skill.
+
+## How the Graph Is Built
+
+The graph is constructed from two fields in SKILL.md frontmatter:
+
+```yaml
+---
+name: value-copywriting
+metadata:
+  sources:
+    - domains/value/knowledge/value-proposition.md
+    - domains/value/knowledge/messaging-guide.md
+requires:
+  - "@alavida/methodology-gary-provost"
+---
+```
+
+- Each entry in `metadata.sources` becomes a source node with a provenance edge pointing to this skill
+- Each entry in `requires` becomes a dependency edge pointing to the required skill package
+- The required skill's own `requires` are resolved transitively to build the full graph
+
+## Direct vs Transitive Dependencies
+
+A **direct dependency** is a skill listed in your `requires`. You declared it explicitly because your skill needs it.
+
+A **transitive dependency** is a skill that one of your dependencies requires. You did not declare it, but it must be present for the full chain to work.
+
+```
+  ● my-skill
+  │
+  ├──► ● @scope/copywriting        (direct)
+  │    │
+  │    └──► ● @scope/gary-provost   (transitive)
+  │
+  └──► ● @scope/proof-points       (direct)
+       │
+       └──► ● @scope/gary-provost   (transitive, shared)
+```
+
+In this example, `my-skill` directly requires two skills. Both of those require `@scope/gary-provost`, making it a shared transitive dependency. npm resolves this automatically -- the transitive skill is installed once and shared.
+
+## Cross-Skill Dependency Chains
+
+When skill A requires skill B, and skill B requires skill C, the graph forms a chain. Changes propagate through these chains:
+
+```
+  ◆ source-doc.md ─ ─ ─ ► ● skill-C    (changed → stale)
+                                │
+                           ● skill-B    (affected)
+                                │
+                           ● skill-A    (affected)
+```
+
+If `source-doc.md` changes, `skill-C` becomes **stale** (its source changed). Skills B and A become **affected** -- they have not changed themselves, but something upstream in their dependency chain has. The [dashboard](/dashboard) shows this propagation visually through its status colors.
+
+## Exploring the Graph in the CLI
+
+Use `agentpack skills dependencies` to inspect the graph from the command line:
+
+```bash
+# Show what a skill depends on and what depends on it
+agentpack skills dependencies path/to/skill
+
+# Or by package name
+agentpack skills dependencies @scope/my-skill
+```
+
+The output shows:
+
+- **Direct dependencies**: skills listed in `requires`
+- **Reverse dependencies**: other skills in the repo that require this skill
+- **Lifecycle status**: whether each node is current, stale, or affected
+
+For JSON output (useful in scripts and CI):
+
+```bash
+agentpack skills dependencies @scope/my-skill --json
+```
+
+## Exploring the Graph in the Dashboard
+
+The [dev dashboard](/dashboard) renders the full skill graph visually when you run `agentpack skills dev`. You can:
+
+- See all source, skill, and dependency nodes laid out as a D3 graph
+- Click any node to inspect its details in the sidebar panel
+- Click a dependency node to drill into its own graph, with breadcrumbs tracking your path
+- Toggle source nodes on and off to simplify complex graphs
+- Watch status changes propagate in real time as you edit files
+
+The dashboard is especially useful for understanding transitive dependency chains and seeing how changes ripple through the graph.
+
+## Graph Integrity
+
+agentpack validates graph integrity during `agentpack skills validate`:
+
+- Every entry in `requires` must resolve to a real skill package
+- Dependencies are synced into `package.json` automatically (no manual editing)
+- Circular dependencies are not supported -- the graph must be acyclic
+
+If a required skill cannot be resolved, validation reports the missing package and suggests how to fix it.
+
+## Related Pages
+
+- [How agentpack Works](/how-it-works) -- the full lifecycle that the graph supports
+- [The Dev Dashboard](/dashboard) -- visual exploration of the graph
+- [Staleness Detection](/staleness) -- how source changes propagate through the graph

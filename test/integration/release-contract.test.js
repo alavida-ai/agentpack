@@ -20,12 +20,14 @@ describe('release contract', () => {
   it('uses changesets on main pushes instead of manual tag releases', () => {
     const workflow = readFileSync(join(repoRoot, '.github', 'workflows', 'release.yml'), 'utf-8');
     const packageJson = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8'));
+    const changelog = readFileSync(join(repoRoot, 'CHANGELOG.md'), 'utf-8');
 
     assert.match(workflow, /branches:\s*\n\s*-\s*main/);
     assert.match(workflow, /changesets\/action@/);
     assert.match(workflow, /commit:\s*"chore: version packages"/);
     assert.doesNotMatch(workflow, /tags:\s*\n\s*-\s*'v\*'/);
     assert.doesNotMatch(workflow, /commit:\s*chore:\s*version packages/);
+    assert.match(changelog, /^# Changelog/m);
 
     assert.equal(packageJson.scripts.changeset, 'changeset');
     assert.equal(packageJson.scripts['version-packages'], 'changeset version');

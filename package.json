@@ -5,7 +5,7 @@
   "type": "module",
   "bin": {
     "agentpack": "bin/agentpack.js",
-    "intent": "./bin/intent.js"
+    "intent": "bin/intent.js"
   },
   "files": [
     "bin",

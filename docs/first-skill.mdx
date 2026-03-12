@@ -5,7 +5,7 @@ description: "Build a skill from source knowledge, validate it, and make it disc
 
 ## What you'll build
 
-You'll create a **copywriting skill** that teaches agents to write in your brand's tone. By the end, the skill will be validated, linked for local development, and visible in the agentpack dashboard.
+You'll create a **copywriting package** that exports one `copywriting` skill module. By the end, it will be validated, linked for local development, and visible in the agentpack dashboard.
 
 **Scenario:** Your team has brand guidelines in markdown files. You want every agent in the repo to follow them consistently, without copy-pasting instructions into every prompt.
 
@@ -27,8 +27,10 @@ your-repo/
 │       │   └── tone-of-voice.md        ← source knowledge (the truth)
 │       └── skills/
 │           └── copywriting/
-│               ├── SKILL.md            ← compiled skill artifact
-│               └── package.json        ← distribution metadata
+│               ├── package.json        ← package and distribution metadata
+│               └── skills/
+│                   └── copywriting/
+│                       └── SKILL.md    ← exported skill artifact
 └── .claude/
     └── skills/
         └── copywriting/                ← symlink (created by agentpack skills dev)
@@ -80,10 +82,10 @@ Knowledge files are plain markdown. There is no special format -- just write wha
 `SKILL.md` is the compiled skill artifact. Its frontmatter declares the skill's identity, its source provenance, and any dependencies. The body contains the instructions agents will follow.
 
 ```bash
-mkdir -p domains/brand/skills/copywriting
+mkdir -p domains/brand/skills/copywriting/skills/copywriting
 ```
 
-```markdown SKILL.md
+```markdown domains/brand/skills/copywriting/skills/copywriting/SKILL.md
 ---
 name: copywriting
 description: Brand-consistent copywriting using company tone and voice principles
@@ -122,14 +124,21 @@ The `metadata.sources` array lists the knowledge files this skill was built from
 
 <Step title="Create the package.json">
 
-Every skill is an npm package. The `package.json` provides the identity and version that npm needs for distribution.
+Every exported skill module ships inside an npm package. The `package.json` provides the package identity, version, and export map that npm and agentpack need for distribution.
 
 ```json package.json
 {
   "name": "@alavida/copywriting",
   "version": "0.1.0",
   "description": "Brand-consistent copywriting using company tone and voice principles",
-  "files": ["SKILL.md"],
+  "files": ["skills/"],
+  "agentpack": {
+    "skills": {
+      "copywriting": {
+        "path": "skills/copywriting/SKILL.md"
+      }
+    }
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/your-org/knowledge-base.git"
@@ -141,7 +150,7 @@ Every skill is an npm package. The `package.json` provides the identity and vers
 ```
 
 <Note>
-The `files` array must include `SKILL.md`. This is what gets published when you `npm publish` -- the skill artifact, not the source knowledge.
+The `files` array must include the exported skill paths. `agentpack.skills` is the explicit package contract for which runtime modules the package ships.
 </Note>
 
 </Step>
@@ -157,9 +166,8 @@ agentpack skills validate domains/brand/skills/copywriting
 Expected output:
 
 ```
-Skill: @alavida/copywriting
+Package: @alavida/copywriting
 Status: valid
-Issues: 0
 ```
 
 If validation fails, the output tells you exactly what to fix -- missing fields, unresolvable sources, or mismatched dependencies.
@@ -178,7 +186,7 @@ Expected output:
 
 ```
 Linked Skill: copywriting
-Path: domains/brand/skills/copywriting
+Path: domains/brand/skills/copywriting/skills/copywriting
 Synced Added: 0
 Synced Removed: 0
 Linked Skills: 1
@@ -189,7 +197,7 @@ to pick up newly linked skills.
 ```
 
 This does three things:
-1. **Symlinks** the skill into `.claude/skills/copywriting` and `.agents/skills/copywriting` so agents can discover it
+1. **Symlinks** the exported skill into `.claude/skills/copywriting` and `.agents/skills/copywriting` so agents can discover it
 2. **Starts the dashboard** at `http://localhost:3000` with a visual skill graph
 3. **Watches** your skill directory and source files for changes -- edits trigger an automatic reload
 
@@ -222,7 +230,7 @@ Skill: copywriting
 Description: Brand-consistent copywriting using company tone and voice principles
 Package: @alavida/copywriting
 Version: 0.1.0
-Path: domains/brand/skills/copywriting/SKILL.md
+Path: domains/brand/skills/copywriting/skills/copywriting/SKILL.md
 
 Sources:
 - domains/brand/knowledge/tone-of-voice.md
@@ -246,8 +254,8 @@ You created a skill using the agentpack compiler model:
 | Step | What it is |
 |---|---|
 | `tone-of-voice.md` | Source knowledge (the truth your team maintains) |
-| `SKILL.md` | Compiled skill artifact (instructions + provenance metadata) |
-| `package.json` | Distribution metadata (npm package identity) |
+| `SKILL.md` | Compiled exported skill artifact (instructions + provenance metadata) |
+| `package.json` | Package metadata plus explicit exported skill map |
 | `.claude/skills/copywriting` | Runtime materialization (how agents discover it) |
 
 Your skill is now discoverable by any agent in this repo. Start a new Claude Code or Codex session, and the agent will see the copywriting skill and follow its instructions.

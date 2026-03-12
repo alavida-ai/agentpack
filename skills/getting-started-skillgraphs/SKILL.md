@@ -3,7 +3,7 @@ name: getting-started-skillgraphs
 description: Use when starting from an empty repo or empty skillgraph and needing the first correct authoring loop, lifecycle framing, repo-root routing, and inspect/validate/dev command flow in agentpack.
 type: lifecycle
 library: agentpack
-library_version: "0.1.3"
+library_version: "0.1.4"
 sources:
   - "alavida-ai/agentpack:docs/introduction.mdx"
   - "alavida-ai/agentpack:docs/commands.mdx"
@@ -46,7 +46,7 @@ agentpack skills dev domains/value/skills/copywriting
 
 ```bash
 cd consumer-repo
-agentpack skills install @alavida-ai/value-copywriting
+agentpack skills install @alavida/value-copywriting
 agentpack skills env
 ```
 
@@ -77,7 +77,7 @@ Source: docs/introduction.mdx
 Wrong:
 
 ```bash
-agentpack skills install @alavida-ai/value-copywriting
+agentpack skills install @alavida/value-copywriting
 ```
 
 Correct:

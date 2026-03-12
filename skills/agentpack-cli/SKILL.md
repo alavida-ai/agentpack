@@ -1,7 +1,7 @@
 ---
 name: agentpack-cli
 description: Use the agentpack CLI correctly when treating knowledge as a package. Apply the authored skill lifecycle, plugin lifecycle, source-backed validation, install flow, and bundled plugin artifact flow without mixing those stages together.
-library_version: 0.1.3
+library_version: 0.1.4
 sources:
   - README.md
   - docs/introduction.mdx
@@ -20,7 +20,8 @@ Use this skill when the user is working with `@alavida/agentpack` and needs the 
 
 Agentpack is a lifecycle toolchain for agent artifacts:
 
-- a packaged skill is a reusable capability artifact
+- a package is the distribution unit
+- an exported skill is the runtime module unit
 - a plugin package is a deployable runtime shell
 - source docs are the truth
 - `SKILL.md` is the compiled agent-facing artifact
@@ -49,19 +50,20 @@ If a skill points at `domains/.../knowledge/*.md`, run `skills validate`, `skill
 
 ### 1. Authored packaged skill
 
-Use when the user is creating or editing one reusable skill package.
+Use when the user is creating or editing one packaged skill module or a package that exports several skill modules.
 
 Default flow:
 
-- `agentpack skills inspect <skill-dir>`
-- `agentpack skills validate <skill-dir>`
-- `agentpack skills dev <skill-dir>` if local runtime testing is needed
-- `agentpack skills dev --no-dashboard <skill-dir>` if the user wants to skip the local workbench
+- `agentpack skills inspect <target>`
+- `agentpack skills validate <target>`
+- `agentpack skills dev <target>` if local runtime testing is needed
+- `agentpack skills dev --no-dashboard <target>` if the user wants to skip the local workbench
 
 Key idea:
 
-- `SKILL.md.requires` is the source of truth
-- `package.json.dependencies` is the compiled mirror
+- `package.json.agentpack.skills` declares exported skill modules
+- `SKILL.md.requires` is the source of truth for skill-to-skill edges
+- `package.json.dependencies` is the managed cross-package mirror
 - `validate` and `dev` sync dependencies automatically
 - `skills validate` records the current source-hash snapshot in `.agentpack/build-state.json`
 - `skills dev` materializes the compiled skill artifact for runtime use
@@ -77,7 +79,7 @@ Persistence rule:
 Runtime notes:
 
 - after `skills dev` writes to `.claude/skills/` or `.agents/skills/`, start a fresh agent session if the current one was already running
-- `skills dev` starts a localhost workbench by default for one selected skill, with provenance edges, direct required skills, and actions like validate or stale checks
+- `skills dev` starts a localhost workbench by default for one selected exported skill, with provenance edges, internal module edges, cross-package dependency edges, and actions like validate or stale checks
 - `skills dev` records the active session in `.agentpack/dev-session.json` so the next run can clean up stale runtime links after abnormal termination
 - if a stale local dev session blocks startup, use `agentpack skills dev cleanup` and escalate to `agentpack skills dev cleanup --force` only when the recorded pid is a false positive
 - use `agentpack skills unlink <root> --recursive` when you need to remove one active dev root plus its transitive local runtime links
@@ -92,7 +94,7 @@ Use when the skill is already published and the user wants it available in anoth
 
 Default flow:
 
-- `agentpack skills install <package-name>`
+- `agentpack skills install <package-name-or-local-package-path>`
 - `agentpack skills env`
 
 Do not prescribe `skills dev` here unless the user is authoring locally.
@@ -124,8 +126,8 @@ Use when the source docs changed and the user needs to know whether the packaged
 Default flow:
 
 - `agentpack skills stale`
-- `agentpack skills stale <skill>`
-- `agentpack skills validate <skill>`
+- `agentpack skills stale <target>`
+- `agentpack skills validate <target>`
 
 Key idea:
 
@@ -138,7 +140,8 @@ When the user is reasoning about the model itself, explain agentpack this way:
 
 - docs or knowledge files are source files
 - `SKILL.md` is the compiled artifact
-- `package.json` is the distribution manifest
+- `package.json` is the package manifest and export table
+- canonical skill ids look like `@scope/package:skill-name`
 - install and materialization are the runtime-resolution step
 - staleness means the source changed after the last known compiled state
 

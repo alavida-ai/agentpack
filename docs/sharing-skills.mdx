@@ -7,32 +7,39 @@ Your frontend team's agents should use the same brand skills as your content tea
 
 ## How it works
 
-Skills are standard npm packages. Publishing goes through `npm publish`. Consuming teams install with `agentpack skills install`. GitHub Packages provides the private registry layer.
+Skills are standard npm packages. Publishing goes through `npm publish`. Consuming teams install with `agentpack skills install`. GitHub Packages provides the distribution layer; agentpack handles skill materialization.
 
-```
+```text
 Author repo                    Consumer repo
 ────────────                   ─────────────
 SKILL.md + package.json        .npmrc (points @acme to GitHub Packages)
   │                              │
   ▼                              ▼
-npm publish ──► GitHub ──► agentpack skills install @acme/brand-copywriting
-               Packages          │
-                                 ▼
-                          .claude/skills/brand-copywriting (materialized)
+npm publish ──► GitHub Packages ──► agentpack skills install @acme/brand-copywriting
+                               │
+                               ▼
+                        .claude/skills/brand-copywriting (materialized)
 ```
 
 ## Publisher setup
 
 ### 1. Configure the skill package
 
-Your skill's `package.json` must point at GitHub Packages:
+Your package's `package.json` must declare what it exports and point at GitHub Packages:
 
 ```json package.json
 {
   "name": "@acme/brand-copywriting",
   "version": "1.2.0",
-  "description": "Write brand-consistent copy using company tone and voice guidelines.",
-  "files": ["SKILL.md"],
+  "description": "Brand copywriting package.",
+  "files": ["skills/"],
+  "agentpack": {
+    "skills": {
+      "brand-copywriting": {
+        "path": "skills/brand-copywriting/SKILL.md"
+      }
+    }
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/acme-corp/knowledge-base.git"
@@ -43,11 +50,7 @@ Your skill's `package.json` must point at GitHub Packages:
 }
 ```
 
-<Note>
-  GitHub Packages requires the `repository` field to associate the package with a GitHub repo. Without it, `npm publish` will fail.
-</Note>
-
-### 2. Configure .npmrc in the publishing repo
+### 2. Configure `.npmrc` in the publishing repo
 
 ```ini .npmrc
 @acme:registry=https://npm.pkg.github.com
@@ -56,7 +59,7 @@ Your skill's `package.json` must point at GitHub Packages:
 
 ### 3. Authenticate
 
-Create a GitHub personal access token (classic) with the `write:packages` scope, or use the fine-grained equivalent. Set it as an environment variable:
+Create a GitHub token that can publish packages and set it as an environment variable:
 
 ```bash
 export GITHUB_PACKAGES_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
@@ -65,25 +68,14 @@ export GITHUB_PACKAGES_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
 ### 4. Validate and publish
 
 ```bash
-# Validate the skill is structurally sound
 agentpack skills validate domains/brand/skills/copywriting
-
-# Bump the version
 npm version patch -w domains/brand/skills/copywriting
-
-# Publish to GitHub Packages
 npm publish -w domains/brand/skills/copywriting
 ```
 
-<Tip>
-  Always run `agentpack skills validate` before publishing. It syncs dependencies, checks source provenance, and confirms the package metadata is complete.
-</Tip>
-
 ## Consumer setup
 
-### 1. Configure .npmrc in the consuming repo
-
-Route the `@acme` scope through GitHub Packages:
+### 1. Configure `.npmrc` in the consuming repo
 
 ```ini .npmrc
 @acme:registry=https://npm.pkg.github.com
@@ -93,38 +85,37 @@ always-auth=true
 
 ### 2. Authenticate
 
-Consumers need a GitHub token with the `read:packages` scope. Set it the same way:
-
 ```bash
 export GITHUB_PACKAGES_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
 ```
 
-### 3. Install the skill
+### 3. Install the skill package
 
 ```bash
 agentpack skills install @acme/brand-copywriting
 ```
 
-This does three things:
+This:
 1. Resolves the package and its transitive dependencies through npm
-2. Materializes the skills into `.claude/skills/` and `.agents/skills/`
+2. Materializes the exported skills into `.claude/skills/` and `.agents/skills/`
 3. Records the install state in `.agentpack/install.json`
-
-The agent can now discover the skill at session start.
 
 ## CI tokens
 
-In GitHub Actions, use the built-in `GITHUB_TOKEN` for package operations:
+For publishing in GitHub Actions:
 
 ```yaml .github/workflows/publish.yml
-- name: Publish skill
+- name: Publish skill package
   env:
-    NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
   run: |
+    cat << EOF > "$HOME/.npmrc"
+    //npm.pkg.github.com/:_authToken=$GITHUB_PACKAGES_TOKEN
+    EOF
     npm publish -w domains/brand/skills/copywriting
 ```
 
-For consuming repos in CI, create a repository secret with a personal access token that has `read:packages` scope:
+For consuming in CI:
 
 ```yaml .github/workflows/install-skills.yml
 - name: Install skills
@@ -134,36 +125,8 @@ For consuming repos in CI, create a repository secret with a personal access tok
     agentpack skills install @acme/brand-copywriting
 ```
 
-<Warning>
-  Never hardcode tokens in `.npmrc`. Use environment variable interpolation (`${GITHUB_PACKAGES_TOKEN}`) and set the actual value through shell environment or CI secrets.
-</Warning>
-
 ## Verifying the setup
 
-After configuring both sides, run these checks:
-
-<AccordionGroup>
-  <Accordion title="Check registry configuration">
-    ```bash
-    agentpack skills registry
-    ```
-
-    This reports whether the `@acme` scope is routed to GitHub Packages and whether auth is configured.
-  </Accordion>
-
-  <Accordion title="Check installed skills">
-    ```bash
-    agentpack skills env
-    ```
-
-    Lists all skills visible to agents in the current repo, including their package versions and materialization paths.
-  </Accordion>
-
-  <Accordion title="Check for updates">
-    ```bash
-    agentpack skills outdated
-    ```
-
-    Compares installed versions against the registry to find skills with newer published versions.
-  </Accordion>
-</AccordionGroup>
+- `agentpack skills registry` confirms the scope, registry, and auth wiring
+- `agentpack skills env` shows installed packages and materialized skills
+- `agentpack skills outdated` shows newer available package versions

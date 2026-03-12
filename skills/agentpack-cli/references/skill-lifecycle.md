@@ -7,10 +7,11 @@ Use this reference when the user needs the methodology behind packaged skills, n
 A packaged skill is a reusable capability artifact.
 
 - source docs or knowledge files are the truth
-- `SKILL.md` is the authored agent artifact
+- `SKILL.md` is the authored agent artifact for one exported skill module
 - `package.json` is the package and distribution artifact
-- `requires` expresses direct skill dependencies
-- `package.json.dependencies` is the compiled mirror of `requires`
+- `package.json.agentpack.skills` declares exported skill modules
+- `requires` expresses direct skill dependencies using canonical ids like `@scope/package:skill-name`
+- `package.json.dependencies` is the managed cross-package mirror of `requires`
 
 This is closer to a compiler pipeline than a prompt file:
 
@@ -22,27 +23,28 @@ This is closer to a compiler pipeline than a prompt file:
 
 ## Single Source Of Truth
 
-`SKILL.md.requires` is the dependency truth.
+`SKILL.md.requires` is the dependency truth for skill-to-skill edges.
 
-Do not tell the user to hand-maintain `package.json.dependencies` as the primary dependency source. Agentpack treats those dependencies as a compiled mirror.
+Do not tell the user to hand-maintain `package.json.dependencies` as the primary dependency source. Agentpack treats those dependencies as a compiled package-level mirror for cross-package references.
 
 Practical consequence:
 
 - if `requires` changes, run `skills validate` or `skills dev`
-- those commands sync the package dependencies automatically
+- those commands sync cross-package package dependencies automatically
+- same-package module references do not create package dependency entries
 
 ## Local Authoring Flow
 
 Use this when the user is creating or changing a packaged skill in the same repo as its source docs.
 
-1. `agentpack skills inspect <skill-dir>`
-2. `agentpack skills validate <skill-dir>`
-3. `agentpack skills dev <skill-dir>` if the user wants agent runtime discovery during iteration
+1. `agentpack skills inspect <target>`
+2. `agentpack skills validate <target>`
+3. `agentpack skills dev <target>` if the user wants agent runtime discovery during iteration
 
 What each step means:
 
 - `inspect` explains what the skill currently is
-- `validate` checks package readiness, source existence, and records the validated source snapshot in `.agentpack/build-state.json`
+- `validate` checks package readiness, exported skill declarations, source existence, canonical dependency resolution, and records the validated source snapshot in `.agentpack/build-state.json`
 - `dev` links the skill into `.claude/skills/` and `.agents/skills/` for local testing
 
 Important persistence behavior:
@@ -76,7 +78,7 @@ Authoring stage:
 
 Consumption stage:
 
-- package name
+- package name or local package path
 - installed from registry or tarball
 - `skills install`
 - `skills env`

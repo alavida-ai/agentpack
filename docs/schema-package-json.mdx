@@ -3,7 +3,7 @@ title: "package.json Reference"
 description: "agentpack-relevant fields in package.json for skill and plugin packages."
 ---
 
-Every packaged skill is an npm package. The `package.json` provides the identity, version, and distribution metadata that npm needs to publish and install it.
+Every packaged skill module ships inside an npm package. The `package.json` provides the package identity, version, exported skills, and distribution metadata that npm needs to publish and install it.
 
 ## Skill package fields
 
@@ -11,11 +11,12 @@ Every packaged skill is an npm package. The `package.json` provides the identity
 |---|---|---|
 | `name` | Yes | Scoped package name (e.g., `@acme/brand-copywriting`). |
 | `version` | Yes | Semver version (e.g., `1.2.0`). |
-| `description` | Yes | What the skill does. Should match the SKILL.md `description`. |
-| `files` | Yes | Which files to include in the published package. Must include `"SKILL.md"`. |
-| `dependencies` | Managed | Compiled from SKILL.md `requires`. Managed by `agentpack skills validate` and `agentpack skills dev`. |
+| `description` | Recommended | Package-level summary. |
+| `agentpack.skills` | Yes | Explicit exported skill map. Keys must match each exported `SKILL.md` frontmatter `name`. |
+| `files` | Yes | Which files to include in the published package. Must include the exported skill paths (for example `"skills/"`). |
+| `dependencies` | Managed | Required for cross-package skill references. Managed from exported skills' `requires`. |
 | `publishConfig` | Yes | Registry configuration for GitHub Packages. |
-| `repository` | Yes | GitHub repository URL. Required for `@scope/*` packages on GitHub Packages. |
+| `repository` | Yes | Repository URL for the source package. |
 
 ## Complete example
 
@@ -23,10 +24,17 @@ Every packaged skill is an npm package. The `package.json` provides the identity
 {
   "name": "@acme/brand-copywriting",
   "version": "1.2.0",
-  "description": "Write brand-consistent copy using company tone and voice guidelines.",
-  "files": ["SKILL.md"],
-  "dependencies": {
-    "@acme/editorial-principles": "^1.0.0"
+  "description": "Brand copywriting package.",
+  "files": ["skills/"],
+  "agentpack": {
+    "skills": {
+      "value-copywriting": {
+        "path": "skills/value-copywriting/SKILL.md"
+      },
+      "editorial-principles": {
+        "path": "skills/editorial-principles/SKILL.md"
+      }
+    }
   },
   "repository": {
     "type": "git",
@@ -44,28 +52,30 @@ package.json is the source of truth for:
 
 - **Package version** — the semver version number. agentpack reads it but never writes it. You bump it yourself or with `npm version`.
 - **Publish configuration** — the registry URL and any access settings.
-- **Repository URL** — required by GitHub Packages to associate the package with a repo.
-- **Files list** — controls what gets published. Keep it tight: just `SKILL.md`.
+- **Repository URL** — identifies where the source package lives.
+- **Exported skills** — the package-level contract for which runtime modules ship and where they live.
+- **Files list** — controls what gets published. Keep it tight: just the exported skill directories and supporting assets.
 
 ## What package.json does NOT own
 
 | Concern | Owned by |
 |---|---|
-| Skill identity and description | `SKILL.md` frontmatter (source of truth) |
-| Dependencies | `SKILL.md` `requires` (compiled into `package.json` by agentpack) |
+| Exported skill identity and path | `package.json.agentpack.skills` |
+| Skill description and runtime behavior | `SKILL.md` frontmatter + body |
+| Skill dependencies | `SKILL.md` `requires` (compiled into cross-package `package.json.dependencies`) |
 | Source provenance | `SKILL.md` `metadata.sources` |
 
 <Warning>
-  Do not manually edit the `dependencies` field for skill packages. agentpack compiles it from the `requires` array in SKILL.md. Manual edits will be overwritten on the next validate or dev run.
+  Do not manually edit managed cross-package skill dependencies in `dependencies`. agentpack derives them from exported skills' `requires` arrays. Manual edits will be overwritten on the next validate or dev run.
 </Warning>
 
 ## The dependency sync model
 
 agentpack syncs dependencies the way `go mod tidy` syncs `go.mod`:
 
-1. Read `requires` from SKILL.md
+1. Read `requires` from each exported `SKILL.md`
 2. Read `dependencies` from package.json
-3. Add anything in `requires` that is missing from `dependencies`
+3. Add cross-package requirements that are missing from `dependencies`
 4. Remove anything in `dependencies` that is no longer in `requires`
 5. Write package.json
 
@@ -103,7 +113,8 @@ Plugin packages use `devDependencies` instead of `dependencies` for vendoring st
 `agentpack skills validate` checks these package.json conditions:
 
 - `name` and `version` are present
-- `files` includes `"SKILL.md"` (if the `files` field exists)
-- Every `requires` entry from SKILL.md appears in `dependencies`
+- `agentpack.skills` exists and each exported path resolves
+- `files` includes the exported skill paths (if the `files` field exists)
+- Every cross-package `requires` entry from exported skills appears in `dependencies`
 - `@scope/*` packages include a `repository` field
 - `@scope/*` packages set `publishConfig.registry` to `https://npm.pkg.github.com`

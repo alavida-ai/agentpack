@@ -17,7 +17,7 @@ All `agentpack skills` commands are non-interactive and deterministic. They prod
 
 ## Development
 
-Commands for authoring and testing skills locally.
+Commands for authoring and testing exported skills locally.
 
 ### `skills dev`
 
@@ -33,7 +33,7 @@ agentpack skills dev <target> [flags]
 
 | Argument | Description |
 |----------|-------------|
-| `<target>` | Path to a skill directory or `SKILL.md` file |
+| `<target>` | Path to a package directory, exported skill directory, or `SKILL.md` file |
 
 **Flags**
 
@@ -45,14 +45,16 @@ agentpack skills dev <target> [flags]
 **Example**
 
 ```bash
-$ agentpack skills dev domains/value/skills/copywriting
+$ agentpack skills dev domains/value/packages/value-copywriting
 
-  Skill:      @acme/value-copywriting
-  Version:    1.2.0
-  Linked:     .claude/skills/value-copywriting → domains/value/skills/copywriting
-              .agents/skills/value-copywriting → domains/value/skills/copywriting
-  Synced:     2 requires → package.json dependencies
-  Dashboard:  http://localhost:4800
+  Linked Skill: value-copywriting
+  Path:         domains/value/packages/value-copywriting/skills/value-copywriting
+  Linked Skills: 3
+  Linked:       .claude/skills/value-copywriting
+  Linked:       .claude/skills/research
+  Linked:       .claude/skills/editorial-principles
+  Synced Added: 1
+  Dashboard:    http://localhost:4800
 
   Watching for changes...
 ```
@@ -64,7 +66,7 @@ $ agentpack skills dev domains/value/skills/copywriting
 <Tip>
   Use `--no-dashboard` in CI or when you only need the link without the browser workbench:
   ```bash
-  agentpack skills dev domains/value/skills/copywriting --no-dashboard
+agentpack skills dev domains/value/packages/value-copywriting --no-dashboard
   ```
 </Tip>
 
@@ -84,7 +86,7 @@ agentpack skills unlink <target>
 
 | Argument | Description |
 |----------|-------------|
-| `<target>` | The skill name from SKILL.md frontmatter |
+| `<target>` | The exported skill name from SKILL.md frontmatter |
 
 **Example**
 
@@ -119,39 +121,41 @@ agentpack skills validate [target]
 
 **Checks performed:**
 
-- `SKILL.md` parses successfully
+- `package.json.agentpack.skills` exists and exported paths resolve
+- each exported `SKILL.md` parses successfully
 - `package.json` has `name` and `version`
 - All declared `metadata.sources` exist on disk
-- Every `requires` entry is compiled into `package.json` dependencies
-- If `package.json.files` exists, it includes `SKILL.md`
+- Every `requires` entry is canonical (`@scope/package:skill`) and cross-package references are backed by `package.json.dependencies`
+- If `package.json.files` exists, it includes the exported skill paths (for example `skills/`)
 
 **Example (single skill, passing)**
 
 ```bash
-$ agentpack skills validate domains/value/skills/copywriting
+$ agentpack skills validate domains/value/packages/value-copywriting
 
-  Skill:   @acme/value-copywriting
+  Package: @acme/value-copywriting
   Status:  valid
 
-  ✓ SKILL.md parses
+  ✓ agentpack.skills exports are declared
+  ✓ exported SKILL.md files parse
   ✓ package.json has name and version
   ✓ 3 sources exist
-  ✓ 2 requires compiled to dependencies
-  ✓ files includes SKILL.md
+  ✓ canonical requires align with package dependencies
+  ✓ files includes exported skill paths
 ```
 
 **Example (validation failure)**
 
 ```bash
-$ agentpack skills validate domains/value/skills/copywriting
+$ agentpack skills validate domains/value/packages/value-copywriting
 
-  Skill:   @acme/value-copywriting
+  Package: @acme/value-copywriting
   Status:  invalid
 
-  ✓ SKILL.md parses
+  ✓ agentpack.skills exports are declared
   ✓ package.json has name and version
   ✗ source not found: domains/value/knowledge/selling-points.md
-  ✓ 2 requires compiled to dependencies
+  ✓ canonical requires align with package dependencies
 ```
 
 <Note>
@@ -174,18 +178,18 @@ agentpack skills inspect <target>
 
 | Argument | Description |
 |----------|-------------|
-| `<target>` | Path to a skill directory, `SKILL.md`, or package name |
+| `<target>` | Path to a package directory, exported skill directory, `SKILL.md`, package name, or canonical skill id |
 
 **Example**
 
 ```bash
-$ agentpack skills inspect @acme/value-copywriting
+$ agentpack skills inspect @acme/value-copywriting:value-copywriting
 
   Name:         value-copywriting
   Description:  Generate brand-consistent marketing copy
   Package:      @acme/value-copywriting
   Version:      1.2.0
-  Skill file:   domains/value/skills/copywriting/SKILL.md
+  Skill file:   domains/value/packages/value-copywriting/skills/value-copywriting/SKILL.md
 
   Sources:
     domains/value/knowledge/selling-points.md
@@ -193,8 +197,8 @@ $ agentpack skills inspect @acme/value-copywriting
     domains/value/knowledge/brand-guidelines.md
 
   Requires:
-    @acme/value-tone-analyzer
-    @acme/shared-formatting
+    @acme/research:research
+    @acme/editorial-principles:editorial-principles
 ```
 
 ---
@@ -213,7 +217,7 @@ agentpack skills stale [target]
 
 | Argument | Description |
 |----------|-------------|
-| `[target]` | Path to a skill directory, `SKILL.md`, or package name. Omit to check all authored skills. |
+| `[target]` | Path to a package directory, exported skill directory, `SKILL.md`, package name, or canonical skill id. Omit to check all authored packages. |
 
 **Example (list mode)**
 
@@ -253,7 +257,7 @@ Commands for installing and removing published skill packages.
 
 ### `skills install`
 
-Install a published skill package and materialize it for agent discovery.
+Install a published package and materialize its exported skills for agent discovery.
 
 **Usage**
 

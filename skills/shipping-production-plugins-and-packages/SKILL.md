@@ -1,9 +1,9 @@
 ---
 name: shipping-production-plugins-and-packages
-description: Use when turning maintained skills into deployable bundled plugins or publishable standalone packages with explicit dependency closure, hooks, MCP tools, and production checks in agentpack.
+description: Use when turning maintained skills into deployable bundled plugins or publishable skill packages with explicit dependency closure, hooks, MCP tools, and production checks in agentpack.
 type: core
 library: agentpack
-library_version: "0.1.3"
+library_version: "0.1.4"
 sources:
   - "alavida-ai/agentpack:docs/commands.mdx"
   - "alavida-ai/agentpack:docs/architecture.mdx"
@@ -26,13 +26,21 @@ agentpack plugin build plugins/website-dev
 
 ## Core Patterns
 
-### Ship a standalone package for one reusable capability
+### Ship one package for one reusable skill module
 
 ```bash
 agentpack skills validate domains/value/skills/copywriting
 ```
 
-Use this when the capability stands on its own and does not need to ship bundled with hooks, MCP tools, or other skills.
+Use this when one package should export one reusable skill module and does not need to ship bundled with hooks, MCP tools, or other runtime pieces.
+
+### Ship one package that exports several related skill modules
+
+```bash
+agentpack skills validate domains/value/skills/pm-foundations
+```
+
+Use this when several skills belong together as one package but still need to remain separate runtime modules through `package.json.agentpack.skills`.
 
 ### Bundle a production plugin when shipping several skills together
 
@@ -56,7 +64,7 @@ Wrong:
 
 ```yaml
 requires:
-  - @alavida-ai/value-copywriting
+  - "@alavida/value-copywriting:value-copywriting"
 ```
 
 ```json
@@ -70,7 +78,7 @@ Correct:
 ```json
 {
   "devDependencies": {
-    "@alavida-ai/value-copywriting": "^1.0.0"
+    "@alavida/value-copywriting": "^1.0.0"
   }
 }
 ```
@@ -110,11 +118,11 @@ Publish one packaged skill and assume hooks, MCP tools, and related skills ship 
 Correct:
 
 ```text
-Use a standalone package for one reusable capability
+Use a skill package for one or many reusable skill modules
 Use a bundled plugin when several skills, hooks, or MCP tools must ship together
 ```
 
-Packaged skills are reusable units; plugins are deployable runtime shells.
+Skill packages are reusable distribution units; exported skills are runtime modules; plugins are deployable runtime shells.
 
 Source: README.md
 

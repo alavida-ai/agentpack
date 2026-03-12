@@ -9,11 +9,13 @@ import {
   readNodeStatus,
 } from '../domain/skills/skill-graph.js';
 import { readInstallState } from '../infrastructure/fs/install-state-repository.js';
+import { readDevSession, writeDevSession, removeDevSession } from '../infrastructure/fs/dev-session-repository.js';
 import {
   ensureSkillLink,
   rebuildInstallState,
   removePathIfExists,
   removeSkillLinks,
+  removeSkillLinksByPaths,
   removeSkillLinksByNames,
 } from '../infrastructure/runtime/materialize-skills.js';
 import {
@@ -171,6 +173,100 @@ function readPackageJson(packageDir) {
   };
 }
 
+function isProcessAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if (error.code === 'EPERM') return true;
+    if (error.code === 'ESRCH') return false;
+    return false;
+  }
+}
+
+function buildDevSessionNextSteps(command) {
+  return [{
+    action: 'run_command',
+    command,
+    reason: 'Use the dev session cleanup flow to remove recorded linked skills for this repo',
+  }];
+}
+
+function toDevSessionRecord(repoRoot, target, result, existing = null) {
+  const now = new Date().toISOString();
+  const rootSkill = result.linkedSkills.find((entry) => entry.name === result.name) || result.linkedSkills[0] || null;
+  return {
+    version: 1,
+    session_id: existing?.session_id || `dev-${now.replaceAll(':', '-').replaceAll('.', '-')}`,
+    status: 'active',
+    pid: process.pid,
+    repo_root: repoRoot,
+    target,
+    root_skill: rootSkill
+      ? {
+        name: rootSkill.name,
+        package_name: rootSkill.packageName,
+        path: rootSkill.path,
+      }
+      : null,
+    linked_skills: result.linkedSkills.map((entry) => ({
+      name: entry.name,
+      package_name: entry.packageName,
+      path: entry.path,
+    })),
+    links: result.links,
+    started_at: existing?.started_at || now,
+    updated_at: now,
+  };
+}
+
+function cleanupRecordedDevSession(repoRoot, session, status = 'stale') {
+  if (!session) {
+    return {
+      cleaned: false,
+      removed: [],
+      session: null,
+    };
+  }
+
+  writeDevSession(repoRoot, {
+    ...session,
+    status,
+    updated_at: new Date().toISOString(),
+  });
+  const removed = removeSkillLinksByPaths(repoRoot, session.links || [], normalizeDisplayPath);
+  removeDevSession(repoRoot);
+  return {
+    cleaned: removed.length > 0 || Boolean(session),
+    removed,
+    session,
+  };
+}
+
+function reconcileDevSession(repoRoot) {
+  const session = readDevSession(repoRoot);
+  if (!session) return null;
+
+  if (session.status === 'active' && isProcessAlive(session.pid)) {
+    throw new AgentpackError('A skills dev session is already active in this repo', {
+      code: 'skills_dev_session_active',
+      exitCode: EXIT_CODES.GENERAL,
+      nextSteps: [
+        ...buildDevSessionNextSteps('agentpack skills dev cleanup'),
+        ...buildDevSessionNextSteps('agentpack skills dev cleanup --force'),
+      ],
+      details: {
+        rootSkill: session.root_skill?.name || null,
+        pid: session.pid,
+        startedAt: session.started_at || null,
+      },
+    });
+  }
+
+  return cleanupRecordedDevSession(repoRoot, session, 'stale');
+}
+
 export function syncSkillDependencies(skillDir) {
   const skillFile = join(skillDir, 'SKILL.md');
   const metadata = parseSkillFrontmatterFile(skillFile);
@@ -271,12 +367,14 @@ export function startSkillDev(target, {
   const outerRepoRoot = findRepoRoot(cwd);
   const { skillDir } = resolveLocalPackagedSkillDir(outerRepoRoot, target);
   const repoRoot = findRepoRoot(skillDir);
+  reconcileDevSession(repoRoot);
   let closed = false;
   let timer = null;
   let currentNames = [];
   let watcher = null;
   let workbench = null;
   let initialResult = null;
+  let sessionRecord = null;
 
   const cleanup = () => {
     if (closed) return { name: currentNames[0] || null, unlinked: false, removed: [] };
@@ -284,10 +382,20 @@ export function startSkillDev(target, {
     clearTimeout(timer);
     if (watcher) watcher.close();
     if (workbench) workbench.close();
-    const removed = removeSkillLinksByNames(repoRoot, currentNames, normalizeDisplayPath);
+    if (sessionRecord) {
+      writeDevSession(repoRoot, {
+        ...sessionRecord,
+        status: 'cleaning',
+        updated_at: new Date().toISOString(),
+      });
+    }
+    const removed = sessionRecord
+      ? removeSkillLinksByPaths(repoRoot, sessionRecord.links || [], normalizeDisplayPath)
+      : removeSkillLinksByNames(repoRoot, currentNames, normalizeDisplayPath);
+    removeDevSession(repoRoot);
     detachProcessCleanup();
     return {
-      name: currentNames[0] || null,
+      name: sessionRecord?.root_skill?.name || currentNames[0] || null,
       unlinked: removed.length > 0,
       removed,
     };
@@ -295,9 +403,14 @@ export function startSkillDev(target, {
 
   const processCleanupHandlers = new Map();
   const attachProcessCleanup = () => {
-    for (const eventName of ['exit', 'beforeExit', 'SIGINT', 'SIGTERM', 'SIGHUP']) {
+    const exitHandler = () => cleanup();
+    processCleanupHandlers.set('exit', exitHandler);
+    process.once('exit', exitHandler);
+
+    for (const eventName of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
       const handler = () => {
         cleanup();
+        process.exit(0);
       };
       processCleanupHandlers.set(eventName, handler);
       process.once(eventName, handler);
@@ -333,6 +446,8 @@ export function startSkillDev(target, {
       removeSkillLinksByNames(repoRoot, staleNames, normalizeDisplayPath);
     }
     currentNames = nextNames;
+    sessionRecord = toDevSessionRecord(repoRoot, target, result, sessionRecord);
+    writeDevSession(repoRoot, sessionRecord);
     return result;
   };
 
@@ -390,8 +505,37 @@ export function startSkillDev(target, {
   };
 }
 
-export function unlinkSkill(name, { cwd = process.cwd() } = {}) {
+export function unlinkSkill(name, { cwd = process.cwd(), recursive = false } = {}) {
   const repoRoot = findRepoRoot(cwd);
+  const session = readDevSession(repoRoot);
+
+  if (recursive) {
+    if (!session || session.root_skill?.name !== name) {
+      throw new AgentpackError('Recursive unlink requires the active dev-session root skill', {
+        code: 'linked_skill_recursive_unlink_requires_root',
+        exitCode: EXIT_CODES.GENERAL,
+        nextSteps: session?.root_skill?.name
+          ? [{
+            action: 'run_command',
+            command: `agentpack skills unlink ${session.root_skill.name} --recursive`,
+            reason: 'Recursive unlink in v1 only works for the recorded dev-session root skill',
+          }]
+          : buildDevSessionNextSteps('agentpack skills dev cleanup --force'),
+        details: {
+          rootSkill: session?.root_skill?.name || null,
+        },
+      });
+    }
+
+    const removed = removeSkillLinksByPaths(repoRoot, session.links || [], normalizeDisplayPath);
+    removeDevSession(repoRoot);
+    return {
+      name,
+      unlinked: removed.length > 0,
+      removed,
+    };
+  }
+
   const existing = [
     join(repoRoot, '.claude', 'skills', name),
     join(repoRoot, '.agents', 'skills', name),
@@ -410,6 +554,43 @@ export function unlinkSkill(name, { cwd = process.cwd() } = {}) {
     name,
     unlinked: true,
     removed,
+  };
+}
+
+export function cleanupSkillDevSession({ cwd = process.cwd(), force = false } = {}) {
+  const repoRoot = findRepoRoot(cwd);
+  const session = readDevSession(repoRoot);
+  if (!session) {
+    return {
+      cleaned: false,
+      active: false,
+      removed: [],
+    };
+  }
+
+  if (!force && session.status === 'active' && isProcessAlive(session.pid)) {
+    throw new AgentpackError('A skills dev session is still active in this repo', {
+      code: 'skills_dev_session_active',
+      exitCode: EXIT_CODES.GENERAL,
+      nextSteps: [
+        ...buildDevSessionNextSteps('agentpack skills dev cleanup'),
+        ...buildDevSessionNextSteps('agentpack skills dev cleanup --force'),
+      ],
+      details: {
+        rootSkill: session.root_skill?.name || null,
+        pid: session.pid,
+        startedAt: session.started_at || null,
+      },
+    });
+  }
+
+  const result = cleanupRecordedDevSession(repoRoot, session, 'stale');
+  return {
+    cleaned: true,
+    active: false,
+    forced: force,
+    name: session.root_skill?.name || null,
+    removed: result.removed,
   };
 }
 

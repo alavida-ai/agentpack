@@ -295,10 +295,12 @@ In authoring repos:
 
 - commit `.agentpack/build-state.json`
 - commit `.agentpack/catalog.json`
+- commit `skills/sync-state.json` when maintaining shipped Intent skills
 
 In consumer/runtime repos:
 
 - do not commit `.agentpack/install.json`
+- do not commit `.agentpack/dev-session.json`
 
 ## License
 

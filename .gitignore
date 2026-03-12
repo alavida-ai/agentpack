@@ -2,4 +2,5 @@ node_modules/
 package-lock.json
 .worktrees/
 .agentpack/install.json
+.agentpack/dev-session.json
 .agentpack/dist/

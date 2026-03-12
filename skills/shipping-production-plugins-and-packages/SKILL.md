@@ -3,7 +3,7 @@ name: shipping-production-plugins-and-packages
 description: Use when turning maintained skills into deployable bundled plugins or publishable standalone packages with explicit dependency closure, hooks, MCP tools, and production checks in agentpack.
 type: core
 library: agentpack
-library_version: "0.1.2"
+library_version: "0.1.3"
 sources:
   - "alavida-ai/agentpack:docs/commands.mdx"
   - "alavida-ai/agentpack:docs/architecture.mdx"

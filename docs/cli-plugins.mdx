@@ -1,0 +1,212 @@
+---
+title: "Plugin Commands"
+description: "CLI reference for all agentpack plugin subcommands"
+---
+
+All `agentpack plugin` commands are non-interactive and deterministic. They operate on plugin directories that contain a `.claude-plugin/plugin.json` and one or more local skills.
+
+**Exit codes:**
+
+| Code | Meaning |
+|------|---------|
+| `0`  | Success |
+| `1`  | Operational failure (e.g., unresolvable dependency, missing plugin files) |
+| `2`  | Usage or validation error (e.g., bad arguments, unknown flag) |
+
+---
+
+## Inspection
+
+Commands for examining plugin structure and verifying build readiness.
+
+### `plugin inspect`
+
+Show a summary of a plugin bundle: its local skills, required packages, and the full vendoring closure.
+
+**Usage**
+
+```bash
+agentpack plugin inspect <target>
+```
+
+**Arguments**
+
+| Argument | Description |
+|----------|-------------|
+| `<target>` | Path to the plugin directory |
+
+**Example**
+
+```bash
+$ agentpack plugin inspect plugins/acme-writer
+
+  Plugin:       acme-writer
+  Local skills: 2
+    skills/landing-page-writer/SKILL.md
+    skills/email-writer/SKILL.md
+
+  Required packages (direct):
+    @acme/value-copywriting@^1.2.0
+    @acme/shared-formatting@^2.0.0
+
+  Required packages (transitive):
+    @acme/value-tone-analyzer@^0.8.1
+
+  Unresolved: 0
+```
+
+**Example (with unresolved packages)**
+
+```bash
+$ agentpack plugin inspect plugins/acme-writer
+
+  Plugin:       acme-writer
+  Local skills: 2
+    skills/landing-page-writer/SKILL.md
+    skills/email-writer/SKILL.md
+
+  Required packages (direct):
+    @acme/value-copywriting@^1.2.0
+    @acme/shared-formatting@^2.0.0
+
+  Unresolved: 1
+    @acme/value-tone-analyzer  (required by @acme/value-copywriting, not found)
+```
+
+---
+
+### `plugin validate`
+
+Validate that a plugin can be built into a self-contained artifact.
+
+**Usage**
+
+```bash
+agentpack plugin validate <target>
+```
+
+**Arguments**
+
+| Argument | Description |
+|----------|-------------|
+| `<target>` | Path to the plugin directory |
+
+**Checks performed:**
+
+- `.claude-plugin/plugin.json` exists and is valid
+- `package.json` has `name` and `version`
+- All local plugin skills parse successfully
+- Every direct required package is in `package.json.devDependencies`
+- Every direct and transitive required package resolves
+- Vendored skill names do not collide with local skill directories
+
+**Example (passing)**
+
+```bash
+$ agentpack plugin validate plugins/acme-writer
+
+  Plugin:  acme-writer
+  Status:  valid
+
+  ✓ plugin.json exists
+  ✓ package.json has name and version
+  ✓ 2 local skills parse
+  ✓ 2 direct required packages in devDependencies
+  ✓ 3 total required packages resolve
+  ✓ no skill name collisions
+```
+
+**Example (failure)**
+
+```bash
+$ agentpack plugin validate plugins/acme-writer
+
+  Plugin:  acme-writer
+  Status:  invalid
+
+  ✓ plugin.json exists
+  ✓ package.json has name and version
+  ✓ 2 local skills parse
+  ✗ @acme/value-copywriting not in devDependencies
+  ✗ @acme/value-tone-analyzer cannot be resolved
+  ✓ no skill name collisions
+```
+
+---
+
+## Build
+
+Commands for building and iterating on plugin artifacts.
+
+### `plugin build`
+
+Build a self-contained plugin artifact with all required skill packages vendored in.
+
+**Usage**
+
+```bash
+agentpack plugin build <target>
+```
+
+**Arguments**
+
+| Argument | Description |
+|----------|-------------|
+| `<target>` | Path to the plugin directory |
+
+**Example**
+
+```bash
+$ agentpack plugin build plugins/acme-writer
+
+  Plugin:    acme-writer
+  Output:    .agentpack/dist/plugins/acme-writer/
+
+  Vendored skills:
+    @acme/value-copywriting@1.2.0
+    @acme/shared-formatting@2.0.0
+    @acme/value-tone-analyzer@0.8.1
+
+  Provenance: .claude-plugin/bundled-skills.json updated
+```
+
+---
+
+### `plugin dev`
+
+Watch the plugin source tree and rebuild the artifact on every change.
+
+**Usage**
+
+```bash
+agentpack plugin dev <target>
+```
+
+**Arguments**
+
+| Argument | Description |
+|----------|-------------|
+| `<target>` | Path to the plugin directory |
+
+**Example**
+
+```bash
+$ agentpack plugin dev plugins/acme-writer
+
+  Plugin:    acme-writer
+  Output:    .agentpack/dist/plugins/acme-writer/
+  Use with:  claude --plugin-dir .agentpack/dist/plugins/acme-writer
+
+  Watching for changes...
+
+  [12:04:15] Rebuilt acme-writer (3 vendored skills)
+  [12:06:42] Rebuilt acme-writer (3 vendored skills)
+```
+
+<Note>
+  Unlike `skills dev`, `plugin dev` does **not** launch a dashboard. It only watches for file changes and rebuilds the artifact. Point Claude at the output directory using `claude --plugin-dir`.
+</Note>
+
+<Tip>
+  Run `plugin validate` before `plugin dev` to catch structural issues early. The dev watcher will fail on each rebuild if required packages are unresolvable.
+</Tip>

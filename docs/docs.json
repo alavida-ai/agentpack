@@ -15,32 +15,23 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["introduction", "overview"]
+            "pages": ["introduction", "quickstart", "first-skill", "skill-dependencies", "building-plugins", "publishing"]
           },
           {
-            "group": "Architecture",
-            "pages": ["architecture", "build-lifecycle", "schemas"]
+            "group": "Core Concepts",
+            "pages": ["how-it-works", "dashboard", "skill-graph", "staleness"]
+          },
+          {
+            "group": "Guides",
+            "pages": ["docs-as-sources", "sharing-skills", "ci-integration"]
           },
           {
             "group": "CLI Reference",
-            "pages": ["commands"]
+            "pages": ["cli-skills", "cli-plugins"]
           },
           {
-            "group": "Distribution",
-            "pages": ["distribution"]
-          },
-          {
-            "group": "Development",
-            "pages": [
-              "testing",
-              "fixtures",
-              "live-validation",
-              "implementation-plan"
-            ]
-          },
-          {
-            "group": "Operations",
-            "pages": ["current-state", "production-readiness"]
+            "group": "Reference",
+            "pages": ["schema-skill-md", "schema-package-json", "schema-generated-files"]
           }
         ]
       }
@@ -50,13 +41,13 @@
     "links": [
       {
         "label": "GitHub",
-        "href": "https://github.com/alavida/agentpack"
+        "href": "https://github.com/alavida-ai/agentpack"
       }
     ]
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/alavida"
+      "github": "https://github.com/alavida-ai"
     }
   }
 }

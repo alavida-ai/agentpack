@@ -1,0 +1,322 @@
+---
+title: "Building Plugins"
+description: "Bundle multiple skills into a self-contained plugin artifact for Claude Code"
+---
+
+## What you'll build
+
+You'll create a **plugin** that bundles skills into a single deployable artifact. The plugin can be tested locally with `claude --plugin-dir` and published as one unit.
+
+**The key distinction:** Skills are libraries. Plugins are apps. A skill is a reusable capability. A plugin bundles skills (plus hooks, templates, and MCP config) into a self-contained artifact that ships as one unit to Claude Code.
+
+## Prerequisites
+
+- Completed [Skill Dependencies](/skill-dependencies)
+- Standalone skill packages available in your repo (we'll use the ones from previous tutorials)
+
+## Plugin directory structure
+
+Here is the layout you'll create:
+
+```
+plugins/
+└── website-dev/
+    ├── .claude-plugin/
+    │   └── plugin.json                ← Claude plugin manifest
+    ├── skills/
+    │   ├── landing-page-writer/
+    │   │   └── SKILL.md              ← local plugin skill
+    │   └── page-auditor/
+    │       └── SKILL.md              ← local plugin skill
+    └── package.json                   ← plugin package metadata
+```
+
+After building, the output artifact adds vendored standalone skills:
+
+```
+.agentpack/dist/plugins/website-dev/
+├── .claude-plugin/
+│   ├── plugin.json
+│   └── bundled-skills.json            ← vendoring provenance
+├── skills/
+│   ├── landing-page-writer/SKILL.md   ← local (copied from source)
+│   ├── page-auditor/SKILL.md          ← local (copied from source)
+│   ├── copywriting/SKILL.md           ← vendored (direct dependency)
+│   ├── research/SKILL.md              ← vendored (transitive)
+│   └── methodology-gary-provost/SKILL.md  ← vendored (transitive)
+└── package.json
+```
+
+<Steps>
+
+<Step title="Create the plugin directory">
+
+```bash
+mkdir -p plugins/website-dev/.claude-plugin
+mkdir -p plugins/website-dev/skills/landing-page-writer
+mkdir -p plugins/website-dev/skills/page-auditor
+```
+
+</Step>
+
+<Step title="Write the plugin manifest">
+
+The `.claude-plugin/plugin.json` file tells Claude Code what this plugin is.
+
+```json plugins/website-dev/.claude-plugin/plugin.json
+{
+  "name": "website-dev",
+  "description": "Website development harness with copywriting and page auditing skills."
+}
+```
+
+</Step>
+
+<Step title="Write the plugin package.json">
+
+The plugin's `package.json` declares standalone skill packages as `devDependencies`. These are the packages agentpack will vendor into the build artifact.
+
+```json plugins/website-dev/package.json
+{
+  "name": "@alavida/plugin-website-dev",
+  "version": "0.1.0",
+  "description": "Website development harness plugin",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "devDependencies": {
+    "@alavida/copywriting": "^0.1.0"
+  },
+  "files": [".claude-plugin", "skills"]
+}
+```
+
+<Note>
+Standalone skill packages go in `devDependencies`, not `dependencies`. They are build-time inputs that get vendored into the artifact -- they are not runtime npm dependencies.
+</Note>
+
+</Step>
+
+<Step title="Write the local plugin skills">
+
+Local plugin skills are specific to this plugin. They reference standalone skill packages via `requires`.
+
+```markdown plugins/website-dev/skills/landing-page-writer/SKILL.md
+---
+name: landing-page-writer
+description: Write landing pages using brand copywriting standards
+metadata:
+  sources: []
+requires:
+  - "@alavida/copywriting"
+---
+
+## Instructions
+
+When creating a landing page:
+
+1. Use the copywriting skill to ensure brand-consistent tone.
+2. Structure the page: hero, value props, social proof, CTA.
+3. Keep the hero headline under 10 words.
+4. Every section must have a clear purpose and a single call to action.
+```
+
+```markdown plugins/website-dev/skills/page-auditor/SKILL.md
+---
+name: page-auditor
+description: Audit existing web pages for brand and copy quality
+metadata:
+  sources: []
+requires: []
+---
+
+## Instructions
+
+When auditing a web page:
+
+1. Check that all copy follows brand tone-of-voice guidelines.
+2. Flag any marketing superlatives or jargon.
+3. Verify that every page has a single primary CTA.
+4. Report findings as a checklist with pass/fail per item.
+```
+
+</Step>
+
+<Step title="Inspect the plugin">
+
+Run `agentpack plugin inspect` to see what will be bundled:
+
+```bash
+agentpack plugin inspect plugins/website-dev
+```
+
+```
+Plugin: website-dev
+Package: @alavida/plugin-website-dev
+Version: 0.1.0
+Path: plugins/website-dev
+Local Skills: 2
+Direct Bundled Packages: 1
+Transitive Bundled Packages: 1
+
+Local Skills:
+- landing-page-writer
+  requires: @alavida/copywriting
+- page-auditor
+  requires: none
+
+Direct Bundled Packages:
+- @alavida/copywriting
+  skill: copywriting
+  version: 0.1.0
+  source: packages/skills/copywriting
+
+Transitive Bundled Packages:
+- @alavida/research
+  skill: research
+  version: 1.0.0
+  source: packages/skills/research
+```
+
+This shows the full bundle closure: local skills, direct vendored packages, and transitive vendored packages.
+
+</Step>
+
+<Step title="Validate the plugin">
+
+Run `agentpack plugin validate` to check that the plugin can vendor everything it needs:
+
+```bash
+agentpack plugin validate plugins/website-dev
+```
+
+```
+Plugin: website-dev
+Package: @alavida/plugin-website-dev
+Status: valid
+Issues: 0
+Direct Bundled Packages: 1
+Transitive Bundled Packages: 1
+```
+
+Validation checks:
+- `.claude-plugin/plugin.json` exists and is valid
+- `package.json` has `name` and `version`
+- All local plugin skills parse successfully
+- Every required standalone skill package is present in `devDependencies`
+- Every direct and transitive package resolves
+- No vendored skill names collide with local plugin skill directories
+
+</Step>
+
+<Step title="Build the plugin artifact">
+
+Run `agentpack plugin build` to produce the self-contained artifact:
+
+```bash
+agentpack plugin build plugins/website-dev
+```
+
+```
+Plugin: website-dev
+Output: .agentpack/dist/plugins/website-dev
+Local Skills: 2
+Vendored Skills: 2
+```
+
+The build:
+1. Syncs dependencies for all local plugin skills
+2. Resolves the direct and transitive standalone skill closure
+3. Copies local plugin files (skills, hooks, templates) into the output
+4. Vendors standalone skill packages into the output `skills/` directory
+5. Writes `bundled-skills.json` provenance
+
+{/* Screenshot: terminal showing the build output and a directory listing of .agentpack/dist/plugins/website-dev/ */}
+
+Use `--clean` to remove stale output from a previous build before building:
+
+```bash
+agentpack plugin build --clean plugins/website-dev
+```
+
+</Step>
+
+<Step title="Check bundled provenance">
+
+After building, inspect `.claude-plugin/bundled-skills.json` in the output directory. This file records exactly which packages were vendored and at what versions:
+
+```json .agentpack/dist/plugins/website-dev/.claude-plugin/bundled-skills.json
+{
+  "packages": [
+    {
+      "packageName": "@alavida/copywriting",
+      "version": "0.1.0",
+      "skillName": "copywriting"
+    },
+    {
+      "packageName": "@alavida/research",
+      "version": "1.0.0",
+      "skillName": "research"
+    }
+  ]
+}
+```
+
+This is provenance metadata -- it tells you exactly what went into the plugin artifact so you can audit and reproduce builds.
+
+</Step>
+
+<Step title="Test with Claude Code">
+
+Point Claude Code at the built artifact to test it:
+
+```bash
+claude --plugin-dir .agentpack/dist/plugins/website-dev
+```
+
+Claude sees the complete plugin exactly as consumers will: local skills, vendored standalone skills, all in one directory.
+
+</Step>
+
+<Step title="Use watch mode for iteration">
+
+During development, use `agentpack plugin dev` instead of `plugin build`. It does an initial build and then watches for source changes:
+
+```bash
+agentpack plugin dev plugins/website-dev
+```
+
+```
+Plugin: website-dev
+Output: .agentpack/dist/plugins/website-dev
+Use with: claude --plugin-dir .agentpack/dist/plugins/website-dev
+```
+
+Edit any local skill or plugin file, and the artifact rebuilds automatically. Keep `claude --plugin-dir` pointed at the output -- it always reflects the latest build.
+
+</Step>
+
+</Steps>
+
+## The vendoring model
+
+Plugin bundling is not ordinary npm dependency resolution. In normal npm, packages install separately into a `node_modules` graph. Plugin vendoring is different:
+
+- npm is used as **build-time package acquisition** to fetch standalone skill packages
+- agentpack **copies** the skill artifacts from `node_modules` into the plugin's output directory
+- The built plugin is **self-contained** -- one directory with everything included
+
+This is the same pattern as building any deployable application: libraries are authored and versioned independently, and the deployable artifact bundles what it needs.
+
+## Next steps
+
+Your plugin is built and tested locally. The next step is publishing it (and its standalone skill dependencies) so other repos and teams can consume them.
+
+<CardGroup cols={2}>
+  <Card title="Publishing & Consuming Skills" icon="share-nodes" href="/publishing">
+    Publish skill packages and install them in consumer repos
+  </Card>
+  <Card title="Build Lifecycle" icon="arrows-spin" href="/build-lifecycle">
+    Deeper dive into the compiler model and build paths
+  </Card>
+</CardGroup>

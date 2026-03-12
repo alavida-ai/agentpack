@@ -1,97 +1,93 @@
 ---
-title: "Introduction"
-description: "Package-backed runtime and packaging CLI for agent skills and plugins"
+title: "agentpack"
+description: "Compile your team's knowledge into versioned, dependency-tracked skill packages that every agent runs the same way."
 ---
 
-# agentpack
+Your team's knowledge is trapped in docs that agents can't reliably use.
 
-Package-backed runtime and packaging CLI for agent skills and plugins.
+Someone writes a great process doc. An engineer copy-pastes it into a SKILL.md. It works — until the doc changes and nobody updates the skill. Another team needs the same skill, so they copy it again. Now there are three versions, none of them current, and no way to tell which one your agent is actually running.
 
-## Core Direction
+**agentpack fixes this.** It treats agent skills like software packages — authored from source docs, tracked for staleness, versioned with semver, and distributed through npm. When a source doc changes, you know which skills are affected. When you publish an update, every team gets it.
 
-- `skill = package`
-- `SKILL.md` is the authored skill artifact
-- `package.json` is the distribution artifact
-- npm resolves dependencies and versions
-- plugin packages can vendor standalone skill packages into self-contained plugin artifacts
-- agentpack owns install state, materialization, and plugin bundling validation
-- private package distribution targets GitHub Packages first
+## Who is agentpack for?
 
-## Command Surface
+<CardGroup cols={3}>
+  <Card title="Skill Authors" icon="pen-nib">
+    Write SKILL.md files backed by source docs. agentpack tracks which docs each skill depends on, warns you when sources change, and validates everything before you publish.
+  </Card>
+  <Card title="Team Leads" icon="users">
+    See the full skill graph in a visual dashboard. Know which skills are current, which are stale, and what depends on what — without reading a single config file.
+  </Card>
+  <Card title="Platform Engineers" icon="gear">
+    Distribute skills as npm packages through your private registry. Install them in consumer repos with dependency resolution. Wire staleness checks into CI.
+  </Card>
+</CardGroup>
 
-### Skills commands
+## How it works
 
-1. `agentpack skills inspect`
-2. `agentpack skills validate`
-3. `agentpack skills dev`
-4. `agentpack skills unlink`
-5. `agentpack skills stale`
-6. `agentpack skills install`
-7. `agentpack skills env`
-8. `agentpack skills outdated`
-9. `agentpack skills dependencies`
-10. `agentpack skills registry`
-11. `agentpack skills status`
-12. `agentpack skills missing`
-13. `agentpack skills uninstall`
+agentpack follows a compiler model. Your knowledge docs are source files. Skills are compiled artifacts. Packages are the distributable output.
 
-### Plugin commands
+{/* Screenshot: the skill graph dashboard showing 4-5 nodes with dependency edges, at least one node marked "stale" in orange and one marked "current" in green */}
 
-14. `agentpack plugin inspect`
-15. `agentpack plugin validate`
-16. `agentpack plugin build`
-17. `agentpack plugin dev`
+<Steps>
+  <Step title="Knowledge docs are your source of truth">
+    Your team maintains process docs, methodology guides, and domain knowledge in markdown. These are the **sources** — the single place where truth lives.
+  </Step>
+  <Step title="Skills are compiled from sources">
+    A SKILL.md file declares which source docs it was built from and which other skills it depends on. It is the agent-facing artifact — the compiled output of your knowledge.
+  </Step>
+  <Step title="Packages make skills distributable">
+    Each skill becomes its own npm package with a version, dependencies, and a registry. Teams install exactly the skills they need, and npm handles the dependency graph.
+  </Step>
+  <Step title="Agents discover skills at runtime">
+    Installed skills are materialized into `.claude/skills/` and `.agents/skills/` where agent runtimes find them. Every agent on your team runs the same versioned playbook.
+  </Step>
+</Steps>
 
-## Quick Start
+## The dashboard
 
-```bash
-# Install
-npm install -g @alavida/agentpack
-
-# In the authoring repo, inspect and validate a packaged skill
-agentpack skills inspect domains/operations/skills/agonda-prioritisation
-agentpack skills validate domains/operations/skills/agonda-prioritisation
-
-# Dev-link it into .claude/skills and .agents/skills for local testing
-agentpack skills dev domains/operations/skills/agonda-prioritisation
-
-# Skip the localhost workbench if you only want CLI linking
-agentpack skills dev --no-dashboard domains/operations/skills/agonda-prioritisation
-
-# In a consumer repo, install a published skill package
-agentpack skills install @alavida-ai/agonda-prioritisation
-
-# View environment state
-agentpack skills env
-
-# Build or watch a plugin artifact
-agentpack plugin inspect path/to/plugin
-agentpack plugin validate path/to/plugin
-agentpack plugin build path/to/plugin
-agentpack plugin dev path/to/plugin
-```
-
-## Repo-Root Rule
-
-For source-backed packaged skills, run authoring commands from the repo that owns the files referenced in `metadata.sources`.
-
-If a skill in your knowledge-base repo references `domains/.../knowledge/*.md`, run `skills validate`, `skills dev`, and `skills stale` from that knowledge-base repo root.
-
-## Read Order
-
-If you're new to agentpack, read the docs in this order:
+When you run `agentpack skills dev`, a visual workbench opens in your browser. It renders the skill graph with D3 — showing dependency edges, source provenance links, and lifecycle status for every node.
 
 <CardGroup cols={2}>
-  <Card title="Overview" icon="eye" href="/overview">
-    Architecture decisions and lifecycle model
+  <Card title="Skill graph" icon="diagram-project">
+    See every skill and its dependencies as an interactive DAG. Nodes are colored by status: current, stale, or affected by upstream changes.
   </Card>
-  <Card title="Architecture" icon="sitemap" href="/architecture">
-    Four planes, domain model, and canonical files
+  <Card title="Inspector panel" icon="magnifying-glass">
+    Click any node to see its sources, requires, package version, and validation state. Run actions like validate, refresh, and check-stale directly from the panel.
   </Card>
-  <Card title="Schemas" icon="database" href="/schemas">
-    File formats and schema shapes
+</CardGroup>
+
+{/* Screenshot: the dashboard inspector panel open on a selected skill, showing its sources list and a "Validate" action button */}
+
+<Note>
+  The dashboard is a visibility tool for humans. Agents use the CLI commands directly — they never interact with the dashboard.
+</Note>
+
+## Staleness you can see
+
+When a source doc changes, agentpack knows. It compares recorded source hashes against the current files and marks affected skills as **stale**. Downstream skills that depend on a stale skill are marked **affected**. You always know what needs attention.
+
+```
+knowledge/selling-points.md  (changed)
+        |
+        v
+@acme/value-copywriting      (stale — source changed)
+        |
+        v
+@acme/landing-page-writer    (affected — depends on stale skill)
+```
+
+<Tip>
+  Commit `.agentpack/build-state.json` to your repo so staleness detection works across CI, teammates, and fresh clones.
+</Tip>
+
+## Get started
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install agentpack and see the dashboard in under 5 minutes.
   </Card>
-  <Card title="Commands" icon="terminal" href="/commands">
-    Full CLI command reference
+  <Card title="Build your first skill" icon="hammer" href="/first-skill">
+    Turn your team's docs into a real, versioned skill package.
   </Card>
 </CardGroup>

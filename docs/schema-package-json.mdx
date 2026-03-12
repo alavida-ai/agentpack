@@ -1,0 +1,109 @@
+---
+title: "package.json Reference"
+description: "agentpack-relevant fields in package.json for skill and plugin packages."
+---
+
+Every packaged skill is an npm package. The `package.json` provides the identity, version, and distribution metadata that npm needs to publish and install it.
+
+## Skill package fields
+
+| Field | Required | Description |
+|---|---|---|
+| `name` | Yes | Scoped package name (e.g., `@acme/brand-copywriting`). |
+| `version` | Yes | Semver version (e.g., `1.2.0`). |
+| `description` | Yes | What the skill does. Should match the SKILL.md `description`. |
+| `files` | Yes | Which files to include in the published package. Must include `"SKILL.md"`. |
+| `dependencies` | Managed | Compiled from SKILL.md `requires`. Managed by `agentpack skills validate` and `agentpack skills dev`. |
+| `publishConfig` | Yes | Registry configuration for GitHub Packages. |
+| `repository` | Yes | GitHub repository URL. Required for `@scope/*` packages on GitHub Packages. |
+
+## Complete example
+
+```json package.json
+{
+  "name": "@acme/brand-copywriting",
+  "version": "1.2.0",
+  "description": "Write brand-consistent copy using company tone and voice guidelines.",
+  "files": ["SKILL.md"],
+  "dependencies": {
+    "@acme/editorial-principles": "^1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/acme-corp/knowledge-base.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}
+```
+
+## What package.json owns
+
+package.json is the source of truth for:
+
+- **Package version** — the semver version number. agentpack reads it but never writes it. You bump it yourself or with `npm version`.
+- **Publish configuration** — the registry URL and any access settings.
+- **Repository URL** — required by GitHub Packages to associate the package with a repo.
+- **Files list** — controls what gets published. Keep it tight: just `SKILL.md`.
+
+## What package.json does NOT own
+
+| Concern | Owned by |
+|---|---|
+| Skill identity and description | `SKILL.md` frontmatter (source of truth) |
+| Dependencies | `SKILL.md` `requires` (compiled into `package.json` by agentpack) |
+| Source provenance | `SKILL.md` `metadata.sources` |
+
+<Warning>
+  Do not manually edit the `dependencies` field for skill packages. agentpack compiles it from the `requires` array in SKILL.md. Manual edits will be overwritten on the next validate or dev run.
+</Warning>
+
+## The dependency sync model
+
+agentpack syncs dependencies the way `go mod tidy` syncs `go.mod`:
+
+1. Read `requires` from SKILL.md
+2. Read `dependencies` from package.json
+3. Add anything in `requires` that is missing from `dependencies`
+4. Remove anything in `dependencies` that is no longer in `requires`
+5. Write package.json
+
+This sync runs automatically inside `agentpack skills validate` and `agentpack skills dev`. You never run it separately.
+
+## Plugin packages
+
+Plugin packages use `devDependencies` instead of `dependencies` for vendoring standalone skill packages at build time.
+
+```json package.json
+{
+  "name": "@acme/plugin-website-dev",
+  "version": "1.0.0",
+  "description": "Website development plugin with brand copywriting skills.",
+  "devDependencies": {
+    "@acme/brand-copywriting": "^1.2.0",
+    "@acme/editorial-principles": "^1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/acme-corp/knowledge-base.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}
+```
+
+<Note>
+  For plugins, standalone skill packages go in `devDependencies` because they are vendored into the build artifact at build time. They are not runtime npm dependencies — they are build-time inputs.
+</Note>
+
+## Validation checks
+
+`agentpack skills validate` checks these package.json conditions:
+
+- `name` and `version` are present
+- `files` includes `"SKILL.md"` (if the `files` field exists)
+- Every `requires` entry from SKILL.md appears in `dependencies`
+- `@scope/*` packages include a `repository` field
+- `@scope/*` packages set `publishConfig.registry` to `https://npm.pkg.github.com`

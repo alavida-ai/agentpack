@@ -1,0 +1,303 @@
+---
+title: "Publishing & Consuming Skills"
+description: "Publish skill packages to GitHub Packages and install them in consumer repos"
+---
+
+## What you'll learn
+
+You'll walk through the full publish-to-install cycle: publishing a skill package to GitHub Packages, configuring a consumer repo to pull from the private registry, and using agentpack to install, inspect, update, and remove skills.
+
+## Prerequisites
+
+- Completed [Building Plugins](/building-plugins)
+- A GitHub Packages-enabled repository
+- A GitHub token with `read:packages` and `write:packages` scopes
+
+## Publishing a skill package
+
+<Steps>
+
+<Step title="Validate before publishing">
+
+Always validate before you publish. This ensures the skill is structurally sound and the package metadata is correct.
+
+```bash
+agentpack skills validate domains/brand/skills/copywriting
+```
+
+```
+Skill: @alavida/copywriting
+Status: valid
+Issues: 0
+```
+
+Validation checks that `package.json` includes `repository`, `publishConfig.registry`, and that `files` includes `SKILL.md`. If any of these are missing, the output tells you what to fix.
+
+</Step>
+
+<Step title="Publish with npm">
+
+agentpack does not replace `npm publish`. Publishing uses standard npm tooling:
+
+```bash
+cd domains/brand/skills/copywriting
+npm publish
+```
+
+```
+npm notice
+npm notice @alavida/copywriting@0.1.0
+npm notice Tarball Contents
+npm notice 1.2kB SKILL.md
+npm notice 312B  package.json
+npm notice === Tarball Details ===
+npm notice name:          @alavida/copywriting
+npm notice version:       0.1.0
+npm notice package size:  842 B
+npm notice total files:   2
+npm notice
++ @alavida/copywriting@0.1.0
+```
+
+The package is now on GitHub Packages. Only `SKILL.md` and `package.json` are published -- the source knowledge files stay in the authoring repo.
+
+<Note>
+For CI publishing, use a GitHub Actions workflow with the `NODE_AUTH_TOKEN` secret. A personal access token with `write:packages` scope works for local publishing.
+</Note>
+
+</Step>
+
+</Steps>
+
+## Configuring a consumer repo
+
+A consumer repo is any repo that *uses* published skills but does not *author* them. It needs to know where to find `@alavida` packages.
+
+<Steps>
+
+<Step title="Create the .npmrc file">
+
+In the root of the consumer repo, create (or update) `.npmrc` to route the `@alavida` scope through GitHub Packages:
+
+```ini .npmrc
+@alavida:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
+always-auth=true
+```
+
+This tells npm: "whenever you see `@alavida/*`, resolve it from GitHub Packages instead of the public npm registry."
+
+<Warning>
+Do **not** hardcode the token in `.npmrc`. Use an environment variable (`GITHUB_PACKAGES_TOKEN`) and set it in your shell profile or CI secrets. The `.npmrc` file is committed to the repo; the token is not.
+</Warning>
+
+</Step>
+
+<Step title="Set the environment variable">
+
+For local development:
+
+```bash
+export GITHUB_PACKAGES_TOKEN=ghp_your_token_here
+```
+
+For CI (GitHub Actions):
+
+```yaml .github/workflows/install.yml
+env:
+  GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
+```
+
+</Step>
+
+<Step title="Verify registry configuration">
+
+Use `agentpack skills registry` to confirm the repo is wired correctly:
+
+```bash
+agentpack skills registry
+```
+
+```
+Scope: @alavida
+Configured: true
+Registry: https://npm.pkg.github.com
+Always Auth: true
+Path: .npmrc
+Auth: environment variable reference
+Auth Key: GITHUB_PACKAGES_TOKEN
+```
+
+If this reports `Configured: false` or `Auth: missing`, check your `.npmrc` syntax.
+
+</Step>
+
+</Steps>
+
+## Installing skills in a consumer repo
+
+<Steps>
+
+<Step title="Install a skill package">
+
+```bash
+agentpack skills install @alavida/copywriting
+```
+
+```
+Installed Skills: 2
+
+- @alavida/copywriting
+  direct: true
+  version: 0.1.0
+
+- @alavida/research
+  direct: false
+  version: 1.0.0
+```
+
+agentpack calls npm to resolve the full dependency graph, then materializes every resolved skill package into `.claude/skills/` and `.agents/skills/`. Two skills were installed because `copywriting` requires `research`.
+
+{/* Screenshot: directory listing showing .claude/skills/copywriting and .claude/skills/research as symlinks */}
+
+</Step>
+
+<Step title="Verify the installation">
+
+Use `agentpack skills env` to see what's visible:
+
+```bash
+agentpack skills env
+```
+
+```
+Installed Skills: 2
+
+- @alavida/copywriting
+  direct: true
+  version: 0.1.0
+  source: node_modules/@alavida/copywriting
+  materialized: .claude/skills/copywriting (symlink)
+
+- @alavida/research
+  direct: false
+  version: 1.0.0
+  source: node_modules/@alavida/research
+  materialized: .claude/skills/research (symlink)
+```
+
+The `direct` field distinguishes skills you explicitly requested from those pulled in transitively.
+
+</Step>
+
+<Step title="Check overall status">
+
+Use `agentpack skills status` for a health overview:
+
+```bash
+agentpack skills status
+```
+
+```
+Health: healthy
+Installed Skills: 2
+Direct Skills: 1
+Transitive Skills: 1
+Outdated Skills: 0
+Deprecated Skills: 0
+Incomplete Skills: 0
+Registry Configured: true
+```
+
+This is a single-command check for common problems: outdated packages, deprecated skills, missing dependencies, and registry configuration.
+
+</Step>
+
+</Steps>
+
+## Managing installed skills
+
+<Steps>
+
+<Step title="Check for updates">
+
+After the authoring team publishes a new version, check for available updates:
+
+```bash
+agentpack skills outdated
+```
+
+```
+Outdated Skills: 1
+
+- @alavida/copywriting
+  current: 0.1.0
+  available: 0.2.0
+  type: minor
+  source: registry
+  recommended: agentpack skills install @alavida/copywriting
+```
+
+The `recommended` field gives you the exact command to run. The `source` tells you whether the newer version was found in the registry or in a local repo path.
+
+</Step>
+
+<Step title="Update a skill">
+
+Reinstall to pick up the latest version:
+
+```bash
+agentpack skills install @alavida/copywriting
+```
+
+agentpack resolves the updated graph and re-materializes. If the new version added or removed dependencies, the installed set adjusts accordingly.
+
+</Step>
+
+<Step title="Uninstall a skill">
+
+Remove a skill you no longer need:
+
+```bash
+agentpack skills uninstall @alavida/copywriting
+```
+
+```
+Removed Skills: 2
+- @alavida/copywriting
+- @alavida/research
+```
+
+agentpack calls `npm uninstall`, rebuilds the runtime state from remaining packages, removes dead materialized symlinks, and rewrites `.agentpack/install.json`. Transitive dependencies that are no longer needed are cleaned up automatically.
+
+</Step>
+
+</Steps>
+
+## Summary
+
+The full lifecycle from authoring to consumption:
+
+| Step | Command | Who |
+|---|---|---|
+| Validate | `agentpack skills validate <path>` | Skill author |
+| Publish | `npm publish` | Skill author |
+| Configure registry | Create `.npmrc` | Consumer team (once) |
+| Install | `agentpack skills install <package>` | Consumer |
+| Check health | `agentpack skills status` | Consumer |
+| Check updates | `agentpack skills outdated` | Consumer |
+| Update | `agentpack skills install <package>` | Consumer |
+| Remove | `agentpack skills uninstall <package>` | Consumer |
+
+agentpack handles the agent-specific parts -- materialization, runtime state, provenance -- while npm handles what npm is good at: versioning, resolution, and registry distribution.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="CLI Reference" icon="terminal" href="/commands">
+    Full reference for every agentpack command
+  </Card>
+  <Card title="Schemas" icon="database" href="/schemas">
+    Detailed file format specs for SKILL.md, package.json, and generated metadata
+  </Card>
+</CardGroup>

@@ -1,0 +1,147 @@
+---
+title: "The Dev Dashboard"
+description: "A visual tour of the live dashboard that launches during agentpack skills dev, showing your skill graph, source provenance, and lifecycle status."
+---
+
+{/* Screenshot: full dashboard showing a skill with sources and dependencies, some stale */}
+
+When you run `agentpack skills dev`, a live dashboard opens in your browser showing your skill's dependency graph, source provenance, and lifecycle status. It updates in real time as you edit files, giving you immediate visual feedback on what has changed and what needs attention.
+
+The dashboard launches automatically at `http://127.0.0.1:<port>` (the port is auto-assigned). It is the primary way to understand the shape and health of a skill during authoring.
+
+## Layout
+
+The dashboard is organized into four sections:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Skill Graph            ◆ Source  ● Skill  ● Dep   │  ← Header + Legend
+├─────────────────────────────────────────────────────┤
+│  Home > my-skill > @scope/dep-skill                 │  ← Breadcrumbs
+├──────────────────────────────────┬──────────────────┤
+│                                  │                  │
+│                                  │   Inspector      │
+│       Skill Graph Canvas         │   Panel          │
+│                                  │                  │
+│                                  │                  │
+├──────────────────────────────────┴──────────────────┤
+│  [Reset] [Validate] [Refresh] [Labels] [Sources]    │  ← Control Strip
+└─────────────────────────────────────────────────────┘
+```
+
+- **Header**: shows the title "Skill Graph" and a legend mapping shapes and colors to node types
+- **Breadcrumbs**: tracks your navigation trail when you drill into dependency graphs
+- **Skill Graph Canvas**: the main D3-powered visualization of nodes and edges
+- **Inspector Panel**: slides open from the right when you click a node
+- **Control Strip**: action buttons anchored at the bottom-left
+
+## The Skill Graph Canvas
+
+The canvas renders your skill as a directed graph with three kinds of nodes:
+
+| Node type | Shape | What it represents |
+|---|---|---|
+| Source | Diamond (blue) | A knowledge document listed in `metadata.sources` |
+| Skill | Circle | The skill being developed, or a skill it depends on |
+| Dependency | Circle | A transitive dependency resolved through the graph |
+
+Edges connect nodes in two ways:
+
+| Edge type | Style | Meaning |
+|---|---|---|
+| Provenance | Dashed blue line | "This source was used to build this skill" |
+| Requires | Solid green line | "This skill depends on that skill" |
+
+Provenance edges flow from source diamonds into the skill that references them. Requires edges flow between skill circles, showing the dependency chain.
+
+## Status Colors
+
+Every node has a lifecycle status that is encoded visually:
+
+| Status | Visual | Meaning |
+|---|---|---|
+| **current** | Solid green fill (`#8fa67e`) | Skill matches its last validated state. All sources unchanged. |
+| **stale** | Amber pulse glow (`#d4a45e`) | One or more sources changed since last validation. Skill may contain outdated knowledge. |
+| **affected** | Hollow purple ring (`#c4956e`) | A dependency of this skill has upstream changes. The skill itself has not changed, but something it depends on has. |
+| **changed** | Red diamond with pulse (`#c45454`) | A source file has been modified on disk. Shown on source nodes only. |
+| **unknown** | Gray fill (`#9a9488`) | No build state recorded. The skill has not been validated yet. |
+
+When you edit a source file while the dashboard is running, you will see its diamond turn red immediately. The skill node that references it shifts to amber. Any skills that depend on that skill show a purple ring. This cascade is the lifecycle status propagating through the graph.
+
+{/* Screenshot: inspector panel open showing a stale skill's details */}
+
+## The Inspector Panel
+
+Click any node to open the inspector panel on the right side. It shows detailed information about the selected node:
+
+- **Type**: source, skill, or dependency
+- **Name**: the node's display name or package name
+- **Status**: current lifecycle status with explanation
+- **Description**: the skill's description from SKILL.md frontmatter
+- **Version**: the package version from package.json
+- **Used by** (sources only): which skills reference this source in their `metadata.sources`
+
+The inspector gives you the detail behind the visual summary. If a skill is stale, the inspector tells you which sources changed and when.
+
+{/* Screenshot: control strip closeup showing validate and refresh buttons */}
+
+## The Control Strip
+
+The control strip sits at the bottom-left of the dashboard and provides quick actions:
+
+| Button | Action |
+|---|---|
+| **Reset zoom** | Returns the graph to its default zoom level and position |
+| **Validate** | Runs `agentpack skills validate` on the current skill and updates status |
+| **Refresh** | Reloads the graph data from disk |
+| **Toggle labels** | Shows or hides node labels on the graph |
+| **Toggle knowledge sources** | Shows or hides source diamond nodes (useful for complex graphs) |
+| **Light/Dark theme** | Switches between dark mode (warm browns, the default) and light mode |
+
+{/* Screenshot: dashboard in light mode */}
+
+## Breadcrumb Navigation
+
+When your skill depends on other skills, you can click a dependency node to drill into its own graph. The breadcrumbs at the top track your navigation trail:
+
+```
+Home > value-copywriting > @alavida/methodology-gary-provost
+```
+
+Click any breadcrumb to jump back up the chain. This lets you explore transitive dependency graphs without losing your place.
+
+## Live Reload Workflow
+
+The dashboard watches your skill directory and its declared source files for changes. The typical workflow looks like this:
+
+1. Run `agentpack skills dev path/to/skill`
+2. Dashboard opens showing your skill graph with all nodes green (current)
+3. Open a source document in your editor and make a change
+4. The dashboard updates: the source node turns red, the skill node turns amber
+5. Re-author the skill from the updated source (or have an agent do it)
+6. Click **Validate** in the control strip
+7. All nodes return to green
+
+This feedback loop means you never have to guess whether a skill is up to date. The visual state tells you immediately.
+
+## Theme
+
+The dashboard defaults to dark mode with warm brown tones and uses the Crimson Pro serif font. Toggle to light mode using the theme button in the control strip if you prefer a lighter background.
+
+<Tip>
+Pass `--no-dashboard` to skip the browser dashboard entirely. This is useful in CI pipelines or headless environments where you only need the CLI linking behavior:
+
+```bash
+agentpack skills dev --no-dashboard path/to/skill
+```
+</Tip>
+
+<Note>
+Set the environment variable `AGENTPACK_DISABLE_BROWSER=1` to prevent the dashboard from automatically opening a browser tab. The dashboard server still starts and is accessible at its URL -- the browser just will not open automatically. This is helpful if you are working in a remote SSH session or prefer to open the tab manually.
+</Note>
+
+## Related Pages
+
+- [How agentpack Works](/how-it-works) -- the lifecycle model the dashboard visualizes
+- [The Skill Graph](/skill-graph) -- understanding the dependency and provenance relationships
+- [Staleness Detection](/staleness) -- how source hashes drive the status colors you see

@@ -17,12 +17,11 @@ function ensureDashboardBundle() {
   throw new AgentpackError('Skill workbench bundle is missing from this install', {
     code: 'missing_skill_workbench_bundle',
     suggestion: 'Reinstall agentpack or rebuild the dashboard bundle before starting skills dev.',
-    path: 'src/dashboard/dist/dashboard.js',
+    path: bundlePath,
   });
 }
 
-export async function startSkillDevWorkbenchServer({ model, onAction = null }) {
-  let currentModel = model;
+export async function startSkillDevWorkbenchServer({ buildModel, defaultSkill, onAction = null }) {
   ensureDashboardBundle();
 
   const server = http.createServer(async (req, res) => {
@@ -32,14 +31,28 @@ export async function startSkillDevWorkbenchServer({ model, onAction = null }) {
       return;
     }
 
-    if (req.url === '/api/model') {
-      res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify(currentModel));
+    const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+
+    if (parsedUrl.pathname === '/api/model') {
+      const skillParam = parsedUrl.searchParams.get('skill') || defaultSkill;
+      try {
+        const model = buildModel(skillParam);
+        if (!model) {
+          res.writeHead(404, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Skill not found' }));
+          return;
+        }
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify(model));
+      } catch (error) {
+        res.writeHead(500, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
       return;
     }
 
-    if (req.method === 'POST' && req.url.startsWith('/api/actions/')) {
-      const action = req.url.slice('/api/actions/'.length);
+    if (req.method === 'POST' && parsedUrl.pathname.startsWith('/api/actions/')) {
+      const action = parsedUrl.pathname.slice('/api/actions/'.length);
       res.writeHead(200, { 'content-type': 'application/json' });
       try {
         const result = onAction ? await onAction(action) : { refreshed: true };
@@ -51,13 +64,13 @@ export async function startSkillDevWorkbenchServer({ model, onAction = null }) {
       return;
     }
 
-    if (req.url === '/') {
+    if (parsedUrl.pathname === '/') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       res.end(readFileSync(htmlPath, 'utf-8'));
       return;
     }
 
-    if (req.url === '/assets/dashboard.js') {
+    if (parsedUrl.pathname === '/assets/dashboard.js') {
       res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' });
       res.end(readFileSync(bundlePath, 'utf-8'));
       return;
@@ -74,9 +87,6 @@ export async function startSkillDevWorkbenchServer({ model, onAction = null }) {
       resolve({
         port: address.port,
         url: `http://127.0.0.1:${address.port}`,
-        updateModel(nextModel) {
-          currentModel = nextModel;
-        },
         close() {
           server.close();
         },

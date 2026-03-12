@@ -114,9 +114,9 @@ var require_scheduler_development = __commonJS({
         }
         return first;
       }
-      function compare(a, b) {
-        var diff = a.sortIndex - b.sortIndex;
-        return 0 !== diff ? diff : a.id - b.id;
+      function compare(a2, b) {
+        var diff = a2.sortIndex - b.sortIndex;
+        return 0 !== diff ? diff : a2.id - b.id;
       }
       function advanceTimers(currentTime) {
         for (var timer2 = peek(timerQueue); null !== timer2; ) {
@@ -405,7 +405,7 @@ var require_react_development = __commonJS({
               type2 = type2._init;
               try {
                 return getComponentNameFromType(type2(innerType));
-              } catch (x) {
+              } catch (x3) {
               }
           }
         return null;
@@ -417,7 +417,7 @@ var require_react_development = __commonJS({
         try {
           var name = getComponentNameFromType(type2);
           return name ? "<" + name + ">" : "<...>";
-        } catch (x) {
+        } catch (x3) {
           return "<...>";
         }
       }
@@ -579,8 +579,8 @@ var require_react_development = __commonJS({
           invokeCallback = children2;
           callback = callback(invokeCallback);
           var childKey = "" === nameSoFar ? "." + getElementKey(invokeCallback, 0) : nameSoFar;
-          isArrayImpl(callback) ? (escapedPrefix = "", null != childKey && (escapedPrefix = childKey.replace(userProvidedKeyEscapeRegex, "$&/") + "/"), mapIntoArray(callback, array2, escapedPrefix, "", function(c) {
-            return c;
+          isArrayImpl(callback) ? (escapedPrefix = "", null != childKey && (escapedPrefix = childKey.replace(userProvidedKeyEscapeRegex, "$&/") + "/"), mapIntoArray(callback, array2, escapedPrefix, "", function(c2) {
+            return c2;
           })) : null != callback && (isValidElement(callback) && (null != callback.key && (invokeCallback && invokeCallback.key === callback.key || checkKeyStringCoercion(callback.key)), escapedPrefix = cloneAndReplaceKey(
             callback,
             escapedPrefix + (null == callback.key || invokeCallback && invokeCallback.key === callback.key ? "" : ("" + callback.key).replace(
@@ -628,11 +628,11 @@ var require_react_development = __commonJS({
         }
         return invokeCallback;
       }
-      function mapChildren(children2, func, context) {
+      function mapChildren2(children2, func, context) {
         if (null == children2) return children2;
-        var result = [], count = 0;
+        var result = [], count2 = 0;
         mapIntoArray(children2, result, "", "", function(child) {
-          return func.call(context, child, count++);
+          return func.call(context, child, count2++);
         });
         return result;
       }
@@ -861,9 +861,9 @@ var require_react_development = __commonJS({
         }
       });
       var fnName = {
-        map: mapChildren,
+        map: mapChildren2,
         forEach: function(children2, forEachFunc, forEachContext) {
-          mapChildren(
+          mapChildren2(
             children2,
             function() {
               forEachFunc.apply(this, arguments);
@@ -873,13 +873,13 @@ var require_react_development = __commonJS({
         },
         count: function(children2) {
           var n = 0;
-          mapChildren(children2, function() {
+          mapChildren2(children2, function() {
             n++;
           });
           return n;
         },
         toArray: function(children2) {
-          return mapChildren(children2, function(child) {
+          return mapChildren2(children2, function(child) {
             return child;
           }) || [];
         },
@@ -1508,8 +1508,8 @@ var require_react_dom_development = __commonJS({
       exports.requestFormReset = function(form) {
         Internals.d.r(form);
       };
-      exports.unstable_batchedUpdates = function(fn, a) {
-        return fn(a);
+      exports.unstable_batchedUpdates = function(fn, a2) {
+        return fn(a2);
       };
       exports.useFormState = function(action, initialState, permalink) {
         return resolveDispatcher().useFormState(action, initialState, permalink);
@@ -1674,55 +1674,55 @@ var require_react_dom_client_development = __commonJS({
             throw Error("Unable to find node on an unmounted component.");
           return alternate !== fiber ? null : fiber;
         }
-        for (var a = fiber, b = alternate; ; ) {
-          var parentA = a.return;
+        for (var a2 = fiber, b = alternate; ; ) {
+          var parentA = a2.return;
           if (null === parentA) break;
           var parentB = parentA.alternate;
           if (null === parentB) {
             b = parentA.return;
             if (null !== b) {
-              a = b;
+              a2 = b;
               continue;
             }
             break;
           }
           if (parentA.child === parentB.child) {
             for (parentB = parentA.child; parentB; ) {
-              if (parentB === a) return assertIsMounted(parentA), fiber;
+              if (parentB === a2) return assertIsMounted(parentA), fiber;
               if (parentB === b) return assertIsMounted(parentA), alternate;
               parentB = parentB.sibling;
             }
             throw Error("Unable to find node on an unmounted component.");
           }
-          if (a.return !== b.return) a = parentA, b = parentB;
+          if (a2.return !== b.return) a2 = parentA, b = parentB;
           else {
             for (var didFindChild = false, _child = parentA.child; _child; ) {
-              if (_child === a) {
+              if (_child === a2) {
                 didFindChild = true;
-                a = parentA;
+                a2 = parentA;
                 b = parentB;
                 break;
               }
               if (_child === b) {
                 didFindChild = true;
                 b = parentA;
-                a = parentB;
+                a2 = parentB;
                 break;
               }
               _child = _child.sibling;
             }
             if (!didFindChild) {
               for (_child = parentB.child; _child; ) {
-                if (_child === a) {
+                if (_child === a2) {
                   didFindChild = true;
-                  a = parentB;
+                  a2 = parentB;
                   b = parentA;
                   break;
                 }
                 if (_child === b) {
                   didFindChild = true;
                   b = parentB;
-                  a = parentA;
+                  a2 = parentA;
                   break;
                 }
                 _child = _child.sibling;
@@ -1733,14 +1733,14 @@ var require_react_dom_client_development = __commonJS({
                 );
             }
           }
-          if (a.alternate !== b)
+          if (a2.alternate !== b)
             throw Error(
               "Return fibers should always be each others' alternates. This error is likely caused by a bug in React. Please file an issue."
             );
         }
-        if (3 !== a.tag)
+        if (3 !== a2.tag)
           throw Error("Unable to find node on an unmounted component.");
-        return a.stateNode.current === a ? fiber : alternate;
+        return a2.stateNode.current === a2 ? fiber : alternate;
       }
       function findCurrentHostFiberImpl(node) {
         var tag = node.tag;
@@ -1799,7 +1799,7 @@ var require_react_dom_client_development = __commonJS({
               type2 = type2._init;
               try {
                 return getComponentNameFromType(type2(innerType));
-              } catch (x) {
+              } catch (x3) {
               }
           }
         return null;
@@ -1881,11 +1881,11 @@ var require_react_dom_client_development = __commonJS({
         fiberStack[index$jscomp$0] = fiber;
         cursor.current = value;
       }
-      function requiredContext(c) {
-        null === c && console.error(
+      function requiredContext(c2) {
+        null === c2 && console.error(
           "Expected host context to exist. This error is likely caused by a bug in React. Please file an issue."
         );
-        return c;
+        return c2;
       }
       function pushHostContainer(fiber, nextRootInstance) {
         push(rootInstanceStackCursor, nextRootInstance, fiber);
@@ -2015,10 +2015,10 @@ var require_react_dom_client_development = __commonJS({
         if (void 0 === prefix)
           try {
             throw Error();
-          } catch (x) {
-            var match = x.stack.trim().match(/\n( *(at )?)/);
+          } catch (x3) {
+            var match = x3.stack.trim().match(/\n( *(at )?)/);
             prefix = match && match[1] || "";
-            suffix = -1 < x.stack.indexOf("\n    at") ? " (<anonymous>)" : -1 < x.stack.indexOf("@") ? "@unknown:0:0" : "";
+            suffix = -1 < x3.stack.indexOf("\n    at") ? " (<anonymous>)" : -1 < x3.stack.indexOf("@") ? "@unknown:0:0" : "";
           }
         return "\n" + prefix + name + suffix;
       }
@@ -2049,8 +2049,8 @@ var require_react_dom_client_development = __commonJS({
                   if ("object" === typeof Reflect && Reflect.construct) {
                     try {
                       Reflect.construct(Fake, []);
-                    } catch (x) {
-                      var control = x;
+                    } catch (x3) {
+                      var control = x3;
                     }
                     Reflect.construct(fn, [], Fake);
                   } else {
@@ -2182,8 +2182,8 @@ var require_react_dom_client_development = __commonJS({
             workInProgress2 = workInProgress2.return;
           } while (workInProgress2);
           return info;
-        } catch (x) {
-          return "\nError generating stack: " + x.message + "\n" + x.stack;
+        } catch (x3) {
+          return "\nError generating stack: " + x3.message + "\n" + x3.stack;
         }
       }
       function describeFunctionComponentFrameWithoutLineNumber(fn) {
@@ -2242,8 +2242,8 @@ var require_react_dom_client_development = __commonJS({
               (workInProgress2 = workInProgress2.owner) && ownerStack && (info += "\n" + formatOwnerStack(ownerStack));
             } else break;
           var JSCompiler_inline_result = info;
-        } catch (x) {
-          JSCompiler_inline_result = "\nError generating stack: " + x.message + "\n" + x.stack;
+        } catch (x3) {
+          JSCompiler_inline_result = "\nError generating stack: " + x3.message + "\n" + x3.stack;
         }
         return JSCompiler_inline_result;
       }
@@ -2329,9 +2329,9 @@ var require_react_dom_client_development = __commonJS({
             ));
           }
       }
-      function clz32Fallback(x) {
-        x >>>= 0;
-        return 0 === x ? 32 : 31 - (log(x) / LN2 | 0) | 0;
+      function clz32Fallback(x3) {
+        x3 >>>= 0;
+        return 0 === x3 ? 32 : 31 - (log(x3) / LN2 | 0) | 0;
       }
       function getHighestPriorityLanes(lanes) {
         var pendingSyncLanes = lanes & 42;
@@ -3029,7 +3029,7 @@ var require_react_dom_client_development = __commonJS({
         return indentation(indent) + describeTextNode(clientText, maxLength) + "\n";
       }
       function objectName(object) {
-        return Object.prototype.toString.call(object).replace(/^\[object (.*)\]$/, function(m, p0) {
+        return Object.prototype.toString.call(object).replace(/^\[object (.*)\]$/, function(m2, p0) {
           return p0;
         });
       }
@@ -3230,7 +3230,7 @@ var require_react_dom_client_development = __commonJS({
       function describeDiff(rootNode) {
         try {
           return "\n\n" + describeNode(rootNode, 0);
-        } catch (x) {
+        } catch (x3) {
           return "";
         }
       }
@@ -3876,16 +3876,16 @@ var require_react_dom_client_development = __commonJS({
           }
         }
       }
-      function batchedUpdates$1(fn, a, b) {
-        if (isInsideEventHandler) return fn(a, b);
+      function batchedUpdates$1(fn, a2, b) {
+        if (isInsideEventHandler) return fn(a2, b);
         isInsideEventHandler = true;
         try {
-          var JSCompiler_inline_result = fn(a);
+          var JSCompiler_inline_result = fn(a2);
           return JSCompiler_inline_result;
         } finally {
           if (isInsideEventHandler = false, null !== restoreTarget || null !== restoreQueue) {
-            if (flushSyncWork$1(), restoreTarget && (a = restoreTarget, fn = restoreQueue, restoreQueue = restoreTarget = null, restoreStateOfTarget(a), fn))
-              for (a = 0; a < fn.length; a++) restoreStateOfTarget(fn[a]);
+            if (flushSyncWork$1(), restoreTarget && (a2 = restoreTarget, fn = restoreQueue, restoreQueue = restoreTarget = null, restoreStateOfTarget(a2), fn))
+              for (a2 = 0; a2 < fn.length; a2++) restoreStateOfTarget(fn[a2]);
           }
         }
       }
@@ -4090,8 +4090,8 @@ var require_react_dom_client_development = __commonJS({
         if ("input" === domEventName || "change" === domEventName)
           return getInstIfValueChanged(targetInst);
       }
-      function is(x, y) {
-        return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
+      function is(x3, y3) {
+        return x3 === y3 && (0 !== x3 || 1 / x3 === 1 / y3) || x3 !== x3 && y3 !== y3;
       }
       function shallowEqual(objA, objB) {
         if (objectIs(objA, objB)) return true;
@@ -5779,10 +5779,10 @@ var require_react_dom_client_development = __commonJS({
       function resolveLazy(lazyType) {
         try {
           return callLazyInitInDEV(lazyType);
-        } catch (x) {
-          if (null !== x && "object" === typeof x && "function" === typeof x.then)
-            throw suspendedThenable = x, needsToResetSuspendedThenableDEV = true, SuspenseException;
-          throw x;
+        } catch (x3) {
+          if (null !== x3 && "object" === typeof x3 && "function" === typeof x3.then)
+            throw suspendedThenable = x3, needsToResetSuspendedThenableDEV = true, SuspenseException;
+          throw x3;
         }
       }
       function getSuspendedThenable() {
@@ -6499,9 +6499,9 @@ var require_react_dom_client_development = __commonJS({
             );
             thenableState$1 = null;
             return firstChildFiber;
-          } catch (x) {
-            if (x === SuspenseException || x === SuspenseActionException) throw x;
-            var fiber = createFiber(29, x, null, returnFiber.mode);
+          } catch (x3) {
+            if (x3 === SuspenseException || x3 === SuspenseActionException) throw x3;
+            var fiber = createFiber(29, x3, null, returnFiber.mode);
             fiber.lanes = lanes;
             fiber.return = returnFiber;
             var debugInfo = fiber._debugInfo = currentDebugInfo;
@@ -7615,9 +7615,9 @@ var require_react_dom_client_development = __commonJS({
         if ("object" === typeof currentStateHook && null !== currentStateHook && "function" === typeof currentStateHook.then)
           try {
             var state = useThenable(currentStateHook);
-          } catch (x) {
-            if (x === SuspenseException) throw SuspenseActionException;
-            throw x;
+          } catch (x3) {
+            if (x3 === SuspenseException) throw SuspenseActionException;
+            throw x3;
           }
         else state = currentStateHook;
         currentStateHook = updateWorkInProgressHook();
@@ -10676,11 +10676,11 @@ var require_react_dom_client_development = __commonJS({
                 addendum = null === lastEffect ? " You returned null. If your effect does not require clean up, return undefined (or nothing)." : "function" === typeof lastEffect.then ? "\n\nIt looks like you wrote " + hookName + "(async () => ...) or returned a Promise. Instead, write the async function inside your effect and call it immediately:\n\n" + hookName + "(() => {\n  async function fetchData() {\n    // You can await here\n    const response = await MyAPI.getData(someId);\n    // ...\n  }\n  fetchData();\n}, [someId]); // Or [] if effect doesn't need props or state\n\nLearn more about data fetching with Hooks: https://react.dev/link/hooks-data-fetching" : " You returned: " + lastEffect;
                 runWithFiberInDEV(
                   finishedWork,
-                  function(n, a) {
+                  function(n, a2) {
                     console.error(
                       "%s must not return anything besides a function, which is used for clean-up.%s",
                       n,
-                      a
+                      a2
                     );
                   },
                   hookName,
@@ -17055,7 +17055,7 @@ var require_react_dom_client_development = __commonJS({
       }
       function estimateBandwidth() {
         if ("function" === typeof performance.getEntriesByType) {
-          for (var count = 0, bits = 0, resourceEntries = performance.getEntriesByType("resource"), i = 0; i < resourceEntries.length; i++) {
+          for (var count2 = 0, bits = 0, resourceEntries = performance.getEntriesByType("resource"), i = 0; i < resourceEntries.length; i++) {
             var entry = resourceEntries[i], transferSize = entry.transferSize, initiatorType = entry.initiatorType, duration = entry.duration;
             if (transferSize && duration && isLikelyStaticResource(initiatorType)) {
               initiatorType = 0;
@@ -17068,13 +17068,13 @@ var require_react_dom_client_development = __commonJS({
               }
               --i;
               bits += 8 * (transferSize + initiatorType) / (entry.duration / 1e3);
-              count++;
-              if (10 < count) break;
+              count2++;
+              if (10 < count2) break;
             }
           }
-          if (0 < count) return bits / count / 1e6;
+          if (0 < count2) return bits / count2 / 1e6;
         }
-        return navigator.connection && (count = navigator.connection.downlink, "number" === typeof count) ? count : 5;
+        return navigator.connection && (count2 = navigator.connection.downlink, "number" === typeof count2) ? count2 : 5;
       }
       function getOwnerDocumentFromRootContainer(rootContainerElement) {
         return 9 === rootContainerElement.nodeType ? rootContainerElement : rootContainerElement.ownerDocument;
@@ -17987,8 +17987,8 @@ var require_react_dom_client_development = __commonJS({
       function markRetryLaneImpl(fiber, retryLane) {
         fiber = fiber.memoizedState;
         if (null !== fiber && null !== fiber.dehydrated) {
-          var a = fiber.retryLane;
-          fiber.retryLane = 0 !== a && a < retryLane ? a : retryLane;
+          var a2 = fiber.retryLane;
+          fiber.retryLane = 0 !== a2 && a2 < retryLane ? a2 : retryLane;
         }
       }
       function markRetryLaneIfNotHydrated(fiber, retryLane) {
@@ -21494,7 +21494,7 @@ var require_react_jsx_runtime_development = __commonJS({
               type2 = type2._init;
               try {
                 return getComponentNameFromType(type2(innerType));
-              } catch (x) {
+              } catch (x3) {
               }
           }
         return null;
@@ -21528,7 +21528,7 @@ var require_react_jsx_runtime_development = __commonJS({
         try {
           var name = getComponentNameFromType(type2);
           return name ? "<" + name + ">" : "<...>";
-        } catch (x) {
+        } catch (x3) {
           return "<...>";
         }
       }
@@ -21724,10 +21724,12 @@ var import_client = __toESM(require_client(), 1);
 var import_react2 = __toESM(require_react(), 1);
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/src/dashboard/lib/api.js
-async function fetchWorkbenchModel() {
-  const response = await fetch("/api/model");
+async function fetchWorkbenchModel(skillPackageName) {
+  const params = skillPackageName ? `?skill=${encodeURIComponent(skillPackageName)}` : "";
+  const response = await fetch(`/api/model${params}`);
   if (!response.ok) {
-    throw new Error(`Failed to load workbench model: ${response.status}`);
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || `Failed to load workbench model: ${response.status}`);
   }
   return response.json();
 }
@@ -21739,6 +21741,21 @@ async function runWorkbenchAction(action) {
     throw new Error(`Failed to run ${action}: ${response.status}`);
   }
   return response.json();
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/src/dashboard/lib/router.js
+function getSkillFromHash() {
+  const hash = window.location.hash;
+  const match = hash.match(/^#\/skill\/(.+)$/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+function setSkillHash(packageName) {
+  window.location.hash = `#/skill/${encodeURIComponent(packageName)}`;
+}
+function onHashChange(callback) {
+  window.addEventListener("hashchange", () => {
+    callback(getSkillFromHash());
+  });
 }
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/src/dashboard/components/SkillGraph.jsx
@@ -21796,9 +21813,9 @@ Dispatch.prototype = dispatch.prototype = {
   }
 };
 function get(type2, name) {
-  for (var i = 0, n = type2.length, c; i < n; ++i) {
-    if ((c = type2[i]).name === name) {
-      return c.value;
+  for (var i = 0, n = type2.length, c2; i < n; ++i) {
+    if ((c2 = type2[i]).name === name) {
+      return c2.value;
     }
   }
 }
@@ -21860,7 +21877,7 @@ function selector_default(selector) {
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/selection/select.js
 function select_default(select) {
   if (typeof select !== "function") select = selector_default(select);
-  for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j) {
+  for (var groups = this._groups, m2 = groups.length, subgroups = new Array(m2), j = 0; j < m2; ++j) {
     for (var group = groups[j], n = group.length, subgroup = subgroups[j] = new Array(n), node, subnode, i = 0; i < n; ++i) {
       if ((node = group[i]) && (subnode = select.call(node, node.__data__, i, group))) {
         if ("__data__" in node) subnode.__data__ = node.__data__;
@@ -21872,8 +21889,8 @@ function select_default(select) {
 }
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/array.js
-function array(x) {
-  return x == null ? [] : Array.isArray(x) ? x : Array.from(x);
+function array(x3) {
+  return x3 == null ? [] : Array.isArray(x3) ? x3 : Array.from(x3);
 }
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/selectorAll.js
@@ -21895,7 +21912,7 @@ function arrayAll(select) {
 function selectAll_default(select) {
   if (typeof select === "function") select = arrayAll(select);
   else select = selectorAll_default(select);
-  for (var groups = this._groups, m = groups.length, subgroups = [], parents = [], j = 0; j < m; ++j) {
+  for (var groups = this._groups, m2 = groups.length, subgroups = [], parents = [], j = 0; j < m2; ++j) {
     for (var group = groups[j], n = group.length, node, i = 0; i < n; ++i) {
       if (node = group[i]) {
         subgroups.push(select.call(node, node.__data__, i, group));
@@ -21949,7 +21966,7 @@ function selectChildren_default(match) {
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/selection/filter.js
 function filter_default(match) {
   if (typeof match !== "function") match = matcher_default(match);
-  for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j) {
+  for (var groups = this._groups, m2 = groups.length, subgroups = new Array(m2), j = 0; j < m2; ++j) {
     for (var group = groups[j], n = group.length, subgroup = subgroups[j] = [], node, i = 0; i < n; ++i) {
       if ((node = group[i]) && match.call(node, node.__data__, i, group)) {
         subgroup.push(node);
@@ -21992,9 +22009,9 @@ EnterNode.prototype = {
 };
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/constant.js
-function constant_default(x) {
+function constant_default(x3) {
   return function() {
-    return x;
+    return x3;
   };
 }
 
@@ -22050,7 +22067,7 @@ function data_default(value, key) {
   if (!arguments.length) return Array.from(this, datum);
   var bind = key ? bindKey : bindIndex, parents = this._parents, groups = this._groups;
   if (typeof value !== "function") value = constant_default(value);
-  for (var m = groups.length, update = new Array(m), enter = new Array(m), exit = new Array(m), j = 0; j < m; ++j) {
+  for (var m2 = groups.length, update = new Array(m2), enter = new Array(m2), exit = new Array(m2), j = 0; j < m2; ++j) {
     var parent = parents[j], group = groups[j], groupLength = group.length, data = arraylike(value.call(parent, parent && parent.__data__, j, parents)), dataLength = data.length, enterGroup = enter[j] = new Array(dataLength), updateGroup = update[j] = new Array(dataLength), exitGroup = exit[j] = new Array(groupLength);
     bind(parent, group, enterGroup, updateGroup, exitGroup, data, key);
     for (var i0 = 0, i1 = 0, previous, next; i0 < dataLength; ++i0) {
@@ -22096,7 +22113,7 @@ function join_default(onenter, onupdate, onexit) {
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/selection/merge.js
 function merge_default(context) {
   var selection2 = context.selection ? context.selection() : context;
-  for (var groups0 = this._groups, groups1 = selection2._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j) {
+  for (var groups0 = this._groups, groups1 = selection2._groups, m0 = groups0.length, m1 = groups1.length, m2 = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m2; ++j) {
     for (var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge = merges[j] = new Array(n), node, i = 0; i < n; ++i) {
       if (node = group0[i] || group1[i]) {
         merge[i] = node;
@@ -22111,7 +22128,7 @@ function merge_default(context) {
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/selection/order.js
 function order_default() {
-  for (var groups = this._groups, j = -1, m = groups.length; ++j < m; ) {
+  for (var groups = this._groups, j = -1, m2 = groups.length; ++j < m2; ) {
     for (var group = groups[j], i = group.length - 1, next = group[i], node; --i >= 0; ) {
       if (node = group[i]) {
         if (next && node.compareDocumentPosition(next) ^ 4) next.parentNode.insertBefore(node, next);
@@ -22125,10 +22142,10 @@ function order_default() {
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/selection/sort.js
 function sort_default(compare) {
   if (!compare) compare = ascending;
-  function compareNode(a, b) {
-    return a && b ? compare(a.__data__, b.__data__) : !a - !b;
+  function compareNode(a2, b) {
+    return a2 && b ? compare(a2.__data__, b.__data__) : !a2 - !b;
   }
-  for (var groups = this._groups, m = groups.length, sortgroups = new Array(m), j = 0; j < m; ++j) {
+  for (var groups = this._groups, m2 = groups.length, sortgroups = new Array(m2), j = 0; j < m2; ++j) {
     for (var group = groups[j], n = group.length, sortgroup = sortgroups[j] = new Array(n), node, i = 0; i < n; ++i) {
       if (node = group[i]) {
         sortgroup[i] = node;
@@ -22138,8 +22155,8 @@ function sort_default(compare) {
   }
   return new Selection(sortgroups, this._parents).order();
 }
-function ascending(a, b) {
-  return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
+function ascending(a2, b) {
+  return a2 < b ? -1 : a2 > b ? 1 : a2 >= b ? 0 : NaN;
 }
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/selection/call.js
@@ -22157,7 +22174,7 @@ function nodes_default() {
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/selection/node.js
 function node_default() {
-  for (var groups = this._groups, j = 0, m = groups.length; j < m; ++j) {
+  for (var groups = this._groups, j = 0, m2 = groups.length; j < m2; ++j) {
     for (var group = groups[j], i = 0, n = group.length; i < n; ++i) {
       var node = group[i];
       if (node) return node;
@@ -22180,7 +22197,7 @@ function empty_default() {
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/selection/each.js
 function each_default(callback) {
-  for (var groups = this._groups, j = 0, m = groups.length; j < m; ++j) {
+  for (var groups = this._groups, j = 0, m2 = groups.length; j < m2; ++j) {
     for (var group = groups[j], i = 0, n = group.length, node; i < n; ++i) {
       if (node = group[i]) callback.call(node, node.__data__, i, group);
     }
@@ -22464,7 +22481,7 @@ function onRemove(typename) {
   return function() {
     var on = this.__on;
     if (!on) return;
-    for (var j = 0, i = -1, m = on.length, o; j < m; ++j) {
+    for (var j = 0, i = -1, m2 = on.length, o; j < m2; ++j) {
       if (o = on[j], (!typename.type || o.type === typename.type) && o.name === typename.name) {
         this.removeEventListener(o.type, o.listener, o.options);
       } else {
@@ -22478,7 +22495,7 @@ function onRemove(typename) {
 function onAdd(typename, value, options) {
   return function() {
     var on = this.__on, o, listener = contextListener(value);
-    if (on) for (var j = 0, m = on.length; j < m; ++j) {
+    if (on) for (var j = 0, m2 = on.length; j < m2; ++j) {
       if ((o = on[j]).type === typename.type && o.name === typename.name) {
         this.removeEventListener(o.type, o.listener, o.options);
         this.addEventListener(o.type, o.listener = listener, o.options = options);
@@ -22496,7 +22513,7 @@ function on_default(typename, value, options) {
   var typenames = parseTypenames2(typename + ""), i, n = typenames.length, t;
   if (arguments.length < 2) {
     var on = this.node().__on;
-    if (on) for (var j = 0, m = on.length, o; j < m; ++j) {
+    if (on) for (var j = 0, m2 = on.length, o; j < m2; ++j) {
       for (i = 0, o = on[j]; i < n; ++i) {
         if ((t = typenames[i]).type === o.type && t.name === o.name) {
           return o.value;
@@ -22538,7 +22555,7 @@ function dispatch_default2(type2, params) {
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/selection/iterator.js
 function* iterator_default() {
-  for (var groups = this._groups, j = 0, m = groups.length; j < m; ++j) {
+  for (var groups = this._groups, j = 0, m2 = groups.length; j < m2; ++j) {
     for (var group = groups[j], i = 0, n = group.length, node; i < n; ++i) {
       if (node = group[i]) yield node;
     }
@@ -22600,6 +22617,66 @@ var selection_default = selection;
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/select.js
 function select_default2(selector) {
   return typeof selector === "string" ? new Selection([[document.querySelector(selector)]], [document.documentElement]) : new Selection([[selector]], root);
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/sourceEvent.js
+function sourceEvent_default(event) {
+  let sourceEvent;
+  while (sourceEvent = event.sourceEvent) event = sourceEvent;
+  return event;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-selection/src/pointer.js
+function pointer_default(event, node) {
+  event = sourceEvent_default(event);
+  if (node === void 0) node = event.currentTarget;
+  if (node) {
+    var svg = node.ownerSVGElement || node;
+    if (svg.createSVGPoint) {
+      var point = svg.createSVGPoint();
+      point.x = event.clientX, point.y = event.clientY;
+      point = point.matrixTransform(node.getScreenCTM().inverse());
+      return [point.x, point.y];
+    }
+    if (node.getBoundingClientRect) {
+      var rect = node.getBoundingClientRect();
+      return [event.clientX - rect.left - node.clientLeft, event.clientY - rect.top - node.clientTop];
+    }
+  }
+  return [event.pageX, event.pageY];
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-drag/src/noevent.js
+var nonpassivecapture = { capture: true, passive: false };
+function noevent_default(event) {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-drag/src/nodrag.js
+function nodrag_default(view) {
+  var root2 = view.document.documentElement, selection2 = select_default2(view).on("dragstart.drag", noevent_default, nonpassivecapture);
+  if ("onselectstart" in root2) {
+    selection2.on("selectstart.drag", noevent_default, nonpassivecapture);
+  } else {
+    root2.__noselect = root2.style.MozUserSelect;
+    root2.style.MozUserSelect = "none";
+  }
+}
+function yesdrag(view, noclick) {
+  var root2 = view.document.documentElement, selection2 = select_default2(view).on("dragstart.drag", null);
+  if (noclick) {
+    selection2.on("click.drag", noevent_default, nonpassivecapture);
+    setTimeout(function() {
+      selection2.on("click.drag", null);
+    }, 0);
+  }
+  if ("onselectstart" in root2) {
+    selection2.on("selectstart.drag", null);
+  } else {
+    root2.style.MozUserSelect = root2.__noselect;
+    delete root2.__noselect;
+  }
 }
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-color/src/define.js
@@ -22806,16 +22883,16 @@ function color_formatRgb() {
   return this.rgb().formatRgb();
 }
 function color(format) {
-  var m, l;
+  var m2, l;
   format = (format + "").trim().toLowerCase();
-  return (m = reHex.exec(format)) ? (l = m[1].length, m = parseInt(m[1], 16), l === 6 ? rgbn(m) : l === 3 ? new Rgb(m >> 8 & 15 | m >> 4 & 240, m >> 4 & 15 | m & 240, (m & 15) << 4 | m & 15, 1) : l === 8 ? rgba(m >> 24 & 255, m >> 16 & 255, m >> 8 & 255, (m & 255) / 255) : l === 4 ? rgba(m >> 12 & 15 | m >> 8 & 240, m >> 8 & 15 | m >> 4 & 240, m >> 4 & 15 | m & 240, ((m & 15) << 4 | m & 15) / 255) : null) : (m = reRgbInteger.exec(format)) ? new Rgb(m[1], m[2], m[3], 1) : (m = reRgbPercent.exec(format)) ? new Rgb(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) : (m = reRgbaInteger.exec(format)) ? rgba(m[1], m[2], m[3], m[4]) : (m = reRgbaPercent.exec(format)) ? rgba(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, m[4]) : (m = reHslPercent.exec(format)) ? hsla(m[1], m[2] / 100, m[3] / 100, 1) : (m = reHslaPercent.exec(format)) ? hsla(m[1], m[2] / 100, m[3] / 100, m[4]) : named.hasOwnProperty(format) ? rgbn(named[format]) : format === "transparent" ? new Rgb(NaN, NaN, NaN, 0) : null;
+  return (m2 = reHex.exec(format)) ? (l = m2[1].length, m2 = parseInt(m2[1], 16), l === 6 ? rgbn(m2) : l === 3 ? new Rgb(m2 >> 8 & 15 | m2 >> 4 & 240, m2 >> 4 & 15 | m2 & 240, (m2 & 15) << 4 | m2 & 15, 1) : l === 8 ? rgba(m2 >> 24 & 255, m2 >> 16 & 255, m2 >> 8 & 255, (m2 & 255) / 255) : l === 4 ? rgba(m2 >> 12 & 15 | m2 >> 8 & 240, m2 >> 8 & 15 | m2 >> 4 & 240, m2 >> 4 & 15 | m2 & 240, ((m2 & 15) << 4 | m2 & 15) / 255) : null) : (m2 = reRgbInteger.exec(format)) ? new Rgb(m2[1], m2[2], m2[3], 1) : (m2 = reRgbPercent.exec(format)) ? new Rgb(m2[1] * 255 / 100, m2[2] * 255 / 100, m2[3] * 255 / 100, 1) : (m2 = reRgbaInteger.exec(format)) ? rgba(m2[1], m2[2], m2[3], m2[4]) : (m2 = reRgbaPercent.exec(format)) ? rgba(m2[1] * 255 / 100, m2[2] * 255 / 100, m2[3] * 255 / 100, m2[4]) : (m2 = reHslPercent.exec(format)) ? hsla(m2[1], m2[2] / 100, m2[3] / 100, 1) : (m2 = reHslaPercent.exec(format)) ? hsla(m2[1], m2[2] / 100, m2[3] / 100, m2[4]) : named.hasOwnProperty(format) ? rgbn(named[format]) : format === "transparent" ? new Rgb(NaN, NaN, NaN, 0) : null;
 }
 function rgbn(n) {
   return new Rgb(n >> 16 & 255, n >> 8 & 255, n & 255, 1);
 }
-function rgba(r, g, b, a) {
-  if (a <= 0) r = g = b = NaN;
-  return new Rgb(r, g, b, a);
+function rgba(r, g, b, a2) {
+  if (a2 <= 0) r = g = b = NaN;
+  return new Rgb(r, g, b, a2);
 }
 function rgbConvert(o) {
   if (!(o instanceof Color)) o = color(o);
@@ -22864,8 +22941,8 @@ function rgb_formatHex8() {
   return `#${hex(this.r)}${hex(this.g)}${hex(this.b)}${hex((isNaN(this.opacity) ? 1 : this.opacity) * 255)}`;
 }
 function rgb_formatRgb() {
-  const a = clampa(this.opacity);
-  return `${a === 1 ? "rgb(" : "rgba("}${clampi(this.r)}, ${clampi(this.g)}, ${clampi(this.b)}${a === 1 ? ")" : `, ${a})`}`;
+  const a2 = clampa(this.opacity);
+  return `${a2 === 1 ? "rgb(" : "rgba("}${clampi(this.r)}, ${clampi(this.g)}, ${clampi(this.b)}${a2 === 1 ? ")" : `, ${a2})`}`;
 }
 function clampa(opacity) {
   return isNaN(opacity) ? 1 : Math.max(0, Math.min(1, opacity));
@@ -22877,11 +22954,11 @@ function hex(value) {
   value = clampi(value);
   return (value < 16 ? "0" : "") + value.toString(16);
 }
-function hsla(h, s, l, a) {
-  if (a <= 0) h = s = l = NaN;
+function hsla(h, s, l, a2) {
+  if (a2 <= 0) h = s = l = NaN;
   else if (l <= 0 || l >= 1) h = s = NaN;
   else if (s <= 0) h = NaN;
-  return new Hsl(h, s, l, a);
+  return new Hsl(h, s, l, a2);
 }
 function hslConvert(o) {
   if (o instanceof Hsl) return new Hsl(o.h, o.s, o.l, o.opacity);
@@ -22935,8 +23012,8 @@ define_default(Hsl, hsl, extend(Color, {
     return (0 <= this.s && this.s <= 1 || isNaN(this.s)) && (0 <= this.l && this.l <= 1) && (0 <= this.opacity && this.opacity <= 1);
   },
   formatHsl() {
-    const a = clampa(this.opacity);
-    return `${a === 1 ? "hsl(" : "hsla("}${clamph(this.h)}, ${clampt(this.s) * 100}%, ${clampt(this.l) * 100}%${a === 1 ? ")" : `, ${a})`}`;
+    const a2 = clampa(this.opacity);
+    return `${a2 === 1 ? "hsl(" : "hsla("}${clamph(this.h)}, ${clampt(this.s) * 100}%, ${clampt(this.l) * 100}%${a2 === 1 ? ")" : `, ${a2})`}`;
   }
 }));
 function clamph(value) {
@@ -22973,32 +23050,32 @@ function basisClosed_default(values) {
 }
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-interpolate/src/constant.js
-var constant_default2 = (x) => () => x;
+var constant_default2 = (x3) => () => x3;
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-interpolate/src/color.js
-function linear(a, d) {
+function linear(a2, d) {
   return function(t) {
-    return a + t * d;
+    return a2 + t * d;
   };
 }
-function exponential(a, b, y) {
-  return a = Math.pow(a, y), b = Math.pow(b, y) - a, y = 1 / y, function(t) {
-    return Math.pow(a + t * b, y);
+function exponential(a2, b, y3) {
+  return a2 = Math.pow(a2, y3), b = Math.pow(b, y3) - a2, y3 = 1 / y3, function(t) {
+    return Math.pow(a2 + t * b, y3);
   };
 }
-function gamma(y) {
-  return (y = +y) === 1 ? nogamma : function(a, b) {
-    return b - a ? exponential(a, b, y) : constant_default2(isNaN(a) ? b : a);
+function gamma(y3) {
+  return (y3 = +y3) === 1 ? nogamma : function(a2, b) {
+    return b - a2 ? exponential(a2, b, y3) : constant_default2(isNaN(a2) ? b : a2);
   };
 }
-function nogamma(a, b) {
-  var d = b - a;
-  return d ? linear(a, d) : constant_default2(isNaN(a) ? b : a);
+function nogamma(a2, b) {
+  var d = b - a2;
+  return d ? linear(a2, d) : constant_default2(isNaN(a2) ? b : a2);
 }
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-interpolate/src/rgb.js
-var rgb_default = (function rgbGamma(y) {
-  var color2 = gamma(y);
+var rgb_default = (function rgbGamma(y3) {
+  var color2 = gamma(y3);
   function rgb2(start2, end) {
     var r = color2((start2 = rgb(start2)).r, (end = rgb(end)).r), g = color2(start2.g, end.g), b = color2(start2.b, end.b), opacity = nogamma(start2.opacity, end.opacity);
     return function(t) {
@@ -23037,9 +23114,9 @@ var rgbBasis = rgbSpline(basis_default);
 var rgbBasisClosed = rgbSpline(basisClosed_default);
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-interpolate/src/number.js
-function number_default(a, b) {
-  return a = +a, b = +b, function(t) {
-    return a * (1 - t) + b * t;
+function number_default(a2, b) {
+  return a2 = +a2, b = +b, function(t) {
+    return a2 * (1 - t) + b * t;
   };
 }
 
@@ -23056,10 +23133,10 @@ function one(b) {
     return b(t) + "";
   };
 }
-function string_default(a, b) {
+function string_default(a2, b) {
   var bi = reA.lastIndex = reB.lastIndex = 0, am, bm, bs, i = -1, s = [], q = [];
-  a = a + "", b = b + "";
-  while ((am = reA.exec(a)) && (bm = reB.exec(b))) {
+  a2 = a2 + "", b = b + "";
+  while ((am = reA.exec(a2)) && (bm = reB.exec(b))) {
     if ((bs = bm.index) > bi) {
       bs = b.slice(bi, bs);
       if (s[i]) s[i] += bs;
@@ -23095,16 +23172,16 @@ var identity = {
   scaleX: 1,
   scaleY: 1
 };
-function decompose_default(a, b, c, d, e, f) {
+function decompose_default(a2, b, c2, d, e, f) {
   var scaleX, scaleY, skewX;
-  if (scaleX = Math.sqrt(a * a + b * b)) a /= scaleX, b /= scaleX;
-  if (skewX = a * c + b * d) c -= a * skewX, d -= b * skewX;
-  if (scaleY = Math.sqrt(c * c + d * d)) c /= scaleY, d /= scaleY, skewX /= scaleY;
-  if (a * d < b * c) a = -a, b = -b, skewX = -skewX, scaleX = -scaleX;
+  if (scaleX = Math.sqrt(a2 * a2 + b * b)) a2 /= scaleX, b /= scaleX;
+  if (skewX = a2 * c2 + b * d) c2 -= a2 * skewX, d -= b * skewX;
+  if (scaleY = Math.sqrt(c2 * c2 + d * d)) c2 /= scaleY, d /= scaleY, skewX /= scaleY;
+  if (a2 * d < b * c2) a2 = -a2, b = -b, skewX = -skewX, scaleX = -scaleX;
   return {
     translateX: e,
     translateY: f,
-    rotate: Math.atan2(b, a) * degrees,
+    rotate: Math.atan2(b, a2) * degrees,
     skewX: Math.atan(skewX) * degrees,
     scaleX,
     scaleY
@@ -23114,8 +23191,8 @@ function decompose_default(a, b, c, d, e, f) {
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-interpolate/src/transform/parse.js
 var svgNode;
 function parseCss(value) {
-  const m = new (typeof DOMMatrix === "function" ? DOMMatrix : WebKitCSSMatrix)(value + "");
-  return m.isIdentity ? identity : decompose_default(m.a, m.b, m.c, m.d, m.e, m.f);
+  const m2 = new (typeof DOMMatrix === "function" ? DOMMatrix : WebKitCSSMatrix)(value + "");
+  return m2.isIdentity ? identity : decompose_default(m2.a, m2.b, m2.c, m2.d, m2.e, m2.f);
 }
 function parseSvg(value) {
   if (value == null) return identity;
@@ -23139,18 +23216,18 @@ function interpolateTransform(parse, pxComma, pxParen, degParen) {
       s.push("translate(" + xb + pxComma + yb + pxParen);
     }
   }
-  function rotate(a, b, s, q) {
-    if (a !== b) {
-      if (a - b > 180) b += 360;
-      else if (b - a > 180) a += 360;
-      q.push({ i: s.push(pop(s) + "rotate(", null, degParen) - 2, x: number_default(a, b) });
+  function rotate(a2, b, s, q) {
+    if (a2 !== b) {
+      if (a2 - b > 180) b += 360;
+      else if (b - a2 > 180) a2 += 360;
+      q.push({ i: s.push(pop(s) + "rotate(", null, degParen) - 2, x: number_default(a2, b) });
     } else if (b) {
       s.push(pop(s) + "rotate(" + b + degParen);
     }
   }
-  function skewX(a, b, s, q) {
-    if (a !== b) {
-      q.push({ i: s.push(pop(s) + "skewX(", null, degParen) - 2, x: number_default(a, b) });
+  function skewX(a2, b, s, q) {
+    if (a2 !== b) {
+      q.push({ i: s.push(pop(s) + "skewX(", null, degParen) - 2, x: number_default(a2, b) });
     } else if (b) {
       s.push(pop(s) + "skewX(" + b + degParen);
     }
@@ -23163,14 +23240,14 @@ function interpolateTransform(parse, pxComma, pxParen, degParen) {
       s.push(pop(s) + "scale(" + xb + "," + yb + ")");
     }
   }
-  return function(a, b) {
+  return function(a2, b) {
     var s = [], q = [];
-    a = parse(a), b = parse(b);
-    translate(a.translateX, a.translateY, b.translateX, b.translateY, s, q);
-    rotate(a.rotate, b.rotate, s, q);
-    skewX(a.skewX, b.skewX, s, q);
-    scale(a.scaleX, a.scaleY, b.scaleX, b.scaleY, s, q);
-    a = b = null;
+    a2 = parse(a2), b = parse(b);
+    translate(a2.translateX, a2.translateY, b.translateX, b.translateY, s, q);
+    rotate(a2.rotate, b.rotate, s, q);
+    skewX(a2.skewX, b.skewX, s, q);
+    scale(a2.scaleX, a2.scaleY, b.scaleX, b.scaleY, s, q);
+    a2 = b = null;
     return function(t) {
       var i = -1, n = q.length, o;
       while (++i < n) s[(o = q[i]).i] = o.x(t);
@@ -23180,6 +23257,51 @@ function interpolateTransform(parse, pxComma, pxParen, degParen) {
 }
 var interpolateTransformCss = interpolateTransform(parseCss, "px, ", "px)", "deg)");
 var interpolateTransformSvg = interpolateTransform(parseSvg, ", ", ")", ")");
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-interpolate/src/zoom.js
+var epsilon2 = 1e-12;
+function cosh(x3) {
+  return ((x3 = Math.exp(x3)) + 1 / x3) / 2;
+}
+function sinh(x3) {
+  return ((x3 = Math.exp(x3)) - 1 / x3) / 2;
+}
+function tanh(x3) {
+  return ((x3 = Math.exp(2 * x3)) - 1) / (x3 + 1);
+}
+var zoom_default = (function zoomRho(rho, rho2, rho4) {
+  function zoom(p0, p1) {
+    var ux0 = p0[0], uy0 = p0[1], w0 = p0[2], ux1 = p1[0], uy1 = p1[1], w1 = p1[2], dx = ux1 - ux0, dy = uy1 - uy0, d2 = dx * dx + dy * dy, i, S;
+    if (d2 < epsilon2) {
+      S = Math.log(w1 / w0) / rho;
+      i = function(t) {
+        return [
+          ux0 + t * dx,
+          uy0 + t * dy,
+          w0 * Math.exp(rho * t * S)
+        ];
+      };
+    } else {
+      var d1 = Math.sqrt(d2), b0 = (w1 * w1 - w0 * w0 + rho4 * d2) / (2 * w0 * rho2 * d1), b1 = (w1 * w1 - w0 * w0 - rho4 * d2) / (2 * w1 * rho2 * d1), r0 = Math.log(Math.sqrt(b0 * b0 + 1) - b0), r1 = Math.log(Math.sqrt(b1 * b1 + 1) - b1);
+      S = (r1 - r0) / rho;
+      i = function(t) {
+        var s = t * S, coshr0 = cosh(r0), u = w0 / (rho2 * d1) * (coshr0 * tanh(rho * s + r0) - sinh(r0));
+        return [
+          ux0 + u * dx,
+          uy0 + u * dy,
+          w0 * coshr0 / cosh(rho * s + r0)
+        ];
+      };
+    }
+    i.duration = S * 1e3 * rho / Math.SQRT2;
+    return i;
+  }
+  zoom.rho = function(_) {
+    var _1 = Math.max(1e-3, +_), _2 = _1 * _1, _4 = _2 * _2;
+    return zoomRho(_1, _2, _4);
+  };
+  return zoom;
+})(Math.SQRT2, 2, 4);
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-timer/src/timer.js
 var frame = 0;
@@ -23493,9 +23615,9 @@ function tweenValue(transition2, name, value) {
 }
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-transition/src/transition/interpolate.js
-function interpolate_default(a, b) {
-  var c;
-  return (typeof b === "number" ? number_default : b instanceof color ? rgb_default : (c = color(b)) ? (b = c, rgb_default) : string_default)(a, b);
+function interpolate_default(a2, b) {
+  var c2;
+  return (typeof b === "number" ? number_default : b instanceof color ? rgb_default : (c2 = color(b)) ? (b = c2, rgb_default) : string_default)(a2, b);
 }
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-transition/src/transition/attr.js
@@ -23648,7 +23770,7 @@ function easeVarying_default(value) {
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-transition/src/transition/filter.js
 function filter_default2(match) {
   if (typeof match !== "function") match = matcher_default(match);
-  for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j) {
+  for (var groups = this._groups, m2 = groups.length, subgroups = new Array(m2), j = 0; j < m2; ++j) {
     for (var group = groups[j], n = group.length, subgroup = subgroups[j] = [], node, i = 0; i < n; ++i) {
       if ((node = group[i]) && match.call(node, node.__data__, i, group)) {
         subgroup.push(node);
@@ -23661,7 +23783,7 @@ function filter_default2(match) {
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-transition/src/transition/merge.js
 function merge_default2(transition2) {
   if (transition2._id !== this._id) throw new Error();
-  for (var groups0 = this._groups, groups1 = transition2._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j) {
+  for (var groups0 = this._groups, groups1 = transition2._groups, m0 = groups0.length, m1 = groups1.length, m2 = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m2; ++j) {
     for (var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge = merges[j] = new Array(n), node, i = 0; i < n; ++i) {
       if (node = group0[i] || group1[i]) {
         merge[i] = node;
@@ -23711,7 +23833,7 @@ function remove_default2() {
 function select_default3(select) {
   var name = this._name, id2 = this._id;
   if (typeof select !== "function") select = selector_default(select);
-  for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j) {
+  for (var groups = this._groups, m2 = groups.length, subgroups = new Array(m2), j = 0; j < m2; ++j) {
     for (var group = groups[j], n = group.length, subgroup = subgroups[j] = new Array(n), node, subnode, i = 0; i < n; ++i) {
       if ((node = group[i]) && (subnode = select.call(node, node.__data__, i, group))) {
         if ("__data__" in node) subnode.__data__ = node.__data__;
@@ -23727,7 +23849,7 @@ function select_default3(select) {
 function selectAll_default2(select) {
   var name = this._name, id2 = this._id;
   if (typeof select !== "function") select = selectorAll_default(select);
-  for (var groups = this._groups, m = groups.length, subgroups = [], parents = [], j = 0; j < m; ++j) {
+  for (var groups = this._groups, m2 = groups.length, subgroups = [], parents = [], j = 0; j < m2; ++j) {
     for (var group = groups[j], n = group.length, node, i = 0; i < n; ++i) {
       if (node = group[i]) {
         for (var children2 = select.call(node, node.__data__, i, group), child, inherit2 = get2(node, id2), k = 0, l = children2.length; k < l; ++k) {
@@ -23857,7 +23979,7 @@ function textTween_default(value) {
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-transition/src/transition/transition.js
 function transition_default() {
   var name = this._name, id0 = this._id, id1 = newId();
-  for (var groups = this._groups, m = groups.length, j = 0; j < m; ++j) {
+  for (var groups = this._groups, m2 = groups.length, j = 0; j < m2; ++j) {
     for (var group = groups[j], n = group.length, node, i = 0; i < n; ++i) {
       if (node = group[i]) {
         var inherit2 = get2(node, id0);
@@ -23971,7 +24093,7 @@ function transition_default2(name) {
   } else {
     id2 = newId(), (timing = defaultTiming).time = now(), name = name == null ? null : name + "";
   }
-  for (var groups = this._groups, m = groups.length, j = 0; j < m; ++j) {
+  for (var groups = this._groups, m2 = groups.length, j = 0; j < m2; ++j) {
     for (var group = groups[j], n = group.length, node, i = 0; i < n; ++i) {
       if (node = group[i]) {
         schedule_default(node, name, id2, i, group, timing || inherit(node, id2));
@@ -23996,8 +24118,8 @@ function number2(e) {
 var X = {
   name: "x",
   handles: ["w", "e"].map(type),
-  input: function(x, e) {
-    return x == null ? null : [[+x[0], e[0][1]], [+x[1], e[1][1]]];
+  input: function(x3, e) {
+    return x3 == null ? null : [[+x3[0], e[0][1]], [+x3[1], e[1][1]]];
   },
   output: function(xy) {
     return xy && [xy[0][0], xy[1][0]];
@@ -24006,8 +24128,8 @@ var X = {
 var Y = {
   name: "y",
   handles: ["n", "s"].map(type),
-  input: function(y, e) {
-    return y == null ? null : [[e[0][0], +y[0]], [e[1][0], +y[1]]];
+  input: function(y3, e) {
+    return y3 == null ? null : [[e[0][0], +y3[0]], [e[1][0], +y3[1]]];
   },
   output: function(xy) {
     return xy && [xy[0][1], xy[1][1]];
@@ -24027,43 +24149,1070 @@ function type(t) {
   return { type: t };
 }
 
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/add.js
+function add_default(d) {
+  const x3 = +this._x.call(null, d), y3 = +this._y.call(null, d);
+  return add(this.cover(x3, y3), x3, y3, d);
+}
+function add(tree, x3, y3, d) {
+  if (isNaN(x3) || isNaN(y3)) return tree;
+  var parent, node = tree._root, leaf = { data: d }, x0 = tree._x0, y0 = tree._y0, x1 = tree._x1, y1 = tree._y1, xm, ym, xp, yp, right, bottom, i, j;
+  if (!node) return tree._root = leaf, tree;
+  while (node.length) {
+    if (right = x3 >= (xm = (x0 + x1) / 2)) x0 = xm;
+    else x1 = xm;
+    if (bottom = y3 >= (ym = (y0 + y1) / 2)) y0 = ym;
+    else y1 = ym;
+    if (parent = node, !(node = node[i = bottom << 1 | right])) return parent[i] = leaf, tree;
+  }
+  xp = +tree._x.call(null, node.data);
+  yp = +tree._y.call(null, node.data);
+  if (x3 === xp && y3 === yp) return leaf.next = node, parent ? parent[i] = leaf : tree._root = leaf, tree;
+  do {
+    parent = parent ? parent[i] = new Array(4) : tree._root = new Array(4);
+    if (right = x3 >= (xm = (x0 + x1) / 2)) x0 = xm;
+    else x1 = xm;
+    if (bottom = y3 >= (ym = (y0 + y1) / 2)) y0 = ym;
+    else y1 = ym;
+  } while ((i = bottom << 1 | right) === (j = (yp >= ym) << 1 | xp >= xm));
+  return parent[j] = node, parent[i] = leaf, tree;
+}
+function addAll(data) {
+  var d, i, n = data.length, x3, y3, xz = new Array(n), yz = new Array(n), x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (i = 0; i < n; ++i) {
+    if (isNaN(x3 = +this._x.call(null, d = data[i])) || isNaN(y3 = +this._y.call(null, d))) continue;
+    xz[i] = x3;
+    yz[i] = y3;
+    if (x3 < x0) x0 = x3;
+    if (x3 > x1) x1 = x3;
+    if (y3 < y0) y0 = y3;
+    if (y3 > y1) y1 = y3;
+  }
+  if (x0 > x1 || y0 > y1) return this;
+  this.cover(x0, y0).cover(x1, y1);
+  for (i = 0; i < n; ++i) {
+    add(this, xz[i], yz[i], data[i]);
+  }
+  return this;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/cover.js
+function cover_default(x3, y3) {
+  if (isNaN(x3 = +x3) || isNaN(y3 = +y3)) return this;
+  var x0 = this._x0, y0 = this._y0, x1 = this._x1, y1 = this._y1;
+  if (isNaN(x0)) {
+    x1 = (x0 = Math.floor(x3)) + 1;
+    y1 = (y0 = Math.floor(y3)) + 1;
+  } else {
+    var z = x1 - x0 || 1, node = this._root, parent, i;
+    while (x0 > x3 || x3 >= x1 || y0 > y3 || y3 >= y1) {
+      i = (y3 < y0) << 1 | x3 < x0;
+      parent = new Array(4), parent[i] = node, node = parent, z *= 2;
+      switch (i) {
+        case 0:
+          x1 = x0 + z, y1 = y0 + z;
+          break;
+        case 1:
+          x0 = x1 - z, y1 = y0 + z;
+          break;
+        case 2:
+          x1 = x0 + z, y0 = y1 - z;
+          break;
+        case 3:
+          x0 = x1 - z, y0 = y1 - z;
+          break;
+      }
+    }
+    if (this._root && this._root.length) this._root = node;
+  }
+  this._x0 = x0;
+  this._y0 = y0;
+  this._x1 = x1;
+  this._y1 = y1;
+  return this;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/data.js
+function data_default2() {
+  var data = [];
+  this.visit(function(node) {
+    if (!node.length) do
+      data.push(node.data);
+    while (node = node.next);
+  });
+  return data;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/extent.js
+function extent_default(_) {
+  return arguments.length ? this.cover(+_[0][0], +_[0][1]).cover(+_[1][0], +_[1][1]) : isNaN(this._x0) ? void 0 : [[this._x0, this._y0], [this._x1, this._y1]];
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/quad.js
+function quad_default(node, x0, y0, x1, y1) {
+  this.node = node;
+  this.x0 = x0;
+  this.y0 = y0;
+  this.x1 = x1;
+  this.y1 = y1;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/find.js
+function find_default(x3, y3, radius) {
+  var data, x0 = this._x0, y0 = this._y0, x1, y1, x22, y22, x32 = this._x1, y32 = this._y1, quads = [], node = this._root, q, i;
+  if (node) quads.push(new quad_default(node, x0, y0, x32, y32));
+  if (radius == null) radius = Infinity;
+  else {
+    x0 = x3 - radius, y0 = y3 - radius;
+    x32 = x3 + radius, y32 = y3 + radius;
+    radius *= radius;
+  }
+  while (q = quads.pop()) {
+    if (!(node = q.node) || (x1 = q.x0) > x32 || (y1 = q.y0) > y32 || (x22 = q.x1) < x0 || (y22 = q.y1) < y0) continue;
+    if (node.length) {
+      var xm = (x1 + x22) / 2, ym = (y1 + y22) / 2;
+      quads.push(
+        new quad_default(node[3], xm, ym, x22, y22),
+        new quad_default(node[2], x1, ym, xm, y22),
+        new quad_default(node[1], xm, y1, x22, ym),
+        new quad_default(node[0], x1, y1, xm, ym)
+      );
+      if (i = (y3 >= ym) << 1 | x3 >= xm) {
+        q = quads[quads.length - 1];
+        quads[quads.length - 1] = quads[quads.length - 1 - i];
+        quads[quads.length - 1 - i] = q;
+      }
+    } else {
+      var dx = x3 - +this._x.call(null, node.data), dy = y3 - +this._y.call(null, node.data), d2 = dx * dx + dy * dy;
+      if (d2 < radius) {
+        var d = Math.sqrt(radius = d2);
+        x0 = x3 - d, y0 = y3 - d;
+        x32 = x3 + d, y32 = y3 + d;
+        data = node.data;
+      }
+    }
+  }
+  return data;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/remove.js
+function remove_default3(d) {
+  if (isNaN(x3 = +this._x.call(null, d)) || isNaN(y3 = +this._y.call(null, d))) return this;
+  var parent, node = this._root, retainer, previous, next, x0 = this._x0, y0 = this._y0, x1 = this._x1, y1 = this._y1, x3, y3, xm, ym, right, bottom, i, j;
+  if (!node) return this;
+  if (node.length) while (true) {
+    if (right = x3 >= (xm = (x0 + x1) / 2)) x0 = xm;
+    else x1 = xm;
+    if (bottom = y3 >= (ym = (y0 + y1) / 2)) y0 = ym;
+    else y1 = ym;
+    if (!(parent = node, node = node[i = bottom << 1 | right])) return this;
+    if (!node.length) break;
+    if (parent[i + 1 & 3] || parent[i + 2 & 3] || parent[i + 3 & 3]) retainer = parent, j = i;
+  }
+  while (node.data !== d) if (!(previous = node, node = node.next)) return this;
+  if (next = node.next) delete node.next;
+  if (previous) return next ? previous.next = next : delete previous.next, this;
+  if (!parent) return this._root = next, this;
+  next ? parent[i] = next : delete parent[i];
+  if ((node = parent[0] || parent[1] || parent[2] || parent[3]) && node === (parent[3] || parent[2] || parent[1] || parent[0]) && !node.length) {
+    if (retainer) retainer[j] = node;
+    else this._root = node;
+  }
+  return this;
+}
+function removeAll(data) {
+  for (var i = 0, n = data.length; i < n; ++i) this.remove(data[i]);
+  return this;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/root.js
+function root_default() {
+  return this._root;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/size.js
+function size_default2() {
+  var size = 0;
+  this.visit(function(node) {
+    if (!node.length) do
+      ++size;
+    while (node = node.next);
+  });
+  return size;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/visit.js
+function visit_default(callback) {
+  var quads = [], q, node = this._root, child, x0, y0, x1, y1;
+  if (node) quads.push(new quad_default(node, this._x0, this._y0, this._x1, this._y1));
+  while (q = quads.pop()) {
+    if (!callback(node = q.node, x0 = q.x0, y0 = q.y0, x1 = q.x1, y1 = q.y1) && node.length) {
+      var xm = (x0 + x1) / 2, ym = (y0 + y1) / 2;
+      if (child = node[3]) quads.push(new quad_default(child, xm, ym, x1, y1));
+      if (child = node[2]) quads.push(new quad_default(child, x0, ym, xm, y1));
+      if (child = node[1]) quads.push(new quad_default(child, xm, y0, x1, ym));
+      if (child = node[0]) quads.push(new quad_default(child, x0, y0, xm, ym));
+    }
+  }
+  return this;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/visitAfter.js
+function visitAfter_default(callback) {
+  var quads = [], next = [], q;
+  if (this._root) quads.push(new quad_default(this._root, this._x0, this._y0, this._x1, this._y1));
+  while (q = quads.pop()) {
+    var node = q.node;
+    if (node.length) {
+      var child, x0 = q.x0, y0 = q.y0, x1 = q.x1, y1 = q.y1, xm = (x0 + x1) / 2, ym = (y0 + y1) / 2;
+      if (child = node[0]) quads.push(new quad_default(child, x0, y0, xm, ym));
+      if (child = node[1]) quads.push(new quad_default(child, xm, y0, x1, ym));
+      if (child = node[2]) quads.push(new quad_default(child, x0, ym, xm, y1));
+      if (child = node[3]) quads.push(new quad_default(child, xm, ym, x1, y1));
+    }
+    next.push(q);
+  }
+  while (q = next.pop()) {
+    callback(q.node, q.x0, q.y0, q.x1, q.y1);
+  }
+  return this;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/x.js
+function defaultX(d) {
+  return d[0];
+}
+function x_default(_) {
+  return arguments.length ? (this._x = _, this) : this._x;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/y.js
+function defaultY(d) {
+  return d[1];
+}
+function y_default(_) {
+  return arguments.length ? (this._y = _, this) : this._y;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-quadtree/src/quadtree.js
+function quadtree(nodes, x3, y3) {
+  var tree = new Quadtree(x3 == null ? defaultX : x3, y3 == null ? defaultY : y3, NaN, NaN, NaN, NaN);
+  return nodes == null ? tree : tree.addAll(nodes);
+}
+function Quadtree(x3, y3, x0, y0, x1, y1) {
+  this._x = x3;
+  this._y = y3;
+  this._x0 = x0;
+  this._y0 = y0;
+  this._x1 = x1;
+  this._y1 = y1;
+  this._root = void 0;
+}
+function leaf_copy(leaf) {
+  var copy = { data: leaf.data }, next = copy;
+  while (leaf = leaf.next) next = next.next = { data: leaf.data };
+  return copy;
+}
+var treeProto = quadtree.prototype = Quadtree.prototype;
+treeProto.copy = function() {
+  var copy = new Quadtree(this._x, this._y, this._x0, this._y0, this._x1, this._y1), node = this._root, nodes, child;
+  if (!node) return copy;
+  if (!node.length) return copy._root = leaf_copy(node), copy;
+  nodes = [{ source: node, target: copy._root = new Array(4) }];
+  while (node = nodes.pop()) {
+    for (var i = 0; i < 4; ++i) {
+      if (child = node.source[i]) {
+        if (child.length) nodes.push({ source: child, target: node.target[i] = new Array(4) });
+        else node.target[i] = leaf_copy(child);
+      }
+    }
+  }
+  return copy;
+};
+treeProto.add = add_default;
+treeProto.addAll = addAll;
+treeProto.cover = cover_default;
+treeProto.data = data_default2;
+treeProto.extent = extent_default;
+treeProto.find = find_default;
+treeProto.remove = remove_default3;
+treeProto.removeAll = removeAll;
+treeProto.root = root_default;
+treeProto.size = size_default2;
+treeProto.visit = visit_default;
+treeProto.visitAfter = visitAfter_default;
+treeProto.x = x_default;
+treeProto.y = y_default;
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-force/src/constant.js
+function constant_default4(x3) {
+  return function() {
+    return x3;
+  };
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-force/src/jiggle.js
+function jiggle_default(random) {
+  return (random() - 0.5) * 1e-6;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-force/src/collide.js
+function x(d) {
+  return d.x + d.vx;
+}
+function y(d) {
+  return d.y + d.vy;
+}
+function collide_default(radius) {
+  var nodes, radii, random, strength = 1, iterations = 1;
+  if (typeof radius !== "function") radius = constant_default4(radius == null ? 1 : +radius);
+  function force() {
+    var i, n = nodes.length, tree, node, xi, yi, ri, ri2;
+    for (var k = 0; k < iterations; ++k) {
+      tree = quadtree(nodes, x, y).visitAfter(prepare);
+      for (i = 0; i < n; ++i) {
+        node = nodes[i];
+        ri = radii[node.index], ri2 = ri * ri;
+        xi = node.x + node.vx;
+        yi = node.y + node.vy;
+        tree.visit(apply);
+      }
+    }
+    function apply(quad, x0, y0, x1, y1) {
+      var data = quad.data, rj = quad.r, r = ri + rj;
+      if (data) {
+        if (data.index > node.index) {
+          var x3 = xi - data.x - data.vx, y3 = yi - data.y - data.vy, l = x3 * x3 + y3 * y3;
+          if (l < r * r) {
+            if (x3 === 0) x3 = jiggle_default(random), l += x3 * x3;
+            if (y3 === 0) y3 = jiggle_default(random), l += y3 * y3;
+            l = (r - (l = Math.sqrt(l))) / l * strength;
+            node.vx += (x3 *= l) * (r = (rj *= rj) / (ri2 + rj));
+            node.vy += (y3 *= l) * r;
+            data.vx -= x3 * (r = 1 - r);
+            data.vy -= y3 * r;
+          }
+        }
+        return;
+      }
+      return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
+    }
+  }
+  function prepare(quad) {
+    if (quad.data) return quad.r = radii[quad.data.index];
+    for (var i = quad.r = 0; i < 4; ++i) {
+      if (quad[i] && quad[i].r > quad.r) {
+        quad.r = quad[i].r;
+      }
+    }
+  }
+  function initialize() {
+    if (!nodes) return;
+    var i, n = nodes.length, node;
+    radii = new Array(n);
+    for (i = 0; i < n; ++i) node = nodes[i], radii[node.index] = +radius(node, i, nodes);
+  }
+  force.initialize = function(_nodes, _random) {
+    nodes = _nodes;
+    random = _random;
+    initialize();
+  };
+  force.iterations = function(_) {
+    return arguments.length ? (iterations = +_, force) : iterations;
+  };
+  force.strength = function(_) {
+    return arguments.length ? (strength = +_, force) : strength;
+  };
+  force.radius = function(_) {
+    return arguments.length ? (radius = typeof _ === "function" ? _ : constant_default4(+_), initialize(), force) : radius;
+  };
+  return force;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-force/src/lcg.js
+var a = 1664525;
+var c = 1013904223;
+var m = 4294967296;
+function lcg_default() {
+  let s = 1;
+  return () => (s = (a * s + c) % m) / m;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-force/src/simulation.js
+function x2(d) {
+  return d.x;
+}
+function y2(d) {
+  return d.y;
+}
+var initialRadius = 10;
+var initialAngle = Math.PI * (3 - Math.sqrt(5));
+function simulation_default(nodes) {
+  var simulation, alpha = 1, alphaMin = 1e-3, alphaDecay = 1 - Math.pow(alphaMin, 1 / 300), alphaTarget = 0, velocityDecay = 0.6, forces = /* @__PURE__ */ new Map(), stepper = timer(step), event = dispatch_default("tick", "end"), random = lcg_default();
+  if (nodes == null) nodes = [];
+  function step() {
+    tick();
+    event.call("tick", simulation);
+    if (alpha < alphaMin) {
+      stepper.stop();
+      event.call("end", simulation);
+    }
+  }
+  function tick(iterations) {
+    var i, n = nodes.length, node;
+    if (iterations === void 0) iterations = 1;
+    for (var k = 0; k < iterations; ++k) {
+      alpha += (alphaTarget - alpha) * alphaDecay;
+      forces.forEach(function(force) {
+        force(alpha);
+      });
+      for (i = 0; i < n; ++i) {
+        node = nodes[i];
+        if (node.fx == null) node.x += node.vx *= velocityDecay;
+        else node.x = node.fx, node.vx = 0;
+        if (node.fy == null) node.y += node.vy *= velocityDecay;
+        else node.y = node.fy, node.vy = 0;
+      }
+    }
+    return simulation;
+  }
+  function initializeNodes() {
+    for (var i = 0, n = nodes.length, node; i < n; ++i) {
+      node = nodes[i], node.index = i;
+      if (node.fx != null) node.x = node.fx;
+      if (node.fy != null) node.y = node.fy;
+      if (isNaN(node.x) || isNaN(node.y)) {
+        var radius = initialRadius * Math.sqrt(0.5 + i), angle = i * initialAngle;
+        node.x = radius * Math.cos(angle);
+        node.y = radius * Math.sin(angle);
+      }
+      if (isNaN(node.vx) || isNaN(node.vy)) {
+        node.vx = node.vy = 0;
+      }
+    }
+  }
+  function initializeForce(force) {
+    if (force.initialize) force.initialize(nodes, random);
+    return force;
+  }
+  initializeNodes();
+  return simulation = {
+    tick,
+    restart: function() {
+      return stepper.restart(step), simulation;
+    },
+    stop: function() {
+      return stepper.stop(), simulation;
+    },
+    nodes: function(_) {
+      return arguments.length ? (nodes = _, initializeNodes(), forces.forEach(initializeForce), simulation) : nodes;
+    },
+    alpha: function(_) {
+      return arguments.length ? (alpha = +_, simulation) : alpha;
+    },
+    alphaMin: function(_) {
+      return arguments.length ? (alphaMin = +_, simulation) : alphaMin;
+    },
+    alphaDecay: function(_) {
+      return arguments.length ? (alphaDecay = +_, simulation) : +alphaDecay;
+    },
+    alphaTarget: function(_) {
+      return arguments.length ? (alphaTarget = +_, simulation) : alphaTarget;
+    },
+    velocityDecay: function(_) {
+      return arguments.length ? (velocityDecay = 1 - _, simulation) : 1 - velocityDecay;
+    },
+    randomSource: function(_) {
+      return arguments.length ? (random = _, forces.forEach(initializeForce), simulation) : random;
+    },
+    force: function(name, _) {
+      return arguments.length > 1 ? (_ == null ? forces.delete(name) : forces.set(name, initializeForce(_)), simulation) : forces.get(name);
+    },
+    find: function(x3, y3, radius) {
+      var i = 0, n = nodes.length, dx, dy, d2, node, closest;
+      if (radius == null) radius = Infinity;
+      else radius *= radius;
+      for (i = 0; i < n; ++i) {
+        node = nodes[i];
+        dx = x3 - node.x;
+        dy = y3 - node.y;
+        d2 = dx * dx + dy * dy;
+        if (d2 < radius) closest = node, radius = d2;
+      }
+      return closest;
+    },
+    on: function(name, _) {
+      return arguments.length > 1 ? (event.on(name, _), simulation) : event.on(name);
+    }
+  };
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-force/src/manyBody.js
+function manyBody_default() {
+  var nodes, node, random, alpha, strength = constant_default4(-30), strengths, distanceMin2 = 1, distanceMax2 = Infinity, theta2 = 0.81;
+  function force(_) {
+    var i, n = nodes.length, tree = quadtree(nodes, x2, y2).visitAfter(accumulate);
+    for (alpha = _, i = 0; i < n; ++i) node = nodes[i], tree.visit(apply);
+  }
+  function initialize() {
+    if (!nodes) return;
+    var i, n = nodes.length, node2;
+    strengths = new Array(n);
+    for (i = 0; i < n; ++i) node2 = nodes[i], strengths[node2.index] = +strength(node2, i, nodes);
+  }
+  function accumulate(quad) {
+    var strength2 = 0, q, c2, weight = 0, x3, y3, i;
+    if (quad.length) {
+      for (x3 = y3 = i = 0; i < 4; ++i) {
+        if ((q = quad[i]) && (c2 = Math.abs(q.value))) {
+          strength2 += q.value, weight += c2, x3 += c2 * q.x, y3 += c2 * q.y;
+        }
+      }
+      quad.x = x3 / weight;
+      quad.y = y3 / weight;
+    } else {
+      q = quad;
+      q.x = q.data.x;
+      q.y = q.data.y;
+      do
+        strength2 += strengths[q.data.index];
+      while (q = q.next);
+    }
+    quad.value = strength2;
+  }
+  function apply(quad, x1, _, x22) {
+    if (!quad.value) return true;
+    var x3 = quad.x - node.x, y3 = quad.y - node.y, w = x22 - x1, l = x3 * x3 + y3 * y3;
+    if (w * w / theta2 < l) {
+      if (l < distanceMax2) {
+        if (x3 === 0) x3 = jiggle_default(random), l += x3 * x3;
+        if (y3 === 0) y3 = jiggle_default(random), l += y3 * y3;
+        if (l < distanceMin2) l = Math.sqrt(distanceMin2 * l);
+        node.vx += x3 * quad.value * alpha / l;
+        node.vy += y3 * quad.value * alpha / l;
+      }
+      return true;
+    } else if (quad.length || l >= distanceMax2) return;
+    if (quad.data !== node || quad.next) {
+      if (x3 === 0) x3 = jiggle_default(random), l += x3 * x3;
+      if (y3 === 0) y3 = jiggle_default(random), l += y3 * y3;
+      if (l < distanceMin2) l = Math.sqrt(distanceMin2 * l);
+    }
+    do
+      if (quad.data !== node) {
+        w = strengths[quad.data.index] * alpha / l;
+        node.vx += x3 * w;
+        node.vy += y3 * w;
+      }
+    while (quad = quad.next);
+  }
+  force.initialize = function(_nodes, _random) {
+    nodes = _nodes;
+    random = _random;
+    initialize();
+  };
+  force.strength = function(_) {
+    return arguments.length ? (strength = typeof _ === "function" ? _ : constant_default4(+_), initialize(), force) : strength;
+  };
+  force.distanceMin = function(_) {
+    return arguments.length ? (distanceMin2 = _ * _, force) : Math.sqrt(distanceMin2);
+  };
+  force.distanceMax = function(_) {
+    return arguments.length ? (distanceMax2 = _ * _, force) : Math.sqrt(distanceMax2);
+  };
+  force.theta = function(_) {
+    return arguments.length ? (theta2 = _ * _, force) : Math.sqrt(theta2);
+  };
+  return force;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-force/src/x.js
+function x_default2(x3) {
+  var strength = constant_default4(0.1), nodes, strengths, xz;
+  if (typeof x3 !== "function") x3 = constant_default4(x3 == null ? 0 : +x3);
+  function force(alpha) {
+    for (var i = 0, n = nodes.length, node; i < n; ++i) {
+      node = nodes[i], node.vx += (xz[i] - node.x) * strengths[i] * alpha;
+    }
+  }
+  function initialize() {
+    if (!nodes) return;
+    var i, n = nodes.length;
+    strengths = new Array(n);
+    xz = new Array(n);
+    for (i = 0; i < n; ++i) {
+      strengths[i] = isNaN(xz[i] = +x3(nodes[i], i, nodes)) ? 0 : +strength(nodes[i], i, nodes);
+    }
+  }
+  force.initialize = function(_) {
+    nodes = _;
+    initialize();
+  };
+  force.strength = function(_) {
+    return arguments.length ? (strength = typeof _ === "function" ? _ : constant_default4(+_), initialize(), force) : strength;
+  };
+  force.x = function(_) {
+    return arguments.length ? (x3 = typeof _ === "function" ? _ : constant_default4(+_), initialize(), force) : x3;
+  };
+  return force;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-force/src/y.js
+function y_default2(y3) {
+  var strength = constant_default4(0.1), nodes, strengths, yz;
+  if (typeof y3 !== "function") y3 = constant_default4(y3 == null ? 0 : +y3);
+  function force(alpha) {
+    for (var i = 0, n = nodes.length, node; i < n; ++i) {
+      node = nodes[i], node.vy += (yz[i] - node.y) * strengths[i] * alpha;
+    }
+  }
+  function initialize() {
+    if (!nodes) return;
+    var i, n = nodes.length;
+    strengths = new Array(n);
+    yz = new Array(n);
+    for (i = 0; i < n; ++i) {
+      strengths[i] = isNaN(yz[i] = +y3(nodes[i], i, nodes)) ? 0 : +strength(nodes[i], i, nodes);
+    }
+  }
+  force.initialize = function(_) {
+    nodes = _;
+    initialize();
+  };
+  force.strength = function(_) {
+    return arguments.length ? (strength = typeof _ === "function" ? _ : constant_default4(+_), initialize(), force) : strength;
+  };
+  force.y = function(_) {
+    return arguments.length ? (y3 = typeof _ === "function" ? _ : constant_default4(+_), initialize(), force) : y3;
+  };
+  return force;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/count.js
+function count(node) {
+  var sum = 0, children2 = node.children, i = children2 && children2.length;
+  if (!i) sum = 1;
+  else while (--i >= 0) sum += children2[i].value;
+  node.value = sum;
+}
+function count_default() {
+  return this.eachAfter(count);
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/each.js
+function each_default2(callback, that) {
+  let index = -1;
+  for (const node of this) {
+    callback.call(that, node, ++index, this);
+  }
+  return this;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/eachBefore.js
+function eachBefore_default(callback, that) {
+  var node = this, nodes = [node], children2, i, index = -1;
+  while (node = nodes.pop()) {
+    callback.call(that, node, ++index, this);
+    if (children2 = node.children) {
+      for (i = children2.length - 1; i >= 0; --i) {
+        nodes.push(children2[i]);
+      }
+    }
+  }
+  return this;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/eachAfter.js
+function eachAfter_default(callback, that) {
+  var node = this, nodes = [node], next = [], children2, i, n, index = -1;
+  while (node = nodes.pop()) {
+    next.push(node);
+    if (children2 = node.children) {
+      for (i = 0, n = children2.length; i < n; ++i) {
+        nodes.push(children2[i]);
+      }
+    }
+  }
+  while (node = next.pop()) {
+    callback.call(that, node, ++index, this);
+  }
+  return this;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/find.js
+function find_default2(callback, that) {
+  let index = -1;
+  for (const node of this) {
+    if (callback.call(that, node, ++index, this)) {
+      return node;
+    }
+  }
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/sum.js
+function sum_default(value) {
+  return this.eachAfter(function(node) {
+    var sum = +value(node.data) || 0, children2 = node.children, i = children2 && children2.length;
+    while (--i >= 0) sum += children2[i].value;
+    node.value = sum;
+  });
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/sort.js
+function sort_default2(compare) {
+  return this.eachBefore(function(node) {
+    if (node.children) {
+      node.children.sort(compare);
+    }
+  });
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/path.js
+function path_default(end) {
+  var start2 = this, ancestor = leastCommonAncestor(start2, end), nodes = [start2];
+  while (start2 !== ancestor) {
+    start2 = start2.parent;
+    nodes.push(start2);
+  }
+  var k = nodes.length;
+  while (end !== ancestor) {
+    nodes.splice(k, 0, end);
+    end = end.parent;
+  }
+  return nodes;
+}
+function leastCommonAncestor(a2, b) {
+  if (a2 === b) return a2;
+  var aNodes = a2.ancestors(), bNodes = b.ancestors(), c2 = null;
+  a2 = aNodes.pop();
+  b = bNodes.pop();
+  while (a2 === b) {
+    c2 = a2;
+    a2 = aNodes.pop();
+    b = bNodes.pop();
+  }
+  return c2;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/ancestors.js
+function ancestors_default() {
+  var node = this, nodes = [node];
+  while (node = node.parent) {
+    nodes.push(node);
+  }
+  return nodes;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/descendants.js
+function descendants_default() {
+  return Array.from(this);
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/leaves.js
+function leaves_default() {
+  var leaves = [];
+  this.eachBefore(function(node) {
+    if (!node.children) {
+      leaves.push(node);
+    }
+  });
+  return leaves;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/links.js
+function links_default() {
+  var root2 = this, links = [];
+  root2.each(function(node) {
+    if (node !== root2) {
+      links.push({ source: node.parent, target: node });
+    }
+  });
+  return links;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/iterator.js
+function* iterator_default2() {
+  var node = this, current, next = [node], children2, i, n;
+  do {
+    current = next.reverse(), next = [];
+    while (node = current.pop()) {
+      yield node;
+      if (children2 = node.children) {
+        for (i = 0, n = children2.length; i < n; ++i) {
+          next.push(children2[i]);
+        }
+      }
+    }
+  } while (next.length);
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/hierarchy/index.js
+function hierarchy(data, children2) {
+  if (data instanceof Map) {
+    data = [void 0, data];
+    if (children2 === void 0) children2 = mapChildren;
+  } else if (children2 === void 0) {
+    children2 = objectChildren;
+  }
+  var root2 = new Node(data), node, nodes = [root2], child, childs, i, n;
+  while (node = nodes.pop()) {
+    if ((childs = children2(node.data)) && (n = (childs = Array.from(childs)).length)) {
+      node.children = childs;
+      for (i = n - 1; i >= 0; --i) {
+        nodes.push(child = childs[i] = new Node(childs[i]));
+        child.parent = node;
+        child.depth = node.depth + 1;
+      }
+    }
+  }
+  return root2.eachBefore(computeHeight);
+}
+function node_copy() {
+  return hierarchy(this).eachBefore(copyData);
+}
+function objectChildren(d) {
+  return d.children;
+}
+function mapChildren(d) {
+  return Array.isArray(d) ? d[1] : null;
+}
+function copyData(node) {
+  if (node.data.value !== void 0) node.value = node.data.value;
+  node.data = node.data.data;
+}
+function computeHeight(node) {
+  var height = 0;
+  do
+    node.height = height;
+  while ((node = node.parent) && node.height < ++height);
+}
+function Node(data) {
+  this.data = data;
+  this.depth = this.height = 0;
+  this.parent = null;
+}
+Node.prototype = hierarchy.prototype = {
+  constructor: Node,
+  count: count_default,
+  each: each_default2,
+  eachAfter: eachAfter_default,
+  eachBefore: eachBefore_default,
+  find: find_default2,
+  sum: sum_default,
+  sort: sort_default2,
+  path: path_default,
+  ancestors: ancestors_default,
+  descendants: descendants_default,
+  leaves: leaves_default,
+  links: links_default,
+  copy: node_copy,
+  [Symbol.iterator]: iterator_default2
+};
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-hierarchy/src/tree.js
+function defaultSeparation(a2, b) {
+  return a2.parent === b.parent ? 1 : 2;
+}
+function nextLeft(v) {
+  var children2 = v.children;
+  return children2 ? children2[0] : v.t;
+}
+function nextRight(v) {
+  var children2 = v.children;
+  return children2 ? children2[children2.length - 1] : v.t;
+}
+function moveSubtree(wm, wp, shift) {
+  var change = shift / (wp.i - wm.i);
+  wp.c -= change;
+  wp.s += shift;
+  wm.c += change;
+  wp.z += shift;
+  wp.m += shift;
+}
+function executeShifts(v) {
+  var shift = 0, change = 0, children2 = v.children, i = children2.length, w;
+  while (--i >= 0) {
+    w = children2[i];
+    w.z += shift;
+    w.m += shift;
+    shift += w.s + (change += w.c);
+  }
+}
+function nextAncestor(vim, v, ancestor) {
+  return vim.a.parent === v.parent ? vim.a : ancestor;
+}
+function TreeNode(node, i) {
+  this._ = node;
+  this.parent = null;
+  this.children = null;
+  this.A = null;
+  this.a = this;
+  this.z = 0;
+  this.m = 0;
+  this.c = 0;
+  this.s = 0;
+  this.t = null;
+  this.i = i;
+}
+TreeNode.prototype = Object.create(Node.prototype);
+function treeRoot(root2) {
+  var tree = new TreeNode(root2, 0), node, nodes = [tree], child, children2, i, n;
+  while (node = nodes.pop()) {
+    if (children2 = node._.children) {
+      node.children = new Array(n = children2.length);
+      for (i = n - 1; i >= 0; --i) {
+        nodes.push(child = node.children[i] = new TreeNode(children2[i], i));
+        child.parent = node;
+      }
+    }
+  }
+  (tree.parent = new TreeNode(null, 0)).children = [tree];
+  return tree;
+}
+function tree_default() {
+  var separation = defaultSeparation, dx = 1, dy = 1, nodeSize = null;
+  function tree(root2) {
+    var t = treeRoot(root2);
+    t.eachAfter(firstWalk), t.parent.m = -t.z;
+    t.eachBefore(secondWalk);
+    if (nodeSize) root2.eachBefore(sizeNode);
+    else {
+      var left = root2, right = root2, bottom = root2;
+      root2.eachBefore(function(node) {
+        if (node.x < left.x) left = node;
+        if (node.x > right.x) right = node;
+        if (node.depth > bottom.depth) bottom = node;
+      });
+      var s = left === right ? 1 : separation(left, right) / 2, tx = s - left.x, kx = dx / (right.x + s + tx), ky = dy / (bottom.depth || 1);
+      root2.eachBefore(function(node) {
+        node.x = (node.x + tx) * kx;
+        node.y = node.depth * ky;
+      });
+    }
+    return root2;
+  }
+  function firstWalk(v) {
+    var children2 = v.children, siblings = v.parent.children, w = v.i ? siblings[v.i - 1] : null;
+    if (children2) {
+      executeShifts(v);
+      var midpoint = (children2[0].z + children2[children2.length - 1].z) / 2;
+      if (w) {
+        v.z = w.z + separation(v._, w._);
+        v.m = v.z - midpoint;
+      } else {
+        v.z = midpoint;
+      }
+    } else if (w) {
+      v.z = w.z + separation(v._, w._);
+    }
+    v.parent.A = apportion(v, w, v.parent.A || siblings[0]);
+  }
+  function secondWalk(v) {
+    v._.x = v.z + v.parent.m;
+    v.m += v.parent.m;
+  }
+  function apportion(v, w, ancestor) {
+    if (w) {
+      var vip = v, vop = v, vim = w, vom = vip.parent.children[0], sip = vip.m, sop = vop.m, sim = vim.m, som = vom.m, shift;
+      while (vim = nextRight(vim), vip = nextLeft(vip), vim && vip) {
+        vom = nextLeft(vom);
+        vop = nextRight(vop);
+        vop.a = v;
+        shift = vim.z + sim - vip.z - sip + separation(vim._, vip._);
+        if (shift > 0) {
+          moveSubtree(nextAncestor(vim, v, ancestor), v, shift);
+          sip += shift;
+          sop += shift;
+        }
+        sim += vim.m;
+        sip += vip.m;
+        som += vom.m;
+        sop += vop.m;
+      }
+      if (vim && !nextRight(vop)) {
+        vop.t = vim;
+        vop.m += sim - sop;
+      }
+      if (vip && !nextLeft(vom)) {
+        vom.t = vip;
+        vom.m += sip - som;
+        ancestor = v;
+      }
+    }
+    return ancestor;
+  }
+  function sizeNode(node) {
+    node.x *= dx;
+    node.y = node.depth * dy;
+  }
+  tree.separation = function(x3) {
+    return arguments.length ? (separation = x3, tree) : separation;
+  };
+  tree.size = function(x3) {
+    return arguments.length ? (nodeSize = false, dx = +x3[0], dy = +x3[1], tree) : nodeSize ? null : [dx, dy];
+  };
+  tree.nodeSize = function(x3) {
+    return arguments.length ? (nodeSize = true, dx = +x3[0], dy = +x3[1], tree) : nodeSize ? [dx, dy] : null;
+  };
+  return tree;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-zoom/src/constant.js
+var constant_default5 = (x3) => () => x3;
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-zoom/src/event.js
+function ZoomEvent(type2, {
+  sourceEvent,
+  target,
+  transform: transform2,
+  dispatch: dispatch2
+}) {
+  Object.defineProperties(this, {
+    type: { value: type2, enumerable: true, configurable: true },
+    sourceEvent: { value: sourceEvent, enumerable: true, configurable: true },
+    target: { value: target, enumerable: true, configurable: true },
+    transform: { value: transform2, enumerable: true, configurable: true },
+    _: { value: dispatch2 }
+  });
+}
+
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-zoom/src/transform.js
-function Transform(k, x, y) {
+function Transform(k, x3, y3) {
   this.k = k;
-  this.x = x;
-  this.y = y;
+  this.x = x3;
+  this.y = y3;
 }
 Transform.prototype = {
   constructor: Transform,
   scale: function(k) {
     return k === 1 ? this : new Transform(this.k * k, this.x, this.y);
   },
-  translate: function(x, y) {
-    return x === 0 & y === 0 ? this : new Transform(this.k, this.x + this.k * x, this.y + this.k * y);
+  translate: function(x3, y3) {
+    return x3 === 0 & y3 === 0 ? this : new Transform(this.k, this.x + this.k * x3, this.y + this.k * y3);
   },
   apply: function(point) {
     return [point[0] * this.k + this.x, point[1] * this.k + this.y];
   },
-  applyX: function(x) {
-    return x * this.k + this.x;
+  applyX: function(x3) {
+    return x3 * this.k + this.x;
   },
-  applyY: function(y) {
-    return y * this.k + this.y;
+  applyY: function(y3) {
+    return y3 * this.k + this.y;
   },
   invert: function(location) {
     return [(location[0] - this.x) / this.k, (location[1] - this.y) / this.k];
   },
-  invertX: function(x) {
-    return (x - this.x) / this.k;
+  invertX: function(x3) {
+    return (x3 - this.x) / this.k;
   },
-  invertY: function(y) {
-    return (y - this.y) / this.k;
+  invertY: function(y3) {
+    return (y3 - this.y) / this.k;
   },
-  rescaleX: function(x) {
-    return x.copy().domain(x.range().map(this.invertX, this).map(x.invert, x));
+  rescaleX: function(x3) {
+    return x3.copy().domain(x3.range().map(this.invertX, this).map(x3.invert, x3));
   },
-  rescaleY: function(y) {
-    return y.copy().domain(y.range().map(this.invertY, this).map(y.invert, y));
+  rescaleY: function(y3) {
+    return y3.copy().domain(y3.range().map(this.invertY, this).map(y3.invert, y3));
   },
   toString: function() {
     return "translate(" + this.x + "," + this.y + ") scale(" + this.k + ")";
@@ -24076,186 +25225,1414 @@ function transform(node) {
   return node.__zoom;
 }
 
-// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/src/dashboard/components/SkillGraph.jsx
-var import_jsx_runtime = __toESM(require_jsx_runtime(), 1);
-var WIDTH = 760;
-var HEIGHT = 520;
-function nodeColor(node) {
-  if (node.type === "source") return "#58c4ff";
-  if (node.type === "dependency") return "#2ed089";
-  return "#5b8cff";
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-zoom/src/noevent.js
+function nopropagation2(event) {
+  event.stopImmediatePropagation();
 }
-function SkillGraph({ model, selectedId, onSelect }) {
-  const ref = (0, import_react.useRef)(null);
-  (0, import_react.useEffect)(() => {
-    if (!model || !ref.current) return;
-    const svg = select_default2(ref.current);
-    svg.selectAll("*").remove();
-    const layout = /* @__PURE__ */ new Map();
-    const sources = model.nodes.filter((node) => node.type === "source");
-    const selected = model.selected;
-    const dependencies = model.nodes.filter((node) => node.type === "dependency");
-    sources.forEach((node, index) => {
-      layout.set(node.id, { x: 120, y: 120 + index * 280 });
-    });
-    layout.set(selected.id, { x: WIDTH / 2, y: HEIGHT / 2 });
-    dependencies.forEach((node, index) => {
-      layout.set(node.id, { x: WIDTH - 140, y: 120 + index * 280 });
-    });
-    const edgeGroup = svg.append("g");
-    for (const edge of model.edges) {
-      const source = layout.get(edge.source);
-      const target = layout.get(edge.target);
-      edgeGroup.append("path").attr("d", `M ${source.x} ${source.y} C ${(source.x + target.x) / 2} ${source.y}, ${(source.x + target.x) / 2} ${target.y}, ${target.x} ${target.y}`).attr("fill", "none").attr("stroke", edge.kind === "provenance" ? "rgba(88,196,255,0.55)" : "rgba(46,208,137,0.55)").attr("stroke-width", 2.5);
+function noevent_default3(event) {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/node_modules/d3-zoom/src/zoom.js
+function defaultFilter(event) {
+  return (!event.ctrlKey || event.type === "wheel") && !event.button;
+}
+function defaultExtent() {
+  var e = this;
+  if (e instanceof SVGElement) {
+    e = e.ownerSVGElement || e;
+    if (e.hasAttribute("viewBox")) {
+      e = e.viewBox.baseVal;
+      return [[e.x, e.y], [e.x + e.width, e.y + e.height]];
     }
-    const nodeGroup = svg.append("g").selectAll("g").data(model.nodes).join("g").attr("transform", (node) => {
-      const point = layout.get(node.id);
-      return `translate(${point.x}, ${point.y})`;
-    }).style("cursor", "pointer").on("click", (_, node) => onSelect(node.id));
-    nodeGroup.append("circle").attr("r", (node) => node.id === selectedId ? 44 : 34).attr("fill", "#08131f").attr("stroke", (node) => node.id === selectedId ? "#ffbf47" : nodeColor(node)).attr("stroke-width", (node) => node.id === selectedId ? 3 : 2);
-    nodeGroup.append("text").text((node) => node.type.toUpperCase()).attr("text-anchor", "middle").attr("y", -56).attr("fill", "#90a4c4").attr("font-size", 11).attr("letter-spacing", "0.08em");
-    nodeGroup.append("text").text((node) => node.packageName || node.path.split("/").slice(-1)[0]).attr("text-anchor", "middle").attr("y", 6).attr("fill", "#eef4ff").attr("font-size", 12);
-  }, [model, selectedId, onSelect]);
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-    "svg",
-    {
-      ref,
-      viewBox: `0 0 ${WIDTH} ${HEIGHT}`,
-      style: {
-        width: "100%",
-        minHeight: 520,
-        borderRadius: 18,
-        border: "1px solid rgba(255,255,255,0.08)",
-        background: "rgba(7, 18, 29, 0.92)"
+    return [[0, 0], [e.width.baseVal.value, e.height.baseVal.value]];
+  }
+  return [[0, 0], [e.clientWidth, e.clientHeight]];
+}
+function defaultTransform() {
+  return this.__zoom || identity2;
+}
+function defaultWheelDelta(event) {
+  return -event.deltaY * (event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 2e-3) * (event.ctrlKey ? 10 : 1);
+}
+function defaultTouchable() {
+  return navigator.maxTouchPoints || "ontouchstart" in this;
+}
+function defaultConstrain(transform2, extent, translateExtent) {
+  var dx0 = transform2.invertX(extent[0][0]) - translateExtent[0][0], dx1 = transform2.invertX(extent[1][0]) - translateExtent[1][0], dy0 = transform2.invertY(extent[0][1]) - translateExtent[0][1], dy1 = transform2.invertY(extent[1][1]) - translateExtent[1][1];
+  return transform2.translate(
+    dx1 > dx0 ? (dx0 + dx1) / 2 : Math.min(0, dx0) || Math.max(0, dx1),
+    dy1 > dy0 ? (dy0 + dy1) / 2 : Math.min(0, dy0) || Math.max(0, dy1)
+  );
+}
+function zoom_default2() {
+  var filter2 = defaultFilter, extent = defaultExtent, constrain = defaultConstrain, wheelDelta = defaultWheelDelta, touchable = defaultTouchable, scaleExtent = [0, Infinity], translateExtent = [[-Infinity, -Infinity], [Infinity, Infinity]], duration = 250, interpolate = zoom_default, listeners = dispatch_default("start", "zoom", "end"), touchstarting, touchfirst, touchending, touchDelay = 500, wheelDelay = 150, clickDistance2 = 0, tapDistance = 10;
+  function zoom(selection2) {
+    selection2.property("__zoom", defaultTransform).on("wheel.zoom", wheeled, { passive: false }).on("mousedown.zoom", mousedowned).on("dblclick.zoom", dblclicked).filter(touchable).on("touchstart.zoom", touchstarted).on("touchmove.zoom", touchmoved).on("touchend.zoom touchcancel.zoom", touchended).style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
+  }
+  zoom.transform = function(collection, transform2, point, event) {
+    var selection2 = collection.selection ? collection.selection() : collection;
+    selection2.property("__zoom", defaultTransform);
+    if (collection !== selection2) {
+      schedule(collection, transform2, point, event);
+    } else {
+      selection2.interrupt().each(function() {
+        gesture(this, arguments).event(event).start().zoom(null, typeof transform2 === "function" ? transform2.apply(this, arguments) : transform2).end();
+      });
+    }
+  };
+  zoom.scaleBy = function(selection2, k, p, event) {
+    zoom.scaleTo(selection2, function() {
+      var k0 = this.__zoom.k, k1 = typeof k === "function" ? k.apply(this, arguments) : k;
+      return k0 * k1;
+    }, p, event);
+  };
+  zoom.scaleTo = function(selection2, k, p, event) {
+    zoom.transform(selection2, function() {
+      var e = extent.apply(this, arguments), t0 = this.__zoom, p0 = p == null ? centroid(e) : typeof p === "function" ? p.apply(this, arguments) : p, p1 = t0.invert(p0), k1 = typeof k === "function" ? k.apply(this, arguments) : k;
+      return constrain(translate(scale(t0, k1), p0, p1), e, translateExtent);
+    }, p, event);
+  };
+  zoom.translateBy = function(selection2, x3, y3, event) {
+    zoom.transform(selection2, function() {
+      return constrain(this.__zoom.translate(
+        typeof x3 === "function" ? x3.apply(this, arguments) : x3,
+        typeof y3 === "function" ? y3.apply(this, arguments) : y3
+      ), extent.apply(this, arguments), translateExtent);
+    }, null, event);
+  };
+  zoom.translateTo = function(selection2, x3, y3, p, event) {
+    zoom.transform(selection2, function() {
+      var e = extent.apply(this, arguments), t = this.__zoom, p0 = p == null ? centroid(e) : typeof p === "function" ? p.apply(this, arguments) : p;
+      return constrain(identity2.translate(p0[0], p0[1]).scale(t.k).translate(
+        typeof x3 === "function" ? -x3.apply(this, arguments) : -x3,
+        typeof y3 === "function" ? -y3.apply(this, arguments) : -y3
+      ), e, translateExtent);
+    }, p, event);
+  };
+  function scale(transform2, k) {
+    k = Math.max(scaleExtent[0], Math.min(scaleExtent[1], k));
+    return k === transform2.k ? transform2 : new Transform(k, transform2.x, transform2.y);
+  }
+  function translate(transform2, p0, p1) {
+    var x3 = p0[0] - p1[0] * transform2.k, y3 = p0[1] - p1[1] * transform2.k;
+    return x3 === transform2.x && y3 === transform2.y ? transform2 : new Transform(transform2.k, x3, y3);
+  }
+  function centroid(extent2) {
+    return [(+extent2[0][0] + +extent2[1][0]) / 2, (+extent2[0][1] + +extent2[1][1]) / 2];
+  }
+  function schedule(transition2, transform2, point, event) {
+    transition2.on("start.zoom", function() {
+      gesture(this, arguments).event(event).start();
+    }).on("interrupt.zoom end.zoom", function() {
+      gesture(this, arguments).event(event).end();
+    }).tween("zoom", function() {
+      var that = this, args = arguments, g = gesture(that, args).event(event), e = extent.apply(that, args), p = point == null ? centroid(e) : typeof point === "function" ? point.apply(that, args) : point, w = Math.max(e[1][0] - e[0][0], e[1][1] - e[0][1]), a2 = that.__zoom, b = typeof transform2 === "function" ? transform2.apply(that, args) : transform2, i = interpolate(a2.invert(p).concat(w / a2.k), b.invert(p).concat(w / b.k));
+      return function(t) {
+        if (t === 1) t = b;
+        else {
+          var l = i(t), k = w / l[2];
+          t = new Transform(k, p[0] - l[0] * k, p[1] - l[1] * k);
+        }
+        g.zoom(null, t);
+      };
+    });
+  }
+  function gesture(that, args, clean) {
+    return !clean && that.__zooming || new Gesture(that, args);
+  }
+  function Gesture(that, args) {
+    this.that = that;
+    this.args = args;
+    this.active = 0;
+    this.sourceEvent = null;
+    this.extent = extent.apply(that, args);
+    this.taps = 0;
+  }
+  Gesture.prototype = {
+    event: function(event) {
+      if (event) this.sourceEvent = event;
+      return this;
+    },
+    start: function() {
+      if (++this.active === 1) {
+        this.that.__zooming = this;
+        this.emit("start");
+      }
+      return this;
+    },
+    zoom: function(key, transform2) {
+      if (this.mouse && key !== "mouse") this.mouse[1] = transform2.invert(this.mouse[0]);
+      if (this.touch0 && key !== "touch") this.touch0[1] = transform2.invert(this.touch0[0]);
+      if (this.touch1 && key !== "touch") this.touch1[1] = transform2.invert(this.touch1[0]);
+      this.that.__zoom = transform2;
+      this.emit("zoom");
+      return this;
+    },
+    end: function() {
+      if (--this.active === 0) {
+        delete this.that.__zooming;
+        this.emit("end");
+      }
+      return this;
+    },
+    emit: function(type2) {
+      var d = select_default2(this.that).datum();
+      listeners.call(
+        type2,
+        this.that,
+        new ZoomEvent(type2, {
+          sourceEvent: this.sourceEvent,
+          target: zoom,
+          type: type2,
+          transform: this.that.__zoom,
+          dispatch: listeners
+        }),
+        d
+      );
+    }
+  };
+  function wheeled(event, ...args) {
+    if (!filter2.apply(this, arguments)) return;
+    var g = gesture(this, args).event(event), t = this.__zoom, k = Math.max(scaleExtent[0], Math.min(scaleExtent[1], t.k * Math.pow(2, wheelDelta.apply(this, arguments)))), p = pointer_default(event);
+    if (g.wheel) {
+      if (g.mouse[0][0] !== p[0] || g.mouse[0][1] !== p[1]) {
+        g.mouse[1] = t.invert(g.mouse[0] = p);
+      }
+      clearTimeout(g.wheel);
+    } else if (t.k === k) return;
+    else {
+      g.mouse = [p, t.invert(p)];
+      interrupt_default(this);
+      g.start();
+    }
+    noevent_default3(event);
+    g.wheel = setTimeout(wheelidled, wheelDelay);
+    g.zoom("mouse", constrain(translate(scale(t, k), g.mouse[0], g.mouse[1]), g.extent, translateExtent));
+    function wheelidled() {
+      g.wheel = null;
+      g.end();
+    }
+  }
+  function mousedowned(event, ...args) {
+    if (touchending || !filter2.apply(this, arguments)) return;
+    var currentTarget = event.currentTarget, g = gesture(this, args, true).event(event), v = select_default2(event.view).on("mousemove.zoom", mousemoved, true).on("mouseup.zoom", mouseupped, true), p = pointer_default(event, currentTarget), x0 = event.clientX, y0 = event.clientY;
+    nodrag_default(event.view);
+    nopropagation2(event);
+    g.mouse = [p, this.__zoom.invert(p)];
+    interrupt_default(this);
+    g.start();
+    function mousemoved(event2) {
+      noevent_default3(event2);
+      if (!g.moved) {
+        var dx = event2.clientX - x0, dy = event2.clientY - y0;
+        g.moved = dx * dx + dy * dy > clickDistance2;
+      }
+      g.event(event2).zoom("mouse", constrain(translate(g.that.__zoom, g.mouse[0] = pointer_default(event2, currentTarget), g.mouse[1]), g.extent, translateExtent));
+    }
+    function mouseupped(event2) {
+      v.on("mousemove.zoom mouseup.zoom", null);
+      yesdrag(event2.view, g.moved);
+      noevent_default3(event2);
+      g.event(event2).end();
+    }
+  }
+  function dblclicked(event, ...args) {
+    if (!filter2.apply(this, arguments)) return;
+    var t0 = this.__zoom, p0 = pointer_default(event.changedTouches ? event.changedTouches[0] : event, this), p1 = t0.invert(p0), k1 = t0.k * (event.shiftKey ? 0.5 : 2), t1 = constrain(translate(scale(t0, k1), p0, p1), extent.apply(this, args), translateExtent);
+    noevent_default3(event);
+    if (duration > 0) select_default2(this).transition().duration(duration).call(schedule, t1, p0, event);
+    else select_default2(this).call(zoom.transform, t1, p0, event);
+  }
+  function touchstarted(event, ...args) {
+    if (!filter2.apply(this, arguments)) return;
+    var touches = event.touches, n = touches.length, g = gesture(this, args, event.changedTouches.length === n).event(event), started, i, t, p;
+    nopropagation2(event);
+    for (i = 0; i < n; ++i) {
+      t = touches[i], p = pointer_default(t, this);
+      p = [p, this.__zoom.invert(p), t.identifier];
+      if (!g.touch0) g.touch0 = p, started = true, g.taps = 1 + !!touchstarting;
+      else if (!g.touch1 && g.touch0[2] !== p[2]) g.touch1 = p, g.taps = 0;
+    }
+    if (touchstarting) touchstarting = clearTimeout(touchstarting);
+    if (started) {
+      if (g.taps < 2) touchfirst = p[0], touchstarting = setTimeout(function() {
+        touchstarting = null;
+      }, touchDelay);
+      interrupt_default(this);
+      g.start();
+    }
+  }
+  function touchmoved(event, ...args) {
+    if (!this.__zooming) return;
+    var g = gesture(this, args).event(event), touches = event.changedTouches, n = touches.length, i, t, p, l;
+    noevent_default3(event);
+    for (i = 0; i < n; ++i) {
+      t = touches[i], p = pointer_default(t, this);
+      if (g.touch0 && g.touch0[2] === t.identifier) g.touch0[0] = p;
+      else if (g.touch1 && g.touch1[2] === t.identifier) g.touch1[0] = p;
+    }
+    t = g.that.__zoom;
+    if (g.touch1) {
+      var p0 = g.touch0[0], l0 = g.touch0[1], p1 = g.touch1[0], l1 = g.touch1[1], dp = (dp = p1[0] - p0[0]) * dp + (dp = p1[1] - p0[1]) * dp, dl = (dl = l1[0] - l0[0]) * dl + (dl = l1[1] - l0[1]) * dl;
+      t = scale(t, Math.sqrt(dp / dl));
+      p = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2];
+      l = [(l0[0] + l1[0]) / 2, (l0[1] + l1[1]) / 2];
+    } else if (g.touch0) p = g.touch0[0], l = g.touch0[1];
+    else return;
+    g.zoom("touch", constrain(translate(t, p, l), g.extent, translateExtent));
+  }
+  function touchended(event, ...args) {
+    if (!this.__zooming) return;
+    var g = gesture(this, args).event(event), touches = event.changedTouches, n = touches.length, i, t;
+    nopropagation2(event);
+    if (touchending) clearTimeout(touchending);
+    touchending = setTimeout(function() {
+      touchending = null;
+    }, touchDelay);
+    for (i = 0; i < n; ++i) {
+      t = touches[i];
+      if (g.touch0 && g.touch0[2] === t.identifier) delete g.touch0;
+      else if (g.touch1 && g.touch1[2] === t.identifier) delete g.touch1;
+    }
+    if (g.touch1 && !g.touch0) g.touch0 = g.touch1, delete g.touch1;
+    if (g.touch0) g.touch0[1] = this.__zoom.invert(g.touch0[0]);
+    else {
+      g.end();
+      if (g.taps === 2) {
+        t = pointer_default(t, this);
+        if (Math.hypot(touchfirst[0] - t[0], touchfirst[1] - t[1]) < tapDistance) {
+          var p = select_default2(this).on("dblclick.zoom");
+          if (p) p.apply(this, arguments);
+        }
       }
     }
-  );
+  }
+  zoom.wheelDelta = function(_) {
+    return arguments.length ? (wheelDelta = typeof _ === "function" ? _ : constant_default5(+_), zoom) : wheelDelta;
+  };
+  zoom.filter = function(_) {
+    return arguments.length ? (filter2 = typeof _ === "function" ? _ : constant_default5(!!_), zoom) : filter2;
+  };
+  zoom.touchable = function(_) {
+    return arguments.length ? (touchable = typeof _ === "function" ? _ : constant_default5(!!_), zoom) : touchable;
+  };
+  zoom.extent = function(_) {
+    return arguments.length ? (extent = typeof _ === "function" ? _ : constant_default5([[+_[0][0], +_[0][1]], [+_[1][0], +_[1][1]]]), zoom) : extent;
+  };
+  zoom.scaleExtent = function(_) {
+    return arguments.length ? (scaleExtent[0] = +_[0], scaleExtent[1] = +_[1], zoom) : [scaleExtent[0], scaleExtent[1]];
+  };
+  zoom.translateExtent = function(_) {
+    return arguments.length ? (translateExtent[0][0] = +_[0][0], translateExtent[1][0] = +_[1][0], translateExtent[0][1] = +_[0][1], translateExtent[1][1] = +_[1][1], zoom) : [[translateExtent[0][0], translateExtent[0][1]], [translateExtent[1][0], translateExtent[1][1]]];
+  };
+  zoom.constrain = function(_) {
+    return arguments.length ? (constrain = _, zoom) : constrain;
+  };
+  zoom.duration = function(_) {
+    return arguments.length ? (duration = +_, zoom) : duration;
+  };
+  zoom.interpolate = function(_) {
+    return arguments.length ? (interpolate = _, zoom) : interpolate;
+  };
+  zoom.on = function() {
+    var value = listeners.on.apply(listeners, arguments);
+    return value === listeners ? zoom : value;
+  };
+  zoom.clickDistance = function(_) {
+    return arguments.length ? (clickDistance2 = (_ = +_) * _, zoom) : Math.sqrt(clickDistance2);
+  };
+  zoom.tapDistance = function(_) {
+    return arguments.length ? (tapDistance = +_, zoom) : tapDistance;
+  };
+  return zoom;
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/src/dashboard/components/SkillGraph.jsx
+var import_jsx_runtime = __toESM(require_jsx_runtime(), 1);
+var STATUS_COLORS = {
+  current: "#8fa67e",
+  stale: "#d4a45e",
+  affected: "#c4956e",
+  changed: "#d4a45e",
+  unknown: "#9a9488"
+};
+var SOURCE_COLOR = "#7a9abb";
+var SOURCE_CHANGED_COLOR = "#c45454";
+var GLOW_COLORS = {
+  current: { color: "#8fa67e", opacity: 0.6 },
+  stale: { color: "#d4a45e", opacity: 0.6 },
+  affected: { color: "#c4956e", opacity: 0.5 },
+  changed: { color: "#c45454", opacity: 0.7 },
+  unknown: { color: "#9a9488", opacity: 0.4 },
+  source: { color: "#7a9abb", opacity: 0.5 },
+  sourceChanged: { color: "#c45454", opacity: 0.7 }
+};
+function nodeRadius(node) {
+  if (node.type === "skill") return 14;
+  return 9;
+}
+function nodeColor(node) {
+  if (node.type === "source") return SOURCE_COLOR;
+  return STATUS_COLORS[node.status] || STATUS_COLORS.unknown;
+}
+function isFilled(node) {
+  if (node.type === "source") return true;
+  return node.status === "current" || node.status === "unknown";
+}
+function diamondPath(size) {
+  return `M0,${-size} L${size},0 L0,${size} L${-size},0 Z`;
+}
+function buildTreeHierarchy(model) {
+  if (!model || !model.selected) return null;
+  const sourceNodes = model.nodes.filter((n) => n.type === "source");
+  const edgesBySource = /* @__PURE__ */ new Map();
+  for (const edge of model.edges) {
+    if (edge.kind !== "requires") continue;
+    if (!edgesBySource.has(edge.source)) edgesBySource.set(edge.source, []);
+    edgesBySource.get(edge.source).push(edge.target);
+  }
+  const treeChildren = /* @__PURE__ */ new Map();
+  const visited = /* @__PURE__ */ new Set();
+  const crossLinks = [];
+  const queue = [model.selected.id];
+  visited.add(model.selected.id);
+  while (queue.length > 0) {
+    const parentId = queue.shift();
+    const childIds = edgesBySource.get(parentId) || [];
+    for (const childId of childIds) {
+      if (visited.has(childId)) {
+        crossLinks.push({ source: parentId, target: childId });
+        continue;
+      }
+      visited.add(childId);
+      if (!treeChildren.has(parentId)) treeChildren.set(parentId, []);
+      treeChildren.get(parentId).push(childId);
+      queue.push(childId);
+    }
+  }
+  const nodeMap = new Map(model.nodes.map((n) => [n.id, n]));
+  function buildHierarchy(id2) {
+    const node = nodeMap.get(id2);
+    const children2 = (treeChildren.get(id2) || []).map(buildHierarchy);
+    return { data: node, children: children2.length > 0 ? children2 : void 0 };
+  }
+  const rootHierarchy = buildHierarchy(model.selected.id);
+  return { rootHierarchy, sourceNodes, crossLinks, nodeMap };
+}
+function getThemeColors() {
+  const s = getComputedStyle(document.documentElement);
+  return {
+    current: s.getPropertyValue("--status-current").trim(),
+    stale: s.getPropertyValue("--status-stale").trim(),
+    affected: s.getPropertyValue("--status-affected").trim(),
+    unknown: s.getPropertyValue("--status-unknown").trim(),
+    provenance: s.getPropertyValue("--edge-provenance").trim(),
+    requires: s.getPropertyValue("--edge-requires").trim(),
+    text: s.getPropertyValue("--text").trim(),
+    textDim: s.getPropertyValue("--text-dim").trim()
+  };
+}
+function SkillGraph({
+  model,
+  selectedId,
+  onSelect,
+  onHover,
+  onHoverEnd,
+  labelsVisible,
+  knowledgeVisible,
+  resetZoomSignal
+}) {
+  const svgRef = (0, import_react.useRef)(null);
+  const zoomRef = (0, import_react.useRef)(null);
+  const resetZoom = (0, import_react.useCallback)(() => {
+    if (!svgRef.current || !zoomRef.current) return;
+    const svg = select_default2(svgRef.current);
+    svg.transition().duration(500).call(
+      zoomRef.current.transform,
+      zoomRef.current.__initialTransform || identity2
+    );
+  }, []);
+  (0, import_react.useEffect)(() => {
+    if (resetZoomSignal > 0) resetZoom();
+  }, [resetZoomSignal, resetZoom]);
+  (0, import_react.useEffect)(() => {
+    if (!model || !svgRef.current) return;
+    const result = buildTreeHierarchy(model);
+    if (!result) return;
+    const { rootHierarchy, sourceNodes, crossLinks } = result;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const theme = getThemeColors();
+    const svg = select_default2(svgRef.current);
+    svg.selectAll("*").remove();
+    svg.attr("width", width).attr("height", height);
+    const defs = svg.append("defs");
+    for (const [status, glowConfig] of Object.entries(GLOW_COLORS)) {
+      const filter2 = defs.append("filter").attr("id", `glow-${status}`).attr("x", "-50%").attr("y", "-50%").attr("width", "200%").attr("height", "200%");
+      filter2.append("feGaussianBlur").attr("stdDeviation", 5).attr("result", "blur");
+      filter2.append("feFlood").attr("flood-color", glowConfig.color).attr("flood-opacity", glowConfig.opacity);
+      filter2.append("feComposite").attr("in2", "blur").attr("operator", "in");
+      const merge = filter2.append("feMerge");
+      merge.append("feMergeNode");
+      merge.append("feMergeNode").attr("in", "SourceGraphic");
+    }
+    const zoom = zoom_default2().scaleExtent([0.15, 3]).on("zoom", (e) => g.attr("transform", e.transform));
+    zoomRef.current = zoom;
+    svg.call(zoom);
+    svg.style("cursor", "grab");
+    svg.on("mousedown.cursor", () => svg.style("cursor", "grabbing"));
+    svg.on("mouseup.cursor", () => svg.style("cursor", "grab"));
+    const g = svg.append("g");
+    const hierarchy2 = hierarchy(rootHierarchy);
+    const treeWidth = Math.max(width * 0.5, 400);
+    const treeHeight = Math.max(hierarchy2.height * 180, 280);
+    const treeLayout = tree_default().size([treeWidth, treeHeight]).separation((a2, b) => {
+      if (a2.depth === 0) return 3;
+      return a2.parent === b.parent ? 1.5 : 2;
+    });
+    treeLayout(hierarchy2);
+    const posMap = /* @__PURE__ */ new Map();
+    const sourceBandY = 30;
+    const treeTopPad = 240;
+    hierarchy2.descendants().forEach((d) => {
+      posMap.set(d.data.data.id, { x: d.x, y: d.y + treeTopPad });
+    });
+    const changedSourceIds = new Set(
+      sourceNodes.filter((n) => n.status === "changed").map((n) => n.id)
+    );
+    const provenanceEdges = model.edges.filter((e) => e.kind === "provenance");
+    const hasSources = sourceNodes.length > 0;
+    if (hasSources) {
+      const sourceSimNodes = sourceNodes.map((src) => {
+        const consumers = provenanceEdges.filter((e) => e.source === src.id).map((e) => posMap.get(e.target)).filter(Boolean);
+        const idealX = consumers.length > 0 ? consumers.reduce((s, p) => s + p.x, 0) / consumers.length : treeWidth / 2;
+        return { id: src.id, x: idealX, y: sourceBandY, idealX };
+      });
+      const sourceSim = simulation_default(sourceSimNodes).force("collide", collide_default(70)).force("x", x_default2((d) => d.idealX).strength(0.3)).force("y", y_default2(sourceBandY).strength(0.8)).force("charge", manyBody_default().strength(-100)).stop();
+      for (let i = 0; i < 200; i++) sourceSim.tick();
+      sourceSimNodes.forEach((sn) => {
+        posMap.set(sn.id, { x: sn.x, y: sn.y });
+      });
+    }
+    if (hasSources && knowledgeVisible) {
+      const separatorY = treeTopPad - 60;
+      g.append("line").attr("x1", -200).attr("y1", separatorY).attr("x2", treeWidth + 200).attr("y2", separatorY).attr("stroke", theme.provenance).attr("stroke-width", 0.5).attr("stroke-dasharray", "3 6").attr("opacity", 0.12).style("pointer-events", "none");
+    }
+    const provGroup = g.append("g").attr("class", "provenance-edges");
+    if (knowledgeVisible) {
+      provGroup.selectAll("path").data(provenanceEdges).join("path").attr("class", "edge provenance-edge").attr("d", (e) => {
+        const s = posMap.get(e.source);
+        const t = posMap.get(e.target);
+        if (!s || !t) return "";
+        const midY = s.y + (t.y - s.y) * 0.5;
+        return `M${s.x},${s.y + 8} C${s.x},${midY} ${t.x},${midY} ${t.x},${t.y - 14}`;
+      }).attr("fill", "none").attr("stroke", (e) => changedSourceIds.has(e.source) ? SOURCE_CHANGED_COLOR : theme.provenance).attr("stroke-dasharray", (e) => changedSourceIds.has(e.source) ? "4 3" : "2 4").attr("opacity", (e) => {
+        if (changedSourceIds.has(e.source)) return 0.55;
+        if (e.target === model.selected.id) return 0.35;
+        return 0.08;
+      }).attr("stroke-width", (e) => {
+        if (changedSourceIds.has(e.source)) return 2;
+        if (e.target === model.selected.id) return 1.5;
+        return 1;
+      }).style("transition", "opacity 200ms ease, stroke-width 200ms ease");
+    }
+    const treeGroup = g.append("g").attr("class", "tree-edges");
+    treeGroup.selectAll("path").data(hierarchy2.links()).join("path").attr("class", "edge tree-edge").attr("d", (d) => {
+      const sx = d.source.x;
+      const sy = d.source.y + treeTopPad;
+      const tx = d.target.x;
+      const ty = d.target.y + treeTopPad;
+      const midY = sy + (ty - sy) * 0.5;
+      return `M${sx},${sy} C${sx},${midY} ${tx},${midY} ${tx},${ty}`;
+    }).attr("fill", "none").attr("stroke", theme.requires).attr("stroke-width", (d) => d.target.depth <= 1 ? 2.5 : 1.5).attr("opacity", (d) => {
+      const depth = d.target.depth;
+      if (depth <= 1) return 0.5;
+      if (depth === 2) return 0.35;
+      return 0.2;
+    }).style("transition", "opacity 200ms ease, stroke-width 200ms ease");
+    const crossGroup = g.append("g").attr("class", "cross-edges");
+    crossGroup.selectAll("path").data(crossLinks).join("path").attr("class", "edge cross-edge").attr("d", (e) => {
+      const s = posMap.get(e.source);
+      const t = posMap.get(e.target);
+      if (!s || !t) return "";
+      const midY = Math.max(s.y, t.y) + 40;
+      return `M${s.x},${s.y} C${s.x},${midY} ${t.x},${midY} ${t.x},${t.y}`;
+    }).attr("fill", "none").attr("stroke", theme.requires).attr("stroke-width", 1.5).attr("stroke-dasharray", "6 4").attr("opacity", 0.2).style("transition", "opacity 200ms ease");
+    if (hasSources && knowledgeVisible) {
+      const sourceGroup = g.append("g").attr("class", "source-nodes");
+      const sourceGs = sourceGroup.selectAll("g").data(sourceNodes).join("g").attr("transform", (n) => {
+        const p = posMap.get(n.id);
+        return `translate(${p.x},${p.y})`;
+      }).style("cursor", "pointer").on("click", (_, n) => onSelect(n.id)).on("mouseenter", (event, n) => {
+        highlightConnected(n, model, posMap, g);
+        onHover(n, { x: event.clientX, y: event.clientY });
+      }).on("mousemove", (event, n) => onHover(n, { x: event.clientX, y: event.clientY })).on("mouseleave", () => {
+        clearHighlight(g, model.selected.id, changedSourceIds);
+        onHoverEnd();
+      });
+      sourceGs.filter((n) => n.status === "changed").append("path").attr("d", diamondPath(14)).attr("fill", "none").attr("stroke", SOURCE_CHANGED_COLOR).attr("stroke-width", 1.5).style("animation", "stale-pulse 2s ease-in-out infinite");
+      sourceGs.append("path").attr("class", "source-shape").attr("d", diamondPath(8)).attr("fill", (n) => {
+        if (n.status === "changed") return SOURCE_CHANGED_COLOR;
+        return `${theme.provenance}55`;
+      }).attr("stroke", (n) => n.status === "changed" ? SOURCE_CHANGED_COLOR : theme.provenance).attr("stroke-width", 1.5).attr("filter", (n) => n.status === "changed" ? "url(#glow-sourceChanged)" : null).style("transition", "filter 200ms ease");
+      sourceGs.append("text").attr("class", "node-label").text((n) => n.path.split("/").slice(-1)[0].replace(".md", "")).attr("x", 0).attr("y", -16).attr("text-anchor", "middle").attr("fill", (n) => n.status === "changed" ? SOURCE_CHANGED_COLOR : theme.provenance).attr("font-family", "var(--font-mono)").attr("font-size", 10).attr("opacity", 1).style("pointer-events", "none").style("display", labelsVisible ? null : "none");
+    }
+    const skillNodeData = hierarchy2.descendants();
+    const nodeGroup = g.append("g").attr("class", "skill-nodes");
+    const nodeGs = nodeGroup.selectAll("g").data(skillNodeData).join("g").attr("transform", (d) => `translate(${d.x},${d.y + treeTopPad})`).style("cursor", "pointer").on("click", (_, d) => onSelect(d.data.data.id)).on("mouseenter", (event, d) => {
+      highlightConnected(d.data.data, model, posMap, g);
+      onHover(d.data.data, { x: event.clientX, y: event.clientY });
+    }).on("mousemove", (event, d) => onHover(d.data.data, { x: event.clientX, y: event.clientY })).on("mouseleave", () => {
+      clearHighlight(g, model.selected.id, changedSourceIds);
+      onHoverEnd();
+    });
+    nodeGs.filter((d) => d.data.data.status === "stale").append("circle").attr("r", (d) => nodeRadius(d.data.data) + 7).attr("fill", "none").attr("stroke", STATUS_COLORS.stale).attr("stroke-width", 1.5).style("animation", "stale-pulse 2s ease-in-out infinite");
+    nodeGs.append("circle").attr("class", "node-circle").attr("r", (d) => nodeRadius(d.data.data)).attr("fill", (d) => {
+      const n = d.data.data;
+      if (n.status === "affected") return "transparent";
+      return isFilled(n) ? nodeColor(n) : "transparent";
+    }).attr("stroke", (d) => {
+      const n = d.data.data;
+      if (n.id === selectedId) return theme.text;
+      return nodeColor(n);
+    }).attr("stroke-width", (d) => {
+      const n = d.data.data;
+      if (n.id === selectedId) return 3;
+      if (n.type === "skill") return 2;
+      if (n.status === "affected" || !isFilled(n)) return 1.5;
+      return 0;
+    }).style("transition", "r 200ms ease, filter 200ms ease");
+    nodeGs.append("text").attr("class", "node-label").text((d) => d.data.data.name || d.data.data.packageName).attr("text-anchor", "middle").attr("y", (d) => -nodeRadius(d.data.data) - 12).attr("fill", (d) => d.data.data.id === model.selected.id ? theme.text : theme.textDim).attr("font-family", "var(--font-mono)").attr("font-size", (d) => d.data.data.type === "skill" ? 13 : 11).attr("font-weight", (d) => d.data.data.type === "skill" ? 600 : 400).style("pointer-events", "none").style("display", labelsVisible ? null : "none");
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const [, pos] of posMap) {
+      if (pos.x < minX) minX = pos.x;
+      if (pos.x > maxX) maxX = pos.x;
+      if (pos.y < minY) minY = pos.y;
+      if (pos.y > maxY) maxY = pos.y;
+    }
+    minX -= 80;
+    maxX += 80;
+    minY -= 50;
+    maxY += 50;
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+    const scaleX = (width - 80) / contentWidth;
+    const scaleY = (height - 140) / contentHeight;
+    const scale = Math.min(scaleX, scaleY, 1) * 0.85;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const initialTransform = identity2.translate(width / 2 - centerX * scale, height * 0.42 - centerY * scale).scale(scale);
+    zoom.__initialTransform = initialTransform;
+    svg.call(zoom.transform, initialTransform);
+  }, [model, selectedId, labelsVisible, knowledgeVisible, onSelect, onHover, onHoverEnd]);
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { ref: svgRef, style: { flex: 1, minHeight: 0 } });
+}
+function highlightConnected(node, model, posMap, g) {
+  const connected = /* @__PURE__ */ new Set([node.id]);
+  for (const edge of model.edges) {
+    if (edge.source === node.id) connected.add(edge.target);
+    if (edge.target === node.id) connected.add(edge.source);
+  }
+  if (node.type !== "source") {
+    for (const edge of model.edges) {
+      if (edge.kind === "requires" && edge.target === node.id) {
+        connected.add(edge.source);
+      }
+    }
+  }
+  g.selectAll(".source-nodes g").style("opacity", (n) => connected.has(n.id) ? 1 : 0.08);
+  g.selectAll(".skill-nodes g").style("opacity", (d) => connected.has(d.data.data.id) ? 1 : 0.08);
+  g.selectAll(".provenance-edge").style("opacity", function() {
+    const data = select_default2(this).datum();
+    if (!data) return 0;
+    return connected.has(data.source) && connected.has(data.target) ? 0.6 : 0;
+  }).style("stroke-width", function() {
+    const data = select_default2(this).datum();
+    if (!data) return 1;
+    return connected.has(data.source) && connected.has(data.target) ? 2 : 1;
+  });
+  g.selectAll(".tree-edge").style("opacity", function() {
+    const data = select_default2(this).datum();
+    if (!data?.source?.data?.data) return 0.03;
+    const sId = data.source.data.data.id;
+    const tId = data.target.data.data.id;
+    return connected.has(sId) && connected.has(tId) ? 0.9 : 0.03;
+  });
+  g.selectAll(".cross-edge").style("opacity", function() {
+    const data = select_default2(this).datum();
+    if (!data) return 0.03;
+    return connected.has(data.source) && connected.has(data.target) ? 0.9 : 0.03;
+  });
+  const glowKey = node.type === "source" ? node.status === "changed" ? "sourceChanged" : "source" : node.status || "unknown";
+  g.selectAll(".skill-nodes g").filter((d) => d.data.data.id === node.id).select(".node-circle").attr("filter", `url(#glow-${glowKey})`);
+  g.selectAll(".source-nodes g").filter((n) => n.id === node.id).select(".source-shape").attr("filter", `url(#glow-${node.type === "source" && node.status === "changed" ? "sourceChanged" : "source"})`);
+}
+function clearHighlight(g, selectedSkillId, changedSourceIds) {
+  g.selectAll(".source-nodes g").style("opacity", 1);
+  g.selectAll(".skill-nodes g").style("opacity", 1);
+  g.selectAll(".provenance-edge").style("opacity", function() {
+    const d = select_default2(this).datum();
+    if (!d) return 0.08;
+    if (changedSourceIds && changedSourceIds.has(d.source)) return 0.55;
+    if (d.target === selectedSkillId) return 0.35;
+    return 0.08;
+  }).style("stroke-width", function() {
+    const d = select_default2(this).datum();
+    if (!d) return 1;
+    if (changedSourceIds && changedSourceIds.has(d.source)) return 2;
+    if (d.target === selectedSkillId) return 1.5;
+    return 1;
+  });
+  g.selectAll(".tree-edge").style("opacity", null);
+  g.selectAll(".cross-edge").style("opacity", 0.2);
+  g.selectAll(".node-circle").attr("filter", null);
+  g.selectAll(".source-shape").attr("filter", function() {
+    const d = select_default2(this.parentNode).datum();
+    if (d && changedSourceIds && changedSourceIds.has(d.id)) return "url(#glow-sourceChanged)";
+    return null;
+  });
 }
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/src/dashboard/components/InspectorPanel.jsx
 var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
-function InspectorPanel({ selected }) {
-  if (!selected) {
-    return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("aside", { children: "Nothing selected." });
-  }
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-    "aside",
+var STATUS_COLORS2 = {
+  current: "var(--status-current)",
+  stale: "var(--status-stale)",
+  affected: "var(--status-affected)",
+  changed: "var(--status-stale)",
+  unknown: "var(--status-unknown)"
+};
+function StatusPill({ status }) {
+  const color2 = STATUS_COLORS2[status] || STATUS_COLORS2.unknown;
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: {
+    fontFamily: "var(--font-mono)",
+    fontSize: 10,
+    padding: "3px 10px",
+    letterSpacing: "0.04em",
+    background: `color-mix(in srgb, ${color2} 12%, transparent)`,
+    color: color2,
+    textTransform: "uppercase"
+  }, children: status });
+}
+function MetaRow({ label, children: children2 }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { marginTop: 16 }, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: {
+      fontFamily: "var(--font-mono)",
+      fontVariant: "small-caps",
+      textTransform: "uppercase",
+      letterSpacing: 3,
+      fontSize: 9,
+      color: "var(--text-faint)",
+      marginBottom: 6
+    }, children: label }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: { fontSize: 14, color: "var(--text-dim)", lineHeight: 1.6 }, children: children2 })
+  ] });
+}
+function InspectorPanel({ node, onClose, onNavigate }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("aside", { style: {
+    position: "fixed",
+    top: 0,
+    right: 0,
+    width: node ? 340 : 0,
+    height: "100vh",
+    background: "var(--surface)",
+    borderLeft: "1px solid var(--border)",
+    transition: "width 300ms ease",
+    overflow: "hidden",
+    zIndex: 20,
+    display: "flex",
+    flexDirection: "column"
+  }, children: node && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { padding: "28px 24px", overflowY: "auto", flex: 1 }, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+      "button",
+      {
+        type: "button",
+        onClick: onClose,
+        style: {
+          position: "absolute",
+          top: 16,
+          right: 16,
+          background: "none",
+          border: "none",
+          color: "var(--text-dim)",
+          cursor: "pointer",
+          fontFamily: "var(--font-mono)",
+          fontSize: 16,
+          padding: 4,
+          lineHeight: 1,
+          transition: "color 200ms ease"
+        },
+        onMouseEnter: (e) => {
+          e.target.style.color = "var(--text)";
+        },
+        onMouseLeave: (e) => {
+          e.target.style.color = "var(--text-dim)";
+        },
+        children: "\xD7"
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: {
+      fontFamily: "var(--font-mono)",
+      fontVariant: "small-caps",
+      textTransform: "uppercase",
+      letterSpacing: 3,
+      fontSize: 9,
+      color: "var(--text-dim)",
+      marginBottom: 6
+    }, children: node.type }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { style: {
+      fontFamily: "var(--font-body)",
+      fontSize: 24,
+      fontWeight: 400,
+      fontStyle: "italic",
+      color: "var(--text)",
+      margin: "0 0 12px 0",
+      lineHeight: 1.3,
+      paddingRight: 24
+    }, children: node.name || node.path?.split("/").slice(-1)[0] || node.id }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(StatusPill, { status: node.status }),
+    node.description && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: "Description", children: node.description }),
+    node.type === "source" && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: "Path", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: { fontFamily: "var(--font-mono)", fontSize: 12 }, children: node.path }) }),
+      node.usedBy && node.usedBy.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: "Used by", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: { display: "flex", flexDirection: "column", gap: 4 }, children: node.usedBy.map((skillName) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: {
+        fontFamily: "var(--font-mono)",
+        fontSize: 11,
+        color: "var(--edge-provenance)"
+      }, children: skillName }, skillName)) }) })
+    ] }),
+    (node.type === "skill" || node.type === "dependency") && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+      node.version && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: "Version", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: { fontFamily: "var(--font-mono)", fontSize: 12 }, children: node.version }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: "Explanation", children: node.explanation })
+    ] }),
+    node.type === "dependency" && onNavigate && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+      "button",
+      {
+        type: "button",
+        onClick: () => onNavigate(node.packageName),
+        style: {
+          marginTop: 24,
+          width: "100%",
+          fontFamily: "var(--font-mono)",
+          fontSize: 11,
+          background: "transparent",
+          border: "1px solid var(--border-bright)",
+          color: "var(--text-dim)",
+          padding: "10px 16px",
+          cursor: "pointer",
+          transition: "all 200ms ease",
+          letterSpacing: "0.04em",
+          textAlign: "left"
+        },
+        onMouseEnter: (e) => {
+          e.target.style.color = "var(--text)";
+          e.target.style.borderColor = "var(--status-current)";
+        },
+        onMouseLeave: (e) => {
+          e.target.style.color = "var(--text-dim)";
+          e.target.style.borderColor = "var(--border-bright)";
+        },
+        children: "View skill graph \u2192"
+      }
+    )
+  ] }) });
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/src/dashboard/components/Breadcrumbs.jsx
+var import_jsx_runtime3 = __toESM(require_jsx_runtime(), 1);
+function Breadcrumbs({ trail, onNavigate }) {
+  if (!trail || trail.length === 0) return null;
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("nav", { style: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    fontFamily: "var(--font-mono)",
+    fontSize: 11,
+    letterSpacing: "0.02em",
+    color: "var(--text-dim)",
+    padding: "0 40px",
+    height: 32,
+    borderBottom: "1px solid var(--border)",
+    flexShrink: 0
+  }, children: trail.map((entry, index) => {
+    const isLast = index === trail.length - 1;
+    return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { style: { display: "flex", alignItems: "center", gap: 6 }, children: [
+      index > 0 && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: { color: "var(--text-faint)" }, children: "\u203A" }),
+      isLast ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: { color: "var(--text)" }, children: entry.name || entry.packageName }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        "span",
+        {
+          onClick: () => onNavigate(entry.packageName, index),
+          style: {
+            cursor: "pointer",
+            transition: "color 200ms ease"
+          },
+          onMouseEnter: (e) => {
+            e.target.style.color = "var(--text)";
+          },
+          onMouseLeave: (e) => {
+            e.target.style.color = "var(--text-dim)";
+          },
+          children: entry.name || entry.packageName
+        }
+      )
+    ] }, entry.packageName);
+  }) });
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/src/dashboard/components/ControlStrip.jsx
+var import_jsx_runtime4 = __toESM(require_jsx_runtime(), 1);
+var BUTTON_STYLE = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 11,
+  background: "var(--surface)",
+  border: "1px solid var(--border-bright)",
+  color: "var(--text-dim)",
+  padding: "8px 16px",
+  cursor: "pointer",
+  transition: "all 200ms ease",
+  letterSpacing: "0.04em"
+};
+function ControlStrip({ onAction, busyAction, labelsVisible, onToggleLabels, knowledgeVisible, onToggleKnowledge, lightMode, onToggleTheme }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: {
+    position: "fixed",
+    bottom: 28,
+    left: 40,
+    display: "flex",
+    gap: 8,
+    zIndex: 10
+  }, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "button",
+      {
+        type: "button",
+        style: BUTTON_STYLE,
+        onClick: () => onAction("reset-zoom"),
+        onMouseEnter: (e) => {
+          e.target.style.color = "var(--text)";
+          e.target.style.borderColor = "var(--status-current)";
+        },
+        onMouseLeave: (e) => {
+          e.target.style.color = "var(--text-dim)";
+          e.target.style.borderColor = "var(--border-bright)";
+        },
+        children: "Reset"
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "button",
+      {
+        type: "button",
+        style: BUTTON_STYLE,
+        disabled: Boolean(busyAction),
+        onClick: () => onAction("validate-skill"),
+        onMouseEnter: (e) => {
+          e.target.style.color = "var(--text)";
+          e.target.style.borderColor = "var(--status-current)";
+        },
+        onMouseLeave: (e) => {
+          e.target.style.color = "var(--text-dim)";
+          e.target.style.borderColor = "var(--border-bright)";
+        },
+        children: busyAction === "validate-skill" ? "Validating..." : "Validate"
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "button",
+      {
+        type: "button",
+        style: BUTTON_STYLE,
+        disabled: Boolean(busyAction),
+        onClick: () => onAction("refresh"),
+        onMouseEnter: (e) => {
+          e.target.style.color = "var(--text)";
+          e.target.style.borderColor = "var(--status-current)";
+        },
+        onMouseLeave: (e) => {
+          e.target.style.color = "var(--text-dim)";
+          e.target.style.borderColor = "var(--border-bright)";
+        },
+        children: busyAction === "refresh" ? "Refreshing..." : "Refresh"
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "button",
+      {
+        type: "button",
+        style: {
+          ...BUTTON_STYLE,
+          ...labelsVisible ? {} : {
+            color: "var(--status-current)",
+            borderColor: "var(--status-current)",
+            background: "rgba(143, 166, 126, 0.08)"
+          }
+        },
+        onClick: onToggleLabels,
+        onMouseEnter: (e) => {
+          e.target.style.color = "var(--text)";
+          e.target.style.borderColor = "var(--status-current)";
+        },
+        onMouseLeave: (e) => {
+          if (labelsVisible) {
+            e.target.style.color = "var(--text-dim)";
+            e.target.style.borderColor = "var(--border-bright)";
+          } else {
+            e.target.style.color = "var(--status-current)";
+            e.target.style.borderColor = "var(--status-current)";
+          }
+        },
+        children: labelsVisible ? "Hide labels" : "Show labels"
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "button",
+      {
+        type: "button",
+        style: {
+          ...BUTTON_STYLE,
+          ...knowledgeVisible ? {
+            color: "var(--edge-provenance)",
+            borderColor: "var(--edge-provenance)",
+            background: "rgba(122, 154, 187, 0.08)"
+          } : {}
+        },
+        onClick: onToggleKnowledge,
+        onMouseEnter: (e) => {
+          e.target.style.color = "var(--text)";
+          e.target.style.borderColor = "var(--edge-provenance)";
+        },
+        onMouseLeave: (e) => {
+          if (knowledgeVisible) {
+            e.target.style.color = "var(--edge-provenance)";
+            e.target.style.borderColor = "var(--edge-provenance)";
+          } else {
+            e.target.style.color = "var(--text-dim)";
+            e.target.style.borderColor = "var(--border-bright)";
+          }
+        },
+        children: "Knowledge"
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "button",
+      {
+        type: "button",
+        style: {
+          ...BUTTON_STYLE,
+          ...lightMode ? {
+            color: "var(--accent)",
+            borderColor: "var(--accent)",
+            background: "rgba(196, 138, 32, 0.08)"
+          } : {}
+        },
+        onClick: onToggleTheme,
+        onMouseEnter: (e) => {
+          e.target.style.color = "var(--text)";
+          e.target.style.borderColor = "var(--accent)";
+        },
+        onMouseLeave: (e) => {
+          if (lightMode) {
+            e.target.style.color = "var(--accent)";
+            e.target.style.borderColor = "var(--accent)";
+          } else {
+            e.target.style.color = "var(--text-dim)";
+            e.target.style.borderColor = "var(--border-bright)";
+          }
+        },
+        children: lightMode ? "Dark" : "Light"
+      }
+    )
+  ] });
+}
+
+// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/src/dashboard/components/Tooltip.jsx
+var import_jsx_runtime5 = __toESM(require_jsx_runtime(), 1);
+var STATUS_COLORS3 = {
+  current: "var(--status-current)",
+  stale: "var(--status-stale)",
+  affected: "var(--status-affected)",
+  changed: "var(--status-stale)",
+  unknown: "var(--status-unknown)"
+};
+function Tooltip({ node, position }) {
+  if (!node || !position) return null;
+  const x3 = Math.min(position.x + 16, window.innerWidth - 380);
+  const y3 = Math.min(position.y - 10, window.innerHeight - 220);
+  const statusColor = STATUS_COLORS3[node.status] || STATUS_COLORS3.unknown;
+  const label = node.packageName || node.path?.split("/").slice(-1)[0] || node.id;
+  const description = node.description || "";
+  const truncated = description.length > 200 ? description.slice(0, 200) + "..." : description;
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+    "div",
     {
       style: {
-        padding: 16,
-        borderRadius: 18,
-        background: "rgba(11, 22, 35, 0.9)",
-        border: "1px solid rgba(255,255,255,0.08)"
+        position: "fixed",
+        left: x3,
+        top: y3,
+        background: "var(--surface)",
+        border: "1px solid var(--border-bright)",
+        padding: "16px 20px",
+        maxWidth: 360,
+        zIndex: 100,
+        pointerEvents: "none",
+        animation: "tooltipIn 200ms ease"
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { style: { marginTop: 0 }, children: "Inspector" }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: { color: "#90a4c4", fontSize: 14 }, children: "Type" }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { children: selected.type }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: { color: "#90a4c4", fontSize: 14, marginTop: 10 }, children: "Status" }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { children: selected.status }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: { color: "#90a4c4", fontSize: 14, marginTop: 10 }, children: "Explanation" }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { children: selected.explanation })
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("style", { children: `
+        @keyframes tooltipIn {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      ` }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: {
+          fontFamily: "var(--font-body)",
+          fontSize: 18,
+          fontWeight: 400,
+          fontStyle: "italic",
+          color: "var(--text)",
+          marginBottom: 4
+        }, children: node.name || label }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: {
+          fontFamily: "var(--font-mono)",
+          fontVariant: "small-caps",
+          textTransform: "uppercase",
+          letterSpacing: 3,
+          fontSize: 9,
+          color: statusColor,
+          marginBottom: truncated ? 10 : 0
+        }, children: node.type }),
+        truncated && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: {
+          fontFamily: "var(--font-body)",
+          fontSize: 14,
+          color: "var(--text-dim)",
+          lineHeight: 1.5,
+          marginBottom: 10
+        }, children: truncated }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: {
+            fontFamily: "var(--font-mono)",
+            fontSize: 9,
+            padding: "2px 8px",
+            letterSpacing: "0.02em",
+            background: `color-mix(in srgb, ${statusColor} 12%, transparent)`,
+            color: statusColor
+          }, children: node.status }),
+          node.version && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { style: {
+            fontFamily: "var(--font-mono)",
+            fontSize: 9,
+            padding: "2px 8px",
+            letterSpacing: "0.02em",
+            background: "rgba(255, 255, 255, 0.04)",
+            color: "var(--text-dim)"
+          }, children: [
+            "v",
+            node.version
+          ] }),
+          node.usedBy && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { style: {
+            fontFamily: "var(--font-mono)",
+            fontSize: 9,
+            padding: "2px 8px",
+            letterSpacing: "0.02em",
+            background: "rgba(122, 154, 187, 0.1)",
+            color: "var(--edge-provenance)"
+          }, children: [
+            node.usedBy.length,
+            " skill",
+            node.usedBy.length !== 1 ? "s" : ""
+          ] })
+        ] })
       ]
     }
   );
 }
 
-// ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/src/dashboard/components/ActionBar.jsx
-var import_jsx_runtime3 = __toESM(require_jsx_runtime(), 1);
-var ACTIONS = [
-  ["check-stale", "Check Stale"],
-  ["show-dependencies", "Show Dependencies"],
-  ["validate-skill", "Validate Skill"],
-  ["refresh", "Refresh Graph"]
-];
-function ActionBar({ onAction, busyAction }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { display: "flex", gap: 10, flexWrap: "wrap" }, children: ACTIONS.map(([value, label]) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-    "button",
-    {
-      type: "button",
-      disabled: Boolean(busyAction),
-      onClick: () => onAction(value),
-      children: busyAction === value ? `${label}...` : label
-    },
-    value
-  )) });
-}
-
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/src/dashboard/App.jsx
-var import_jsx_runtime4 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime6 = __toESM(require_jsx_runtime(), 1);
 function App() {
   const [model, setModel] = (0, import_react2.useState)(null);
   const [selectedId, setSelectedId] = (0, import_react2.useState)(null);
   const [error, setError] = (0, import_react2.useState)(null);
-  const [actionResult, setActionResult] = (0, import_react2.useState)(null);
+  const [loading, setLoading] = (0, import_react2.useState)(true);
   const [busyAction, setBusyAction] = (0, import_react2.useState)(null);
-  (0, import_react2.useEffect)(() => {
-    fetchWorkbenchModel().then((nextModel) => {
+  const [labelsVisible, setLabelsVisible] = (0, import_react2.useState)(true);
+  const [knowledgeVisible, setKnowledgeVisible] = (0, import_react2.useState)(true);
+  const [resetZoomSignal, setResetZoomSignal] = (0, import_react2.useState)(0);
+  const [lightMode, setLightMode] = (0, import_react2.useState)(false);
+  const [trail, setTrail] = (0, import_react2.useState)([]);
+  const [tooltipNode, setTooltipNode] = (0, import_react2.useState)(null);
+  const [tooltipPos, setTooltipPos] = (0, import_react2.useState)(null);
+  const inspectedNode = model?.nodes.find((n) => n.id === selectedId) || null;
+  (0, import_react2.useLayoutEffect)(() => {
+    document.documentElement.setAttribute("data-theme", lightMode ? "light" : "dark");
+  }, [lightMode]);
+  const loadModel = (0, import_react2.useCallback)(async (skillPackageName) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const nextModel = await fetchWorkbenchModel(skillPackageName);
       setModel(nextModel);
-      setSelectedId(nextModel.selected.id);
-    }).catch((nextError) => setError(nextError.message));
+      setSelectedId(null);
+      return nextModel;
+    } catch (err) {
+      setError(err.message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
   }, []);
-  const selected = model?.nodes.find((node) => node.id === selectedId) || null;
+  (0, import_react2.useEffect)(() => {
+    const hashSkill = getSkillFromHash();
+    loadModel(hashSkill).then((m2) => {
+      if (m2) {
+        const entry = { packageName: m2.selected.id, name: m2.selected.name };
+        if (hashSkill) {
+          setTrail([entry]);
+        } else {
+          setTrail([entry]);
+          setSkillHash(m2.selected.id);
+        }
+      }
+    });
+  }, [loadModel]);
+  (0, import_react2.useEffect)(() => {
+    onHashChange((skillPackageName) => {
+      if (skillPackageName) {
+        loadModel(skillPackageName).then((m2) => {
+          if (m2) {
+            setTrail((prev) => {
+              const existingIndex = prev.findIndex((e) => e.packageName === skillPackageName);
+              if (existingIndex >= 0) {
+                return prev.slice(0, existingIndex + 1);
+              }
+              return [...prev, { packageName: m2.selected.id, name: m2.selected.name }];
+            });
+          }
+        });
+      }
+    });
+  }, [loadModel]);
+  function navigateToSkill(packageName) {
+    setSkillHash(packageName);
+  }
+  function handleBreadcrumbNavigate(packageName, index) {
+    setTrail((prev) => prev.slice(0, index + 1));
+    setSkillHash(packageName);
+  }
   async function handleAction(action) {
+    if (action === "reset-zoom") {
+      setResetZoomSignal((s) => s + 1);
+      return;
+    }
+    if (action === "refresh") {
+      const hashSkill = getSkillFromHash();
+      setBusyAction("refresh");
+      await loadModel(hashSkill);
+      setBusyAction(null);
+      return;
+    }
     try {
       setBusyAction(action);
-      const payload = await runWorkbenchAction(action);
-      setActionResult(payload);
-      if (action === "refresh") {
-        const nextModel = await fetchWorkbenchModel();
-        setModel(nextModel);
-      }
-    } catch (nextError) {
-      setError(nextError.message);
+      await runWorkbenchAction(action);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setBusyAction(null);
     }
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("main", { style: { padding: 24 }, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("header", { style: { marginBottom: 18 }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("h1", { style: { margin: 0 }, children: "Skill Dev Workbench" }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { style: { color: "#90a4c4", maxWidth: 720, lineHeight: 1.5 }, children: "Single-skill DAG view for provenance and dependencies during `agentpack skills dev`." })
+  const handleHover = (0, import_react2.useCallback)((node, pos) => {
+    setTooltipNode(node);
+    setTooltipPos(pos);
+  }, []);
+  const handleHoverEnd = (0, import_react2.useCallback)(() => {
+    setTooltipNode(null);
+    setTooltipPos(null);
+  }, []);
+  const handleGraphClick = (0, import_react2.useCallback)((nodeId) => {
+    setSelectedId((prev) => prev === nodeId ? null : nodeId);
+  }, []);
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("header", { style: {
+      padding: "20px 40px 0",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      flexShrink: 0
+    }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: {
+          fontFamily: "var(--font-mono)",
+          fontVariant: "small-caps",
+          textTransform: "uppercase",
+          letterSpacing: 3,
+          fontSize: 9,
+          color: "var(--text-dim)",
+          marginBottom: 4
+        }, children: "Agentpack" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: {
+          fontFamily: "var(--font-body)",
+          fontSize: 28,
+          fontWeight: 400,
+          fontStyle: "italic",
+          color: "var(--text)"
+        }, children: "Skill Graph" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("hr", { style: {
+          width: 36,
+          height: 1,
+          background: "var(--status-current)",
+          border: "none",
+          marginTop: 10
+        } })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: {
+        display: "flex",
+        gap: 20,
+        alignItems: "center"
+      }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "var(--edge-provenance)", label: "Source", shape: "diamond" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "#c45454", label: "Changed", shape: "diamond" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "var(--status-current)", label: "Current", shape: "dot" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "var(--status-stale)", label: "Stale", shape: "dot" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "var(--status-affected)", label: "Affected", shape: "ring" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "var(--edge-requires)", label: "Requires", shape: "line" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "var(--edge-provenance)", label: "Provenance", shape: "dashed" })
+      ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ActionBar, { onAction: handleAction, busyAction }),
-    error ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { children: error }) : null,
-    actionResult ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
-      "div",
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Breadcrumbs, { trail, onNavigate: handleBreadcrumbNavigate }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: { flex: 1, position: "relative", minHeight: 0 }, children: [
+      loading && !model && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+        fontFamily: "var(--font-mono)",
+        fontSize: 12,
+        color: "var(--text-dim)"
+      }, children: "Loading..." }),
+      error && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+        gap: 16
+      }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: {
+          fontFamily: "var(--font-body)",
+          fontSize: 18,
+          fontStyle: "italic",
+          color: "var(--status-stale)"
+        }, children: error }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+          "button",
+          {
+            type: "button",
+            onClick: () => handleAction("refresh"),
+            style: {
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              background: "var(--surface)",
+              border: "1px solid var(--border-bright)",
+              color: "var(--text-dim)",
+              padding: "8px 16px",
+              cursor: "pointer",
+              letterSpacing: "0.04em"
+            },
+            children: "Retry"
+          }
+        )
+      ] }),
+      model && !error && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        SkillGraph,
+        {
+          model,
+          selectedId,
+          onSelect: handleGraphClick,
+          onHover: handleHover,
+          onHoverEnd: handleHoverEnd,
+          labelsVisible,
+          knowledgeVisible,
+          resetZoomSignal
+        }
+      ),
+      model && model.nodes.length === 1 && model.nodes[0].type === "skill" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: {
+        position: "absolute",
+        bottom: 80,
+        left: "50%",
+        transform: "translateX(-50%)",
+        fontFamily: "var(--font-body)",
+        fontSize: 14,
+        fontStyle: "italic",
+        color: "var(--text-faint)"
+      }, children: "No dependencies or sources found." })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Tooltip, { node: tooltipNode, position: tooltipPos }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+      InspectorPanel,
       {
-        style: {
-          marginTop: 12,
-          padding: 12,
-          borderRadius: 14,
-          background: "rgba(11, 22, 35, 0.9)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          color: "#90a4c4"
-        },
-        children: [
-          "Last action: ",
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { style: { color: "#eef4ff" }, children: actionResult.action })
-        ]
+        node: inspectedNode,
+        onClose: () => setSelectedId(null),
+        onNavigate: navigateToSkill
       }
-    ) : null,
-    model ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
-      "section",
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+      ControlStrip,
       {
-        style: {
-          marginTop: 18,
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1.7fr) minmax(300px, 0.7fr)",
-          gap: 18
-        },
-        children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(SkillGraph, { model, selectedId, onSelect: setSelectedId }),
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(InspectorPanel, { selected })
-        ]
+        onAction: handleAction,
+        busyAction,
+        labelsVisible,
+        onToggleLabels: () => setLabelsVisible((v) => !v),
+        knowledgeVisible,
+        onToggleKnowledge: () => setKnowledgeVisible((v) => !v),
+        lightMode,
+        onToggleTheme: () => setLightMode((v) => !v)
       }
-    ) : null
+    )
+  ] });
+}
+function LegendItem({ color: color2, label, shape }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { style: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    fontFamily: "var(--font-mono)",
+    fontSize: 10,
+    color: "var(--text-dim)",
+    letterSpacing: "0.04em"
+  }, children: [
+    shape === "dot" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: {
+      width: 10,
+      height: 10,
+      borderRadius: "50%",
+      background: color2
+    } }),
+    shape === "ring" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: {
+      width: 10,
+      height: 10,
+      borderRadius: "50%",
+      background: "transparent",
+      border: `1.5px solid ${color2}`
+    } }),
+    shape === "diamond" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("svg", { width: "12", height: "12", viewBox: "-6 -6 12 12", style: { display: "block" }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { d: "M0,-5 L5,0 L0,5 L-5,0 Z", fill: color2, opacity: 0.6 }) }),
+    shape === "line" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: {
+      width: 20,
+      height: 2,
+      borderRadius: 1,
+      background: color2,
+      opacity: 0.6
+    } }),
+    shape === "dashed" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: {
+      width: 20,
+      height: 0,
+      borderTop: `2px dashed ${color2}`,
+      opacity: 0.5
+    } }),
+    label
   ] });
 }
 
 // ../../../../../../../Users/alexandergirardet/alavida/agentpack/.worktrees/skill-dev-workbench/src/dashboard/main.jsx
-var import_jsx_runtime5 = __toESM(require_jsx_runtime(), 1);
-(0, import_client.createRoot)(document.getElementById("app")).render(/* @__PURE__ */ (0, import_jsx_runtime5.jsx)(App, {}));
+var import_jsx_runtime7 = __toESM(require_jsx_runtime(), 1);
+(0, import_client.createRoot)(document.getElementById("app")).render(/* @__PURE__ */ (0, import_jsx_runtime7.jsx)(App, {}));
 /*! Bundled license information:
 
 scheduler/cjs/scheduler.development.js:

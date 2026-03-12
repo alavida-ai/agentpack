@@ -34,6 +34,11 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Verify npm publish auth
+        run: |
+          npm whoami
+          npm view @alavida/agentpack version
+
       - name: Create release pull request or publish
         uses: changesets/action@v1
         with:

@@ -71,11 +71,16 @@ Persistence rule:
 - commit `.agentpack/build-state.json` so stale detection works across GitHub, CI, and teammate machines
 - commit `.agentpack/catalog.json` in authoring repos
 - do not commit `.agentpack/install.json`
+- do not commit `.agentpack/dev-session.json`
+- commit `skills/sync-state.json` when maintaining the shipped Intent skills for this package
 
 Runtime notes:
 
 - after `skills dev` writes to `.claude/skills/` or `.agents/skills/`, start a fresh agent session if the current one was already running
 - `skills dev` starts a localhost workbench by default for one selected skill, with provenance edges, direct required skills, and actions like validate or stale checks
+- `skills dev` records the active session in `.agentpack/dev-session.json` so the next run can clean up stale runtime links after abnormal termination
+- if a stale local dev session blocks startup, use `agentpack skills dev cleanup` and escalate to `agentpack skills dev cleanup --force` only when the recorded pid is a false positive
+- use `agentpack skills unlink <root> --recursive` when you need to remove one active dev root plus its transitive local runtime links
 - do not reload `metadata.sources` manually once the dev-linked skill exists; trust the compiled `SKILL.md` artifact unless you are explicitly updating the skill
 - invoke the resulting skill through the runtime's skill mechanism, not by opening the file and reading it as plain text
 

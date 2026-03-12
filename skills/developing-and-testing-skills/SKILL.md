@@ -30,7 +30,7 @@ agentpack skills dev domains/value/skills/copywriting
 agentpack skills dev domains/value/skills/copywriting
 ```
 
-This links the selected skill into `.claude/skills/` and `.agents/skills/` and starts a localhost workbench by default.
+This links the selected skill into `.claude/skills/` and `.agents/skills/`, records the active dev session in `.agentpack/dev-session.json`, and starts a localhost workbench by default.
 
 ### Use CLI-only mode when you explicitly do not want the dashboard
 
@@ -42,6 +42,24 @@ agentpack skills dev --no-dashboard domains/value/skills/copywriting
 
 ```bash
 agentpack skills unlink value-copywriting
+```
+
+If the previous dev process was killed badly and left stale runtime links behind:
+
+```bash
+agentpack skills dev cleanup
+```
+
+If a wrapper-managed process left a false-positive live pid in `.agentpack/dev-session.json`:
+
+```bash
+agentpack skills dev cleanup --force
+```
+
+If you need to remove the active root plus its recorded transitive links in one shot:
+
+```bash
+agentpack skills unlink value-copywriting --recursive
 ```
 
 ## Common Mistakes

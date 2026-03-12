@@ -100,10 +100,14 @@ Correct:
 
 ```bash
 agentpack skills unlink value-copywriting
+agentpack skills unlink value-copywriting --recursive
+agentpack skills dev cleanup
 agentpack skills install @alavida-ai/value-copywriting
 ```
 
 Runtime state should be repaired through agentpack lifecycle commands, not direct edits under `.claude/skills` or `.agents/skills`.
+
+Use `skills dev cleanup --force` only when a wrapper-managed process or pid reuse leaves a false-positive active session in `.agentpack/dev-session.json`.
 
 Source: docs/architecture.mdx
 

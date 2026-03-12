@@ -79,6 +79,7 @@ Behavior:
 - optionally syncs managed `requires` into `package.json.dependencies`
 - links the skill into `.claude/skills/<name>`
 - links the skill into `.agents/skills/<name>`
+- records the active session in `.agentpack/dev-session.json`
 - starts a localhost workbench by default unless `--no-dashboard` is passed
 - serves a single-skill dashboard with a focused DAG, inspector, and lifecycle action buttons
 - watches the skill directory plus direct `metadata.sources` for changes until the process exits
@@ -90,6 +91,21 @@ Notes:
 - unresolved `requires` are reported, but local linking still succeeds
 - the dashboard is a visibility workbench, not the primary skill authoring surface
 - if your current Claude Code or Codex session was already running, start a fresh session after linking so the runtime rescans `.claude/skills/` or `.agents/skills/`
+- the next `skills dev` run automatically reconciles a stale recorded session before linking again
+
+<Check>Implemented. Supports text and JSON output.</Check>
+
+### `agentpack skills dev cleanup`
+
+Question answered: how do I remove stale recorded `skills dev` runtime links after abnormal termination.
+
+Behavior:
+
+- reads `.agentpack/dev-session.json`
+- removes the recorded links from `.claude/skills/` and `.agents/skills/`
+- deletes the recorded dev-session file
+- fails clearly if the recorded pid still appears alive
+- supports `--force` for false-positive pid ownership after wrapper-managed termination
 
 <Check>Implemented. Supports text and JSON output.</Check>
 
@@ -105,6 +121,7 @@ Behavior:
 
 - removes `.claude/skills/<name>`
 - removes `.agents/skills/<name>`
+- supports `--recursive` for the active recorded dev-session root and its transitive links
 
 <Check>Implemented. Supports text and JSON output.</Check>
 

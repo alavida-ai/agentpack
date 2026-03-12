@@ -288,6 +288,21 @@ It must not duplicate:
 - the package dependency graph already in the lockfile
 - authoring catalog data
 
+### `.agentpack/dev-session.json`
+
+Owns temporary `skills dev` runtime ownership only.
+
+Includes:
+
+- the active dev root skill
+- the linked transitive skill set
+- recorded materialized link paths
+- the owning pid and timestamps
+
+It exists so `skills dev` can reconcile stale runtime links after abnormal termination.
+
+It must not be committed.
+
 ## Hard Constraints
 
 - non-interactive only

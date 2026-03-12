@@ -43,11 +43,15 @@ Implemented and tested. Supports validating one packaged skill or all authored p
 
 ### `agentpack skills dev`
 
-Implemented and tested. Links one packaged skill into `.claude/skills/` and `.agents/skills/` for local runtime testing, starts a single-skill localhost workbench by default, and refreshes that workbench when the selected skill or direct sources change.
+Implemented and tested. Links one packaged skill into `.claude/skills/` and `.agents/skills/` for local runtime testing, records the active session in `.agentpack/dev-session.json`, starts a single-skill localhost workbench by default, and refreshes that workbench when the selected skill or direct sources change.
 
 ### `agentpack skills unlink`
 
-Implemented and tested. Removes one dev-linked skill from local discovery paths.
+Implemented and tested. Removes one dev-linked skill from local discovery paths and supports `--recursive` for the active recorded dev-session root.
+
+### `agentpack skills dev cleanup`
+
+Implemented and tested. Removes stale recorded `skills dev` links and supports `--force` when wrapper-managed processes leave behind a false-positive live pid.
 
 ### `agentpack skills outdated`
 
@@ -121,6 +125,8 @@ This slice is real and working, but still intentionally focused on repo-local au
 - commit `.agentpack/build-state.json`
 - commit `.agentpack/catalog.json`
 - do not commit `.agentpack/install.json`
+- do not commit `.agentpack/dev-session.json`
+- commit `skills/sync-state.json` when maintaining shipped Intent skills
 
 **Not yet implemented:**
 

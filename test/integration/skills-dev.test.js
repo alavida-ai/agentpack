@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { addPackagedSkill, createTempRepo, runCLI, startCLI } from './fixtures.js';
+import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { addPackagedSkill, createTempRepo, runCLI, runCLIJson, startCLI } from './fixtures.js';
 import { startSkillDev } from '../../src/lib/skills.js';
 
 async function waitUntil(predicate, timeoutMs = 1000) {
@@ -12,6 +12,20 @@ async function waitUntil(predicate, timeoutMs = 1000) {
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   throw new Error('timed out waiting for condition');
+}
+
+function createLinkedSkill(repoRoot, name, targetDirName) {
+  const targetDir = join(repoRoot, 'skills', targetDirName);
+  mkdirSync(targetDir, { recursive: true });
+  mkdirSync(join(repoRoot, '.claude', 'skills'), { recursive: true });
+  mkdirSync(join(repoRoot, '.agents', 'skills'), { recursive: true });
+  symlinkSync(targetDir, join(repoRoot, '.claude', 'skills', name), 'dir');
+  symlinkSync(targetDir, join(repoRoot, '.agents', 'skills', name), 'dir');
+}
+
+function writeDevSession(repoRoot, session) {
+  mkdirSync(join(repoRoot, '.agentpack'), { recursive: true });
+  writeFileSync(join(repoRoot, '.agentpack', 'dev-session.json'), JSON.stringify(session, null, 2) + '\n');
 }
 
 describe('agentpack skills dev', () => {
@@ -379,6 +393,263 @@ requires: []
       const missingPackage = runCLI(['skills', 'dev', 'skills/no-pkg'], { cwd: repo.root });
       assert.equal(missingPackage.exitCode, 1);
       assert.match(missingPackage.stderr, /package\.json|not found/i);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('reconciles a stale dev session before starting a new one', async () => {
+    const repo = createTempRepo('skills-dev-stale-session');
+
+    try {
+      addPackagedSkill(repo.root, 'skills/methodology', {
+        skillMd: `---
+name: methodology-gary-provost
+description: Method.
+requires: []
+---
+
+# Method
+`,
+        packageJson: {
+          name: '@alavida/methodology-gary-provost',
+          version: '1.0.0',
+          files: ['SKILL.md'],
+        },
+      });
+
+      addPackagedSkill(repo.root, 'skills/copywriting', {
+        skillMd: `---
+name: value-copywriting
+description: Copy.
+requires:
+  - @alavida/methodology-gary-provost
+---
+
+# Copy
+`,
+        packageJson: {
+          name: '@alavida/value-copywriting',
+          version: '1.0.0',
+          files: ['SKILL.md'],
+          dependencies: {
+            '@alavida/methodology-gary-provost': '^1.0.0',
+          },
+        },
+      });
+
+      createLinkedSkill(repo.root, 'value-copywriting', 'copywriting');
+      createLinkedSkill(repo.root, 'methodology-gary-provost', 'methodology');
+      writeDevSession(repo.root, {
+        version: 1,
+        session_id: 'stale-session',
+        status: 'active',
+        pid: 999999,
+        repo_root: repo.root,
+        target: 'skills/copywriting',
+        root_skill: {
+          name: 'value-copywriting',
+          package_name: '@alavida/value-copywriting',
+          path: 'skills/copywriting',
+        },
+        linked_skills: [
+          { name: 'value-copywriting', package_name: '@alavida/value-copywriting', path: 'skills/copywriting' },
+          { name: 'methodology-gary-provost', package_name: '@alavida/methodology-gary-provost', path: 'skills/methodology' },
+        ],
+        links: [
+          '.claude/skills/value-copywriting',
+          '.agents/skills/value-copywriting',
+          '.claude/skills/methodology-gary-provost',
+          '.agents/skills/methodology-gary-provost',
+        ],
+        started_at: '2026-03-12T12:00:00.000Z',
+        updated_at: '2026-03-12T12:00:00.000Z',
+      });
+
+      const session = startCLI(['skills', 'dev', 'skills/copywriting'], { cwd: repo.root });
+      await session.waitForOutput(/Linked Skill: value-copywriting/);
+
+      const sessionRecord = JSON.parse(readFileSync(join(repo.root, '.agentpack', 'dev-session.json'), 'utf-8'));
+      assert.equal(sessionRecord.status, 'active');
+      assert.equal(sessionRecord.root_skill.name, 'value-copywriting');
+      assert.ok(existsSync(join(repo.root, '.claude', 'skills', 'value-copywriting')));
+      assert.ok(existsSync(join(repo.root, '.claude', 'skills', 'methodology-gary-provost')));
+
+      await session.stop();
+      await waitUntil(() => !existsSync(join(repo.root, '.agentpack', 'dev-session.json')));
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('refuses to start when another skills dev session is active', () => {
+    const repo = createTempRepo('skills-dev-active-session');
+
+    try {
+      addPackagedSkill(repo.root, 'skills/copywriting', {
+        skillMd: `---
+name: value-copywriting
+description: Copy.
+requires: []
+---
+
+# Copy
+`,
+        packageJson: {
+          name: '@alavida/value-copywriting',
+          version: '1.0.0',
+          files: ['SKILL.md'],
+        },
+      });
+
+      writeDevSession(repo.root, {
+        version: 1,
+        session_id: 'active-session',
+        status: 'active',
+        pid: process.pid,
+        repo_root: repo.root,
+        target: 'skills/other',
+        root_skill: {
+          name: 'other-skill',
+          package_name: '@alavida/other-skill',
+          path: 'skills/other',
+        },
+        linked_skills: [],
+        links: [],
+        started_at: '2026-03-12T12:00:00.000Z',
+        updated_at: '2026-03-12T12:00:00.000Z',
+      });
+
+      const result = runCLIJson(['skills', 'dev', 'skills/copywriting'], { cwd: repo.root });
+      assert.equal(result.exitCode, 1);
+      assert.equal(result.json.error, 'skills_dev_session_active');
+      assert.equal(result.json.details.rootSkill, 'other-skill');
+      assert.equal(result.json.details.pid, process.pid);
+      assert.equal(result.json.nextSteps[0].command, 'agentpack skills dev cleanup');
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('cleans up a stale recorded session with skills dev cleanup', () => {
+    const repo = createTempRepo('skills-dev-cleanup-command');
+
+    try {
+      createLinkedSkill(repo.root, 'value-copywriting', 'copywriting');
+      createLinkedSkill(repo.root, 'methodology-gary-provost', 'methodology');
+      writeDevSession(repo.root, {
+        version: 1,
+        session_id: 'stale-cleanup',
+        status: 'active',
+        pid: 999999,
+        repo_root: repo.root,
+        target: 'skills/copywriting',
+        root_skill: {
+          name: 'value-copywriting',
+          package_name: '@alavida/value-copywriting',
+          path: 'skills/copywriting',
+        },
+        linked_skills: [
+          { name: 'value-copywriting', package_name: '@alavida/value-copywriting', path: 'skills/copywriting' },
+          { name: 'methodology-gary-provost', package_name: '@alavida/methodology-gary-provost', path: 'skills/methodology' },
+        ],
+        links: [
+          '.claude/skills/value-copywriting',
+          '.agents/skills/value-copywriting',
+          '.claude/skills/methodology-gary-provost',
+          '.agents/skills/methodology-gary-provost',
+        ],
+        started_at: '2026-03-12T12:00:00.000Z',
+        updated_at: '2026-03-12T12:00:00.000Z',
+      });
+
+      const result = runCLIJson(['skills', 'dev', 'cleanup'], { cwd: repo.root });
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.equal(result.json.cleaned, true);
+      assert.equal(existsSync(join(repo.root, '.claude', 'skills', 'value-copywriting')), false);
+      assert.equal(existsSync(join(repo.root, '.agents', 'skills', 'methodology-gary-provost')), false);
+      assert.equal(existsSync(join(repo.root, '.agentpack', 'dev-session.json')), false);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('supports forced cleanup when a recorded session pid is still alive', () => {
+    const repo = createTempRepo('skills-dev-cleanup-force');
+
+    try {
+      createLinkedSkill(repo.root, 'value-copywriting', 'copywriting');
+      writeDevSession(repo.root, {
+        version: 1,
+        session_id: 'active-cleanup',
+        status: 'active',
+        pid: process.pid,
+        repo_root: repo.root,
+        target: 'skills/copywriting',
+        root_skill: {
+          name: 'value-copywriting',
+          package_name: '@alavida/value-copywriting',
+          path: 'skills/copywriting',
+        },
+        linked_skills: [
+          { name: 'value-copywriting', package_name: '@alavida/value-copywriting', path: 'skills/copywriting' },
+        ],
+        links: [
+          '.claude/skills/value-copywriting',
+          '.agents/skills/value-copywriting',
+        ],
+        started_at: '2026-03-12T12:00:00.000Z',
+        updated_at: '2026-03-12T12:00:00.000Z',
+      });
+
+      const blocked = runCLIJson(['skills', 'dev', 'cleanup'], { cwd: repo.root });
+      assert.equal(blocked.exitCode, 1);
+      assert.equal(blocked.json.error, 'skills_dev_session_active');
+
+      const forced = runCLIJson(['skills', 'dev', 'cleanup', '--force'], { cwd: repo.root });
+      assert.equal(forced.exitCode, 0, forced.stderr);
+      assert.equal(forced.json.cleaned, true);
+      assert.equal(existsSync(join(repo.root, '.claude', 'skills', 'value-copywriting')), false);
+      assert.equal(existsSync(join(repo.root, '.agentpack', 'dev-session.json')), false);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('ignores unsafe recorded paths during cleanup', () => {
+    const repo = createTempRepo('skills-dev-cleanup-unsafe-paths');
+
+    try {
+      const outsidePath = join(dirname(repo.root), 'agentpack-outside-sentinel.txt');
+      writeFileSync(outsidePath, 'keep me\n');
+      createLinkedSkill(repo.root, 'value-copywriting', 'copywriting');
+      writeDevSession(repo.root, {
+        version: 1,
+        session_id: 'unsafe-cleanup',
+        status: 'active',
+        pid: 999999,
+        repo_root: repo.root,
+        target: 'skills/copywriting',
+        root_skill: {
+          name: 'value-copywriting',
+          package_name: '@alavida/value-copywriting',
+          path: 'skills/copywriting',
+        },
+        linked_skills: [
+          { name: 'value-copywriting', package_name: '@alavida/value-copywriting', path: 'skills/copywriting' },
+        ],
+        links: [
+          '.claude/skills/value-copywriting',
+          '../agentpack-outside-sentinel.txt',
+        ],
+        started_at: '2026-03-12T12:00:00.000Z',
+        updated_at: '2026-03-12T12:00:00.000Z',
+      });
+
+      const result = runCLIJson(['skills', 'dev', 'cleanup'], { cwd: repo.root });
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.equal(existsSync(outsidePath), true);
+      assert.equal(existsSync(join(repo.root, '.claude', 'skills', 'value-copywriting')), false);
     } finally {
       repo.cleanup();
     }

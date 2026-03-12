@@ -11,6 +11,7 @@ import {
   installSkills,
   listOutdatedSkills,
   resolveInstallTargets,
+  cleanupSkillDevSession,
   startSkillDev,
   unlinkSkill,
   uninstallSkills,
@@ -22,13 +23,16 @@ export function skillsCommand() {
   const cmd = new Command('skills')
     .description('Inspect and manage package-backed skills');
 
-  cmd
+  const devCmd = cmd
     .command('dev')
     .description('Link one local packaged skill for local Claude and agent discovery')
     .option('--no-sync', 'Skip syncing managed package dependencies from requires')
     .option('--no-dashboard', 'Skip starting the local skill development workbench')
-    .argument('<target>', 'Packaged skill directory or SKILL.md path')
+    .argument('[target]', 'Packaged skill directory or SKILL.md path')
     .action(async (target, opts, command) => {
+      if (!target) {
+        command.help({ error: true });
+      }
       const globalOpts = command.optsWithGlobals();
       const session = startSkillDev(target, {
         sync: opts.sync,
@@ -70,23 +74,37 @@ export function skillsCommand() {
         },
       });
 
-      const stop = () => {
-        session.close();
-        process.exit(0);
-      };
-
-      process.once('SIGTERM', stop);
-      process.once('SIGINT', stop);
       await session.ready;
+    });
+
+  devCmd
+    .command('cleanup')
+    .description('Remove recorded skills dev links for a stale session')
+    .option('--force', 'Remove recorded links even if the session pid still appears alive')
+    .action((opts, command) => {
+      const globalOpts = command.optsWithGlobals();
+      const result = cleanupSkillDevSession({ force: opts.force });
+
+      if (globalOpts.json) {
+        output.json(result);
+        return;
+      }
+
+      output.write(`Cleaned: ${result.cleaned}`);
+      if (result.name) output.write(`Root Skill: ${result.name}`);
+      for (const removed of result.removed) {
+        output.write(`Removed: ${removed}`);
+      }
     });
 
   cmd
     .command('unlink')
     .description('Remove one locally linked skill from Claude and agent discovery paths')
+    .option('--recursive', 'Remove the active dev root and its recorded transitive links')
     .argument('<name>', 'Skill frontmatter name')
     .action((name, opts, command) => {
       const globalOpts = command.optsWithGlobals();
-      const result = unlinkSkill(name);
+      const result = unlinkSkill(name, { recursive: opts.recursive });
 
       if (globalOpts.json) {
         output.json(result);

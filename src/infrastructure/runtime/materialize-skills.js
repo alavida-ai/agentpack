@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, rmSync, symlinkSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { writeInstallState } from '../fs/install-state-repository.js';
 
 function ensureDir(pathValue) {
@@ -36,6 +36,23 @@ export function removeSkillLinksByNames(repoRoot, names, normalizeDisplayPath) {
   const removed = [];
   for (const name of names) {
     removed.push(...removeSkillLinks(repoRoot, name, normalizeDisplayPath));
+  }
+  return [...new Set(removed)];
+}
+
+export function removeSkillLinksByPaths(repoRoot, paths, normalizeDisplayPath) {
+  const removed = [];
+  const allowedRoots = [
+    resolve(repoRoot, '.claude', 'skills'),
+    resolve(repoRoot, '.agents', 'skills'),
+  ];
+  for (const relativePath of paths || []) {
+    const pathValue = resolve(repoRoot, relativePath);
+    const inAllowedRoot = allowedRoots.some((root) => pathValue === root || pathValue.startsWith(`${root}/`));
+    if (!inAllowedRoot) continue;
+    if (!existsSync(pathValue)) continue;
+    removePathIfExists(pathValue);
+    removed.push(normalizeDisplayPath(repoRoot, pathValue));
   }
   return [...new Set(removed)];
 }

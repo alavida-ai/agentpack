@@ -3,7 +3,7 @@ name: authoring-skillgraphs-from-knowledge
 description: Use when authoring packaged skills from source knowledge with valid SKILL.md metadata, package.json release fields, provenance sources, and requires edges in agentpack.
 type: core
 library: agentpack
-library_version: "0.1.2"
+library_version: "0.1.3"
 sources:
   - "alavida-ai/agentpack:docs/commands.mdx"
   - "alavida-ai/agentpack:docs/architecture.mdx"

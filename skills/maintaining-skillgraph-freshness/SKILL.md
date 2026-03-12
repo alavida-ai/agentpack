@@ -3,7 +3,7 @@ name: maintaining-skillgraph-freshness
 description: Use when validating authored skills, checking stale state, and keeping build-state and catalog metadata aligned with changing knowledge in an agentpack skillgraph.
 type: lifecycle
 library: agentpack
-library_version: "0.1.2"
+library_version: "0.1.3"
 sources:
   - "alavida-ai/agentpack:docs/commands.mdx"
   - "alavida-ai/agentpack:docs/current-state.mdx"

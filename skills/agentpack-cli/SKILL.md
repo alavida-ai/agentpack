@@ -1,7 +1,7 @@
 ---
 name: agentpack-cli
 description: Use the agentpack CLI correctly when treating knowledge as a package. Apply the authored skill lifecycle, plugin lifecycle, source-backed validation, install flow, and bundled plugin artifact flow without mixing those stages together.
-library_version: 0.1.2
+library_version: 0.1.3
 sources:
   - README.md
   - docs/introduction.mdx

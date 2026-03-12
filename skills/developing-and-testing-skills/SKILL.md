@@ -3,7 +3,7 @@ name: developing-and-testing-skills
 description: Use when iterating locally on a packaged skill with agentpack skills dev, the localhost workbench, repo-local materialization, and runtime testing feedback loops.
 type: core
 library: agentpack
-library_version: "0.1.2"
+library_version: "0.1.3"
 sources:
   - "alavida-ai/agentpack:docs/commands.mdx"
   - "alavida-ai/agentpack:docs/introduction.mdx"

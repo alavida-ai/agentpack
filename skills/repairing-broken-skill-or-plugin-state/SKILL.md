@@ -3,7 +3,7 @@ name: repairing-broken-skill-or-plugin-state
 description: Use when auditing or repairing stale skills, unresolved requires, missing runtime dependencies, affected dependents, or malformed plugin definition files in agentpack.
 type: lifecycle
 library: agentpack
-library_version: "0.1.2"
+library_version: "0.1.3"
 sources:
   - "alavida-ai/agentpack:docs/current-state.mdx"
   - "alavida-ai/agentpack:docs/commands.mdx"

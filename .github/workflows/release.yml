@@ -2,12 +2,15 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
   workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
   contents: write
+  pull-requests: write
   id-token: write
 
 jobs:
@@ -31,27 +34,13 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Verify tag matches package version
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
-          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
-            echo "Tag version ($TAG_VERSION) does not match package.json version ($PACKAGE_VERSION)"
-            exit 1
-          fi
-
-      - name: Publish to npm
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          npm whoami
-          npm view @alavida/agentpack version || true
-          npm publish --access public --provenance
-
-      - name: Create GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+      - name: Create release pull request or publish
+        uses: changesets/action@v1
         with:
-          generate_release_notes: true
+          version: npm run version-packages
+          publish: npm run release
+          title: Version Packages
+          commit: chore: version packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

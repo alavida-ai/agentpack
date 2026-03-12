@@ -19,6 +19,9 @@
     "validate:live": "node scripts/live-validation.mjs",
     "smoke:monorepo": "node scripts/smoke-monorepo.mjs",
     "docs:dev": "cd docs && mint dev",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish",
     "intent:validate": "npx @tanstack/intent validate",
     "build:dashboard": "node scripts/build-dashboard.mjs"
   },
@@ -51,6 +54,7 @@
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.30.0",
     "@tanstack/intent": "^0.0.14",
     "esbuild": "^0.25.10"
   },

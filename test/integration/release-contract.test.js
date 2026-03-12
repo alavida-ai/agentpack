@@ -17,6 +17,20 @@ describe('release contract', () => {
     assert.doesNotMatch(serverSource, /await build\(/);
   });
 
+  it('uses changesets on main pushes instead of manual tag releases', () => {
+    const workflow = readFileSync(join(repoRoot, '.github', 'workflows', 'release.yml'), 'utf-8');
+    const packageJson = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8'));
+
+    assert.match(workflow, /branches:\s*\n\s*-\s*main/);
+    assert.match(workflow, /changesets\/action@/);
+    assert.doesNotMatch(workflow, /tags:\s*\n\s*-\s*'v\*'/);
+
+    assert.equal(packageJson.scripts.changeset, 'changeset');
+    assert.equal(packageJson.scripts['version-packages'], 'changeset version');
+    assert.equal(packageJson.scripts.release, 'changeset publish');
+    assert.ok(packageJson.devDependencies['@changesets/cli']);
+  });
+
   it('documents the merged skills dev and plugin diagnostics behavior without worktree paths', () => {
     const readme = readFileSync(join(repoRoot, 'README.md'), 'utf-8');
     const shippedSkill = readFileSync(join(repoRoot, 'skills', 'agentpack-cli', 'SKILL.md'), 'utf-8');

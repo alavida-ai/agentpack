@@ -253,6 +253,28 @@ Validate the shipped agent skill:
 npm run intent:validate
 ```
 
+## Releases
+
+This repo now uses Changesets for versioning and publishing.
+
+Normal maintainer flow:
+
+1. Add a changeset in any PR that changes user-facing behavior.
+2. Merge the feature PR to `main`.
+3. Let GitHub open or update the `Version Packages` release PR.
+4. Review and merge that release PR.
+5. The merge publishes to npm automatically.
+
+Useful local commands:
+
+```bash
+npx changeset
+npm run version-packages
+npm run release
+```
+
+Manual git tags are no longer the normal release path.
+
 ## Optional Agent Integration
 
 This package also ships an agent-facing skill under:

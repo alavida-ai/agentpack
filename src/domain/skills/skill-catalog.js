@@ -1,0 +1,116 @@
+import { existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import {
+  buildCanonicalSkillRequirement,
+  normalizeDisplayPath,
+  readInstalledSkillExports,
+  readPackageMetadata,
+} from './skill-model.js';
+
+function isIgnoredEntry(name) {
+  return name === '.git' || name === 'node_modules' || name === '.agentpack';
+}
+
+function listSkillPackageDirs(repoRoot, { installed = false } = {}) {
+  const root = installed ? join(repoRoot, 'node_modules') : repoRoot;
+  if (!existsSync(root)) return [];
+
+  const stack = [root];
+  const results = [];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    let entries = [];
+    try {
+      entries = readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    let hasRootSkillFile = false;
+    let packageMetadata = null;
+
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (!installed && isIgnoredEntry(entry.name)) continue;
+        stack.push(join(current, entry.name));
+        continue;
+      }
+
+      if (entry.name === 'SKILL.md') hasRootSkillFile = true;
+      if (entry.name !== 'package.json') continue;
+
+      try {
+        packageMetadata = readPackageMetadata(current);
+      } catch {
+        packageMetadata = null;
+      }
+    }
+
+    if (!packageMetadata?.packageName) continue;
+    if (packageMetadata.exportedSkills || hasRootSkillFile) {
+      results.push(current);
+    }
+  }
+
+  return results.sort();
+}
+
+function buildCatalogKey(packageName, exportedSkills, entry) {
+  if (!packageName) return null;
+  if (exportedSkills.length <= 1) return packageName;
+  return buildCanonicalSkillRequirement(packageName, entry.name);
+}
+
+export function readSkillPackage(repoRoot, packageDir, { origin = 'authored' } = {}) {
+  const packageMetadata = readPackageMetadata(packageDir);
+  if (!packageMetadata.packageName) return null;
+
+  const exportedSkills = readInstalledSkillExports(packageDir);
+  if (exportedSkills.length === 0) return null;
+
+  return {
+    origin,
+    packageDir,
+    packagePath: normalizeDisplayPath(repoRoot, packageDir),
+    packageName: packageMetadata.packageName,
+    packageVersion: packageMetadata.packageVersion,
+    packageMetadata,
+    exports: exportedSkills.map((entry) => ({
+      ...entry,
+      key: buildCatalogKey(packageMetadata.packageName, exportedSkills, entry),
+      packageName: packageMetadata.packageName,
+      packageVersion: packageMetadata.packageVersion,
+      packageDir,
+      packagePath: normalizeDisplayPath(repoRoot, packageDir),
+      skillDirPath: entry.skillDir,
+      skillFilePath: entry.skillFile,
+      skillPath: normalizeDisplayPath(repoRoot, entry.skillDir),
+      skillFile: normalizeDisplayPath(repoRoot, entry.skillFile),
+    })),
+  };
+}
+
+export function listAuthoredSkillPackages(repoRoot) {
+  return listSkillPackageDirs(repoRoot)
+    .map((packageDir) => {
+      try {
+        return readSkillPackage(repoRoot, packageDir);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+export function listInstalledSkillPackages(repoRoot) {
+  return listSkillPackageDirs(repoRoot, { installed: true })
+    .map((packageDir) => {
+      try {
+        return readSkillPackage(repoRoot, packageDir, { origin: 'installed' });
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}

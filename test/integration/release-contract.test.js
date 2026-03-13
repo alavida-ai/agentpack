@@ -20,6 +20,11 @@ describe('release contract', () => {
   it('uses changesets on main pushes instead of manual tag releases', () => {
     const workflow = readFileSync(join(repoRoot, '.github', 'workflows', 'release.yml'), 'utf-8');
     const packageJson = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8'));
+    const changesetConfig = JSON.parse(readFileSync(join(repoRoot, '.changeset', 'config.json'), 'utf-8'));
+    const trackerPackageJson = JSON.parse(readFileSync(
+      join(repoRoot, 'packages', 'agentpack-release', 'package.json'),
+      'utf-8'
+    ));
     const changelog = readFileSync(join(repoRoot, 'CHANGELOG.md'), 'utf-8');
 
     assert.match(workflow, /branches:\s*\n\s*-\s*main/);
@@ -30,9 +35,13 @@ describe('release contract', () => {
     assert.match(changelog, /^# Changelog/m);
 
     assert.equal(packageJson.scripts.changeset, 'changeset');
-    assert.equal(packageJson.scripts['version-packages'], 'changeset version');
-    assert.equal(packageJson.scripts.release, 'changeset publish');
+    assert.equal(packageJson.scripts['version-packages'], 'node scripts/version-packages.mjs');
+    assert.equal(packageJson.scripts.release, 'node scripts/release.mjs');
     assert.ok(packageJson.devDependencies['@changesets/cli']);
+    assert.equal(changesetConfig.privatePackages?.version, true);
+    assert.equal(changesetConfig.privatePackages?.tag, false);
+    assert.equal(trackerPackageJson.name, '@alavida/agentpack-release');
+    assert.equal(trackerPackageJson.private, true);
   });
 
   it('documents the merged skills dev and plugin diagnostics behavior without worktree paths', () => {

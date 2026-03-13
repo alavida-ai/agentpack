@@ -149,6 +149,12 @@ export function parseSkillFrontmatterFile(skillFilePath) {
     status: typeof fields.metadata?.status === 'string' ? fields.metadata.status : null,
     replacement: typeof fields.metadata?.replacement === 'string' ? fields.metadata.replacement : null,
     message: typeof fields.metadata?.message === 'string' ? fields.metadata.message : null,
+    wraps: typeof fields.metadata?.wraps === 'string'
+      ? fields.metadata.wraps
+      : (typeof fields.wraps === 'string' ? fields.wraps : null),
+    overrides: Array.isArray(fields.metadata?.overrides)
+      ? fields.metadata.overrides
+      : (Array.isArray(fields.overrides) ? fields.overrides : []),
   };
 }
 
@@ -210,10 +216,13 @@ export function readInstalledSkillExports(packageDir) {
         declaredName,
         name: metadata.name,
         description: metadata.description,
+        sources: metadata.sources,
         requires: metadata.requires,
         status: metadata.status,
         replacement: metadata.replacement,
         message: metadata.message,
+        wraps: metadata.wraps,
+        overrides: metadata.overrides,
         skillDir: dirname(skillFile),
         skillFile,
         relativeSkillFile,
@@ -233,10 +242,13 @@ export function readInstalledSkillExports(packageDir) {
     declaredName: metadata.name,
     name: metadata.name,
     description: metadata.description,
+    sources: metadata.sources,
     requires: metadata.requires,
     status: metadata.status,
     replacement: metadata.replacement,
     message: metadata.message,
+    wraps: metadata.wraps,
+    overrides: metadata.overrides,
     skillDir: packageDir,
     skillFile: rootSkillFile,
     relativeSkillFile: 'SKILL.md',

@@ -304,6 +304,19 @@ export function skillsCommand() {
         return;
       }
 
+      if (result.kind === 'package') {
+        output.write(`Package: ${result.packageName}`);
+        if (result.packageVersion) output.write(`Version: ${result.packageVersion}`);
+        output.write(`Path: ${result.packagePath}`);
+        output.write('');
+        output.write('Exports:');
+        for (const entry of result.exports) {
+          output.write(`- ${entry.name}`);
+          output.write(`  path: ${entry.skillFile}`);
+        }
+        return;
+      }
+
       output.write(`Skill: ${result.name}`);
       if (result.description) output.write(`Description: ${result.description}`);
       if (result.packageName) output.write(`Package: ${result.packageName}`);
@@ -311,6 +324,7 @@ export function skillsCommand() {
       if (result.status) output.write(`Status: ${result.status}`);
       if (result.replacement) output.write(`Replacement: ${result.replacement}`);
       if (result.message) output.write(`Message: ${result.message}`);
+      if (result.wraps) output.write(`Wraps: ${result.wraps}`);
       output.write(`Path: ${result.skillFile}`);
 
       output.write('');
@@ -327,6 +341,12 @@ export function skillsCommand() {
         output.write('- none');
       } else {
         for (const requirement of result.requires) output.write(`- ${requirement}`);
+      }
+
+      if (result.overrides?.length) {
+        output.write('');
+        output.write('Overrides:');
+        for (const override of result.overrides) output.write(`- ${override}`);
       }
     });
 
@@ -387,16 +407,26 @@ export function skillsCommand() {
       const result = validateSkillsUseCase(target);
 
       if (globalOpts.json) {
-        output.json(
-          target
-            ? result.skills[0]
-            : result
-        );
+        output.json(target && result.count === 1 ? result.skills[0] : result);
         if (!result.valid) process.exitCode = EXIT_CODES.VALIDATION;
         return;
       }
 
       if (target) {
+        if (result.count > 1) {
+          output.write(`Validated Skills: ${result.count}`);
+          output.write(`Valid Skills: ${result.validCount}`);
+          output.write(`Invalid Skills: ${result.invalidCount}`);
+          for (const skill of result.skills) {
+            output.write('');
+            output.write(`- ${skill.name || skill.packageName || skill.packagePath}`);
+            output.write(`  status: ${skill.valid ? 'valid' : 'invalid'}`);
+            output.write(`  path: ${skill.skillFile}`);
+          }
+          if (!result.valid) process.exitCode = EXIT_CODES.VALIDATION;
+          return;
+        }
+
         const skill = result.skills[0];
         output.write(`Skill: ${skill.packageName || skill.packagePath}`);
         output.write(`Status: ${skill.valid ? 'valid' : 'invalid'}`);

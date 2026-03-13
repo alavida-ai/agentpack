@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { addPackagedSkill, createTempRepo, runCLI, runCLIJson, startCLI } from './fixtures.js';
+import { addPackagedSkill, createAuthoredMultiSkillFixture, createTempRepo, runCLI, runCLIJson, startCLI } from './fixtures.js';
 import { startSkillDev } from '../../src/lib/skills.js';
 
 async function waitUntil(predicate, timeoutMs = 1000) {
@@ -250,6 +250,38 @@ requires:
       assert.deepEqual(pkg.dependencies, {});
 
       await session.stop();
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('supports targeting one export inside an authored multi-skill package by skill directory', async () => {
+    const repo = createAuthoredMultiSkillFixture('skills-dev-multi-skill-dir');
+
+    try {
+      const session = startCLI(['skills', 'dev', 'workbenches/planning-kit/skills/kickoff'], { cwd: repo.root });
+      await session.waitForOutput(/Linked Skill: kickoff/);
+
+      const claudePath = join(repo.root, '.claude', 'skills', 'kickoff');
+      assert.ok(existsSync(claudePath));
+
+      await session.stop();
+      await waitUntil(() => !existsSync(claudePath));
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('fails clearly when a multi-skill package target is ambiguous', () => {
+    const repo = createAuthoredMultiSkillFixture('skills-dev-multi-skill-ambiguous');
+
+    try {
+      const result = runCLI(['skills', 'dev', 'workbenches/planning-kit'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 1);
+      assert.match(result.stderr, /ambiguous/i);
+      assert.match(result.stderr, /kickoff/);
+      assert.match(result.stderr, /recap/);
     } finally {
       repo.cleanup();
     }

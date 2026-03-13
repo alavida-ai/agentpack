@@ -26,6 +26,8 @@ import {
   readInstalledSkillExports,
   readPackageMetadata,
 } from '../domain/skills/skill-model.js';
+import { listAuthoredSkillPackages } from '../domain/skills/skill-catalog.js';
+import { resolveSingleSkillTarget, resolveSkillTarget } from '../domain/skills/skill-target-resolution.js';
 import { inspectMaterializedSkills } from '../infrastructure/runtime/inspect-materialized-skills.js';
 import {
   buildStateRecordForPackageDir,
@@ -96,24 +98,15 @@ function resolveDevLinkedSkills(repoRoot, rootSkillDir) {
 }
 
 function resolveLocalPackagedSkillDir(repoRoot, target) {
-  const skillFile = resolveSkillFileTarget(repoRoot, target);
-  if (!skillFile) {
-    throw new AgentpackError(`SKILL.md not found for target: ${target}`, {
-      code: 'skill_not_found',
-      exitCode: EXIT_CODES.GENERAL,
-    });
-  }
-
-  const skillDir = dirname(skillFile);
-  const packageJsonPath = join(skillDir, 'package.json');
-  if (!existsSync(packageJsonPath)) {
-    throw new AgentpackError(`package.json not found: ${packageJsonPath}`, {
-      code: 'package_json_not_found',
-      exitCode: EXIT_CODES.GENERAL,
-    });
-  }
-
-  return { skillDir, skillFile, packageJsonPath };
+  const resolved = resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false });
+  return {
+    skillDir: resolved.export.skillDirPath,
+    skillFile: resolved.export.skillFilePath,
+    packageDir: resolved.package.packageDir,
+    packageJsonPath: join(resolved.package.packageDir, 'package.json'),
+    packageName: resolved.package.packageName,
+    skillName: resolved.export.name,
+  };
 }
 
 function resolveSkillFileTarget(repoRoot, target) {
@@ -275,11 +268,11 @@ function reconcileDevSession(repoRoot) {
 }
 
 export function syncSkillDependencies(skillDir) {
-  const skillFile = join(skillDir, 'SKILL.md');
-  const metadata = parseSkillFrontmatterFile(skillFile);
+  const required = [...new Set(
+    readInstalledSkillExports(skillDir).flatMap((entry) => entry.requires || [])
+  )].sort((a, b) => a.localeCompare(b));
   const { packageJsonPath, packageJson } = readPackageJson(skillDir);
   const nextDependencies = { ...(packageJson.dependencies || {}) };
-  const required = [...new Set(metadata.requires || [])].sort((a, b) => a.localeCompare(b));
   const requiredSet = new Set(required);
   const added = [];
   const removed = [];
@@ -320,14 +313,14 @@ export function devSkill(target, {
 } = {}) {
   const repoRoot = findRepoRoot(cwd);
   try {
-    const { skillDir } = resolveLocalPackagedSkillDir(repoRoot, target);
+    const { skillDir, packageDir } = resolveLocalPackagedSkillDir(repoRoot, target);
     const { linkedSkills, unresolved } = resolveDevLinkedSkills(repoRoot, skillDir);
     const rootSkill = linkedSkills.find((entry) => entry.skillDir === skillDir);
     const synced = sync
-      ? syncSkillDependencies(skillDir)
+      ? syncSkillDependencies(packageDir)
       : {
-        skillDir,
-        packageJsonPath: join(skillDir, 'package.json'),
+        skillDir: packageDir,
+        packageJsonPath: join(packageDir, 'package.json'),
         added: [],
         removed: [],
         unchanged: true,
@@ -372,7 +365,20 @@ export function startSkillDev(target, {
   onRebuild = () => {},
 } = {}) {
   const outerRepoRoot = findRepoRoot(cwd);
-  const { skillDir } = resolveLocalPackagedSkillDir(outerRepoRoot, target);
+  let skillDir;
+  try {
+    ({ skillDir } = resolveLocalPackagedSkillDir(outerRepoRoot, target));
+  } catch (error) {
+    if (error instanceof AgentpackError && error.exitCode === EXIT_CODES.GENERAL) {
+      throw error;
+    }
+
+    throw new AgentpackError(error.message, {
+      code: error.code || 'skill_dev_failed',
+      exitCode: EXIT_CODES.GENERAL,
+      suggestion: error.suggestion,
+    });
+  }
   const repoRoot = findRepoRoot(skillDir);
   reconcileDevSession(repoRoot);
   let closed = false;
@@ -815,37 +821,40 @@ async function fetchRegistryLatestVersion(packageName, {
 
 export function inspectSkill(target, { cwd = process.cwd() } = {}) {
   const repoRoot = findRepoRoot(cwd);
+  const resolved = resolveSkillTarget(repoRoot, target);
 
-  let skillFile = resolveSkillFileTarget(repoRoot, target);
-
-  if (!skillFile && target.startsWith('@')) {
-    const packageDir = findPackageDirByName(repoRoot, target);
-    if (packageDir) {
-      skillFile = join(packageDir, 'SKILL.md');
-    }
+  if (resolved.kind === 'package' && resolved.exports.length > 1) {
+    return {
+      kind: 'package',
+      packageName: resolved.package.packageName,
+      packageVersion: resolved.package.packageVersion,
+      packagePath: resolved.package.packagePath,
+      exports: resolved.exports.map((entry) => ({
+        name: entry.name,
+        declaredName: entry.declaredName,
+        skillFile: entry.skillFile,
+        skillPath: entry.skillPath,
+        requires: entry.requires,
+      })),
+    };
   }
 
-  if (!skillFile) {
-    throw new NotFoundError('skill not found', {
-      code: 'skill_not_found',
-      suggestion: `Target: ${target}`,
-    });
-  }
-
-  const metadata = parseSkillFrontmatterFile(skillFile);
-  const packageMetadata = readPackageMetadata(dirname(skillFile));
+  const entry = resolved.kind === 'export' ? resolved.export : resolved.exports[0];
 
   return {
-    name: metadata.name,
-    description: metadata.description,
-    packageName: packageMetadata.packageName,
-    packageVersion: packageMetadata.packageVersion,
-    skillFile: normalizeDisplayPath(repoRoot, skillFile),
-    sources: metadata.sources,
-    requires: metadata.requires,
-    status: metadata.status,
-    replacement: metadata.replacement,
-    message: metadata.message,
+    kind: 'export',
+    name: entry.name,
+    description: entry.description,
+    packageName: resolved.package.packageName,
+    packageVersion: resolved.package.packageVersion,
+    skillFile: entry.skillFile,
+    sources: entry.sources,
+    requires: entry.requires,
+    status: entry.status,
+    replacement: entry.replacement,
+    message: entry.message,
+    wraps: entry.wraps,
+    overrides: entry.overrides,
   };
 }
 
@@ -960,55 +969,14 @@ export function inspectSkillDependencies(target, {
   };
 }
 
-function resolvePackagedSkillTarget(repoRoot, target) {
-  let skillFile = null;
-
-  if (target) {
-    skillFile = resolveSkillFileTarget(repoRoot, target);
-
-    if (!skillFile && target.startsWith('@')) {
-      const packageDir = findPackageDirByName(repoRoot, target);
-      if (packageDir) {
-        skillFile = join(packageDir, 'SKILL.md');
-      }
-    }
-
-    if (!skillFile) {
-      throw new NotFoundError('skill not found', {
-        code: 'skill_not_found',
-        suggestion: `Target: ${target}`,
-      });
-    }
-
-    const packageDir = dirname(skillFile);
-    const packageMetadata = readPackageMetadata(packageDir);
-    if (!packageMetadata.packageName) {
-      throw new ValidationError('validate target is not a packaged skill', {
-        code: 'invalid_validate_target',
-        suggestion: `Target: ${target}`,
-      });
-    }
-
-    return [packageDir];
-  }
-
-  return listPackagedSkillDirs(repoRoot);
+function isPublishedSkillFile(files, relativeSkillFile) {
+  if (!files) return true;
+  return files.some((entry) => entry === relativeSkillFile || relativeSkillFile.startsWith(`${entry}/`));
 }
 
-function validatePackagedSkillDir(repoRoot, packageDir) {
-  const skillFile = join(packageDir, 'SKILL.md');
-  const packageMetadata = readPackageMetadata(packageDir);
+function validatePackagedSkillExport(repoRoot, pkg, skillExport) {
+  const packageMetadata = readPackageMetadata(pkg.packageDir);
   const issues = [];
-  let skillMetadata = null;
-
-  try {
-    skillMetadata = parseSkillFrontmatterFile(skillFile);
-  } catch (error) {
-    issues.push({
-      code: error.code || 'invalid_skill_file',
-      message: error.message,
-    });
-  }
 
   if (!packageMetadata.packageName) {
     issues.push({
@@ -1024,10 +992,10 @@ function validatePackagedSkillDir(repoRoot, packageDir) {
     });
   }
 
-  if (packageMetadata.files && !packageMetadata.files.includes('SKILL.md')) {
+  if (!isPublishedSkillFile(packageMetadata.files, skillExport.relativeSkillFile)) {
     issues.push({
       code: 'skill_not_published',
-      message: 'package.json files does not include SKILL.md',
+      message: `package.json files does not include ${skillExport.relativeSkillFile}`,
     });
   }
 
@@ -1047,51 +1015,50 @@ function validatePackagedSkillDir(repoRoot, packageDir) {
     }
   }
 
-  if (skillMetadata) {
-    if (skillMetadata.status && !['deprecated', 'retired'].includes(skillMetadata.status)) {
+  if (skillExport.status && !['deprecated', 'retired'].includes(skillExport.status)) {
+    issues.push({
+      code: 'invalid_skill_status',
+      message: 'metadata.status must be "deprecated" or "retired"',
+    });
+  }
+
+  if (skillExport.replacement && !skillExport.replacement.startsWith('@')) {
+    issues.push({
+      code: 'invalid_replacement',
+      message: 'metadata.replacement must be a package name',
+    });
+  }
+
+  for (const sourcePath of skillExport.sources || []) {
+    if (!existsSync(join(repoRoot, sourcePath))) {
       issues.push({
-        code: 'invalid_skill_status',
-        message: 'metadata.status must be "deprecated" or "retired"',
+        code: 'missing_source',
+        message: 'declared source file does not exist',
+        path: sourcePath,
       });
     }
+  }
 
-    if (skillMetadata.replacement && !skillMetadata.replacement.startsWith('@')) {
+  for (const requirement of skillExport.requires || []) {
+    if (!packageMetadata.dependencies[requirement]) {
       issues.push({
-        code: 'invalid_replacement',
-        message: 'metadata.replacement must be a package name',
+        code: 'missing_dependency_declaration',
+        message: 'required skill is not declared in package dependencies',
+        dependency: requirement,
       });
-    }
-
-    for (const sourcePath of skillMetadata.sources) {
-      if (!existsSync(join(repoRoot, sourcePath))) {
-        issues.push({
-          code: 'missing_source',
-          message: 'declared source file does not exist',
-          path: sourcePath,
-        });
-      }
-    }
-
-    for (const requirement of skillMetadata.requires) {
-      if (!packageMetadata.dependencies[requirement]) {
-        issues.push({
-          code: 'missing_dependency_declaration',
-          message: 'required skill is not declared in package dependencies',
-          dependency: requirement,
-        });
-      }
     }
   }
 
   return {
     valid: issues.length === 0,
-    name: skillMetadata?.name || null,
+    key: skillExport.key,
+    name: skillExport.name || null,
     packageName: packageMetadata.packageName,
     packageVersion: packageMetadata.packageVersion,
-    skillFile: normalizeDisplayPath(repoRoot, skillFile),
-    packagePath: normalizeDisplayPath(repoRoot, packageDir),
-    status: skillMetadata?.status || null,
-    replacement: skillMetadata?.replacement || null,
+    skillFile: skillExport.skillFile,
+    packagePath: pkg.packagePath,
+    status: skillExport.status || null,
+    replacement: skillExport.replacement || null,
     nextSteps: buildValidateNextSteps(packageMetadata, issues.length === 0),
     issues,
   };
@@ -1099,15 +1066,25 @@ function validatePackagedSkillDir(repoRoot, packageDir) {
 
 export function validateSkills(target, { cwd = process.cwd() } = {}) {
   const repoRoot = findRepoRoot(cwd);
-  const packageDirs = resolvePackagedSkillTarget(repoRoot, target);
+  let targets = [];
 
-  for (const packageDir of packageDirs) {
+  if (target) {
+    const resolved = resolveSkillTarget(repoRoot, target, { includeInstalled: false });
+    targets = resolved.kind === 'export'
+      ? [{ package: resolved.package, export: resolved.export }]
+      : resolved.exports.map((entry) => ({ package: resolved.package, export: entry }));
+  } else {
+    targets = listAuthoredSkillPackages(repoRoot)
+      .flatMap((pkg) => pkg.exports.map((entry) => ({ package: pkg, export: entry })));
+  }
+
+  for (const packageDir of [...new Set(targets.map((entry) => entry.package.packageDir))]) {
     syncSkillDependencies(packageDir);
   }
 
-  const skills = packageDirs
-    .map((packageDir) => validatePackagedSkillDir(repoRoot, packageDir))
-    .sort((a, b) => (a.packageName || a.packagePath).localeCompare(b.packageName || b.packagePath));
+  const skills = targets
+    .map((entry) => validatePackagedSkillExport(repoRoot, entry.package, entry.export))
+    .sort((a, b) => (a.key || a.packageName || a.packagePath).localeCompare(b.key || b.packageName || b.packagePath));
 
   const validCount = skills.filter((skill) => skill.valid).length;
   const invalidCount = skills.length - validCount;
@@ -1115,18 +1092,32 @@ export function validateSkills(target, { cwd = process.cwd() } = {}) {
   if (validCount > 0) {
     const buildState = readBuildState(repoRoot);
 
-    for (const packageDir of packageDirs) {
-      const packageMetadata = readPackageMetadata(packageDir);
-      const result = skills.find((skill) => skill.packageName === packageMetadata.packageName);
+    if (!target) {
+      const authoredKeys = new Set(targets.map((entry) => entry.export.key));
+      for (const key of Object.keys(buildState.skills || {})) {
+        if (authoredKeys.has(key)) continue;
+        delete buildState.skills[key];
+      }
+    }
+
+    for (const targetEntry of targets) {
+      const result = skills.find((skill) => skill.key === targetEntry.export.key);
       if (!result?.valid) continue;
 
-      const { packageName, record } = buildStateRecordForPackageDir(repoRoot, packageDir, {
-        parseSkillFrontmatterFile,
-        readPackageMetadata,
-        normalizeDisplayPath,
-      });
-      if (!packageName) continue;
-      buildState.skills[packageName] = record;
+      const sources = {};
+      for (const sourcePath of targetEntry.export.sources || []) {
+        sources[sourcePath] = {
+          hash: hashFile(join(repoRoot, sourcePath)),
+        };
+      }
+
+      buildState.skills[targetEntry.export.key] = {
+        package_version: targetEntry.package.packageVersion,
+        skill_path: targetEntry.export.skillPath,
+        skill_file: targetEntry.export.skillFile,
+        sources,
+        requires: targetEntry.export.requires,
+      };
     }
 
     writeBuildState(repoRoot, buildState);
@@ -1188,28 +1179,22 @@ function listPackagedSkillDirs(repoRoot) {
 }
 
 function listAuthoredPackagedSkills(repoRoot) {
-  return listPackagedSkillDirs(repoRoot)
-    .map((packageDir) => {
-      const skillFile = join(packageDir, 'SKILL.md');
-      const metadata = parseSkillFrontmatterFile(skillFile);
-      const packageMetadata = readPackageMetadata(packageDir);
-
-      if (!packageMetadata.packageName || !packageMetadata.packageVersion) {
-        return null;
-      }
-
-      return {
-        name: metadata.name,
-        description: metadata.description,
-        packageName: packageMetadata.packageName,
-        packageVersion: packageMetadata.packageVersion,
-        skillPath: normalizeDisplayPath(repoRoot, packageDir),
-        skillFile: normalizeDisplayPath(repoRoot, skillFile),
-        sources: metadata.sources,
-        requires: metadata.requires,
-      };
-    })
-    .filter(Boolean)
+  return listAuthoredSkillPackages(repoRoot)
+    .flatMap((pkg) => pkg.exports.map((entry) => ({
+      key: entry.key,
+      name: entry.name,
+      description: entry.description,
+      packageName: entry.packageName,
+      packageVersion: entry.packageVersion,
+      skillPath: entry.skillPath,
+      skillFile: entry.skillFile,
+      sources: entry.sources,
+      requires: entry.requires,
+      wraps: entry.wraps,
+      overrides: entry.overrides,
+      declaredName: entry.declaredName,
+      packagePath: pkg.packagePath,
+    })))
     .sort((a, b) => a.packageName.localeCompare(b.packageName));
 }
 
@@ -1218,7 +1203,7 @@ export function generateSkillsCatalog({ cwd = process.cwd() } = {}) {
   const skills = {};
 
   for (const skill of listAuthoredPackagedSkills(repoRoot)) {
-    skills[skill.packageName] = {
+    skills[skill.key] = {
       name: skill.name,
       description: skill.description,
       path: skill.skillPath,
@@ -1227,6 +1212,8 @@ export function generateSkillsCatalog({ cwd = process.cwd() } = {}) {
       package_version: skill.packageVersion,
       sources: skill.sources,
       requires: skill.requires,
+      ...(skill.wraps ? { wraps: skill.wraps } : {}),
+      ...(skill.overrides?.length ? { overrides: skill.overrides } : {}),
     };
   }
 
@@ -1248,12 +1235,14 @@ export function generateBuildState({ cwd = process.cwd() } = {}) {
       };
     }
 
-    skills[skill.packageName] = {
+    skills[skill.key] = {
       package_version: skill.packageVersion,
       skill_path: skill.skillPath,
       skill_file: skill.skillFile,
       sources,
       requires: skill.requires,
+      ...(skill.wraps ? { wraps: skill.wraps } : {}),
+      ...(skill.overrides?.length ? { overrides: skill.overrides } : {}),
     };
   }
 

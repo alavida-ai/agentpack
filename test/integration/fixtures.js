@@ -437,6 +437,61 @@ requires:
   };
 }
 
+export function createAuthoredMultiSkillFixture(name = 'authored-multi-skill') {
+  const repo = createTempRepo(name);
+
+  addMultiSkillPackage(repo.root, 'workbenches/planning-kit', {
+    packageJson: {
+      name: '@alavida-ai/planning-kit',
+      version: '0.1.0',
+      files: ['skills'],
+      repository: {
+        type: 'git',
+        url: 'git+https://github.com/alavida-ai/agentpack.git',
+      },
+      publishConfig: {
+        registry: 'https://npm.pkg.github.com',
+      },
+      agentpack: {
+        skills: {
+          kickoff: { path: 'skills/kickoff/SKILL.md' },
+          recap: { path: 'skills/recap/SKILL.md' },
+        },
+      },
+    },
+    skills: [
+      {
+        path: 'skills/kickoff',
+        skillMd: `---
+name: kickoff
+description: Plan the kickoff.
+metadata:
+  sources: []
+requires: []
+---
+
+# Kickoff
+`,
+      },
+      {
+        path: 'skills/recap',
+        skillMd: `---
+name: recap
+description: Plan the recap.
+metadata:
+  sources: []
+requires: []
+---
+
+# Recap
+`,
+      },
+    ],
+  });
+
+  return repo;
+}
+
 export function readPathState(pathValue) {
   try {
     const stat = lstatSync(pathValue);

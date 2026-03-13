@@ -21,6 +21,33 @@ describe('agentpack skills missing', () => {
     }
   });
 
+  it('reports missing dependencies required by a non-primary exported skill', () => {
+    const fixture = createInstalledMultiSkillFixture('skills-missing-multi-skill-non-primary');
+
+    try {
+      const install = runCLI(['skills', 'install', fixture.target], { cwd: fixture.consumer.root });
+      assert.equal(install.exitCode, 0, install.stderr);
+
+      const statePath = join(fixture.consumer.root, '.agentpack', 'install.json');
+      const state = JSON.parse(readFileSync(statePath, 'utf-8'));
+      delete state.installs['@alavida-ai/foundation-primer'];
+      writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`);
+      rmSync(join(fixture.consumer.root, 'node_modules', '@alavida-ai', 'foundation-primer'), {
+        recursive: true,
+        force: true,
+      });
+
+      const result = runCLIJson(['skills', 'missing', '@alavida-ai/prd-development'], { cwd: fixture.consumer.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.equal(result.json.count, 1);
+      assert.equal(result.json.skills[0].packageName, '@alavida-ai/prd-development');
+      assert.equal(result.json.skills[0].missing[0].packageName, '@alavida-ai/foundation-primer');
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
   it('shows no missing dependencies when the installed environment is complete', () => {
     const monorepo = createRepoFromFixture('monorepo', 'skills-missing-complete-source');
     const consumer = createRepoFromFixture('consumer', 'skills-missing-complete-consumer');

@@ -1480,6 +1480,26 @@ function buildInstalledRequirementSet(installs) {
   return installed;
 }
 
+function buildInstalledRequirementRecords(installs) {
+  return installs.map((install) => {
+    const requires = new Set();
+
+    for (const skill of install.skills || []) {
+      for (const requirement of skill.requires || []) {
+        requires.add(requirement);
+      }
+    }
+
+    return {
+      packageName: install.packageName,
+      name: null,
+      skillFile: install.sourcePackagePath ? `${install.sourcePackagePath}/SKILL.md` : null,
+      direct: install.direct,
+      requires: [...requires].sort((a, b) => a.localeCompare(b)),
+    };
+  });
+}
+
 function listLocalWorkbenchSkillRecords(repoRoot) {
   const records = [];
 
@@ -1566,13 +1586,7 @@ export function inspectMissingSkillDependencies({
   const repoRoot = findRepoRoot(cwd);
   const env = inspectSkillsEnv({ cwd });
   const installed = buildInstalledRequirementSet(env.installs);
-  const installedRecords = env.installs.map((install) => ({
-    packageName: install.packageName,
-    name: null,
-    skillFile: install.sourcePackagePath ? `${install.sourcePackagePath}/SKILL.md` : null,
-    direct: install.direct,
-    requires: install.requires,
-  }));
+  const installedRecords = buildInstalledRequirementRecords(env.installs);
   const localWorkbenchRecords = listLocalWorkbenchSkillRecords(repoRoot);
 
   let records = [...installedRecords, ...localWorkbenchRecords];

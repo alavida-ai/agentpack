@@ -9,6 +9,11 @@ import {
   runCLIJson,
 } from './fixtures.js';
 
+function writeDevSession(repoRoot, session) {
+  mkdirSync(join(repoRoot, '.agentpack'), { recursive: true });
+  writeFileSync(join(repoRoot, '.agentpack', 'dev-session.json'), JSON.stringify(session, null, 2) + '\n');
+}
+
 describe('agentpack skills runtime drift', () => {
   it('reports owned drift and orphaned materializations through skills status', () => {
     const fixture = createInstalledMultiSkillFixture('skills-runtime-drift-status');
@@ -62,6 +67,58 @@ describe('agentpack skills runtime drift', () => {
       assert.match(env.stdout, /Installed Skills: 2/);
       assert.match(env.stdout, /skills: prd-development, problem-statement, proto-persona/);
       assert.match(env.stdout, /materialized: \.claude\/skills\/prd-development:proto-persona \(symlink\)/);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  it('does not classify active skills dev links as orphaned materializations', () => {
+    const fixture = createInstalledMultiSkillFixture('skills-runtime-drift-dev-links');
+
+    try {
+      mkdirSync(join(fixture.consumer.root, 'skills', 'local-skill'), { recursive: true });
+      mkdirSync(join(fixture.consumer.root, '.claude', 'skills'), { recursive: true });
+      mkdirSync(join(fixture.consumer.root, '.agents', 'skills'), { recursive: true });
+
+      symlinkSync(
+        join(fixture.consumer.root, 'skills', 'local-skill'),
+        join(fixture.consumer.root, '.claude', 'skills', 'local-skill'),
+        'dir'
+      );
+      symlinkSync(
+        join(fixture.consumer.root, 'skills', 'local-skill'),
+        join(fixture.consumer.root, '.agents', 'skills', 'local-skill'),
+        'dir'
+      );
+
+      writeDevSession(fixture.consumer.root, {
+        version: 1,
+        session_id: 'active-dev',
+        status: 'active',
+        pid: process.pid,
+        repo_root: fixture.consumer.root,
+        target: 'skills/local-skill',
+        root_skill: {
+          name: 'local-skill',
+          package_name: '@alavida-ai/local-skill',
+          path: 'skills/local-skill',
+        },
+        linked_skills: [
+          { name: 'local-skill', package_name: '@alavida-ai/local-skill', path: 'skills/local-skill' },
+        ],
+        links: [
+          '.claude/skills/local-skill',
+          '.agents/skills/local-skill',
+        ],
+        started_at: '2026-03-13T12:00:00.000Z',
+        updated_at: '2026-03-13T12:00:00.000Z',
+      });
+
+      const result = runCLIJson(['skills', 'status'], { cwd: fixture.consumer.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.equal(result.json.orphanedMaterializationCount, 0);
+      assert.deepEqual(result.json.orphanedMaterializations, []);
     } finally {
       fixture.cleanup();
     }

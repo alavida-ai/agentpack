@@ -402,7 +402,8 @@ name: proto-persona
 description: Proto persona.
 metadata:
   sources: []
-requires: []
+requires:
+  - @alavida-ai/foundation-primer
 ---
 
 # Proto Persona

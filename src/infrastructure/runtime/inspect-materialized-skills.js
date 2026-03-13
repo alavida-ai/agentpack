@@ -1,5 +1,6 @@
 import { lstatSync, readlinkSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { readDevSession } from '../fs/dev-session-repository.js';
 
 function readPathType(pathValue) {
   try {
@@ -80,6 +81,13 @@ export function inspectRecordedMaterialization(repoRoot, {
 export function inspectMaterializedSkills(repoRoot, state) {
   const runtimeDrift = [];
   const ownedTargets = new Set();
+  const devSession = readDevSession(repoRoot);
+
+  if (devSession?.status === 'active') {
+    for (const target of devSession.links || []) {
+      ownedTargets.add(target);
+    }
+  }
 
   for (const [packageName, install] of Object.entries(state.installs || {})) {
     const issues = [];

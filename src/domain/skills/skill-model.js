@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { NotFoundError, ValidationError } from '../../utils/errors.js';
 
 function parseScalar(value) {
@@ -171,6 +171,7 @@ export function readPackageMetadata(packageDir) {
       files: null,
       repository: null,
       publishConfigRegistry: null,
+      exportedSkills: null,
     };
   }
 
@@ -183,5 +184,61 @@ export function readPackageMetadata(packageDir) {
     files: Array.isArray(pkg.files) ? pkg.files : null,
     repository: pkg.repository || null,
     publishConfigRegistry: pkg.publishConfig?.registry || null,
+    exportedSkills: pkg.agentpack?.skills || null,
   };
+}
+
+export function buildCanonicalSkillRequirement(packageName, skillName) {
+  if (!packageName || !skillName) return null;
+  return `${packageName}:${skillName}`;
+}
+
+export function readInstalledSkillExports(packageDir) {
+  const packageMetadata = readPackageMetadata(packageDir);
+  const exports = [];
+
+  if (packageMetadata.exportedSkills && typeof packageMetadata.exportedSkills === 'object') {
+    for (const [declaredName, entry] of Object.entries(packageMetadata.exportedSkills)) {
+      const relativeSkillFile = typeof entry === 'string' ? entry : entry?.path;
+      if (!relativeSkillFile) continue;
+
+      const skillFile = join(packageDir, relativeSkillFile);
+      if (!existsSync(skillFile)) continue;
+
+      const metadata = parseSkillFrontmatterFile(skillFile);
+      exports.push({
+        declaredName,
+        name: metadata.name,
+        description: metadata.description,
+        requires: metadata.requires,
+        status: metadata.status,
+        replacement: metadata.replacement,
+        message: metadata.message,
+        skillDir: dirname(skillFile),
+        skillFile,
+        relativeSkillFile,
+      });
+    }
+  }
+
+  if (exports.length > 0) {
+    return exports.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  const rootSkillFile = join(packageDir, 'SKILL.md');
+  if (!existsSync(rootSkillFile)) return [];
+
+  const metadata = parseSkillFrontmatterFile(rootSkillFile);
+  return [{
+    declaredName: metadata.name,
+    name: metadata.name,
+    description: metadata.description,
+    requires: metadata.requires,
+    status: metadata.status,
+    replacement: metadata.replacement,
+    message: metadata.message,
+    skillDir: packageDir,
+    skillFile: rootSkillFile,
+    relativeSkillFile: 'SKILL.md',
+  }];
 }

@@ -3,9 +3,25 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createRepoFromFixture, runCLI, runCLIJson, runCLIJsonAsync } from './fixtures.js';
+import { createInstalledMultiSkillFixture, createRepoFromFixture, runCLI, runCLIJson, runCLIJsonAsync } from './fixtures.js';
 
 describe('agentpack skills status', () => {
+  it('does not mark a healthy multi-skill install incomplete for exported self-references', () => {
+    const fixture = createInstalledMultiSkillFixture('skills-status-multi-skill-complete');
+
+    try {
+      const install = runCLI(['skills', 'install', fixture.target], { cwd: fixture.consumer.root });
+      assert.equal(install.exitCode, 0, install.stderr);
+
+      const result = runCLIJson(['skills', 'status'], { cwd: fixture.consumer.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.equal(result.json.incompleteCount, 0);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
   it('shows a healthy empty environment when nothing is installed', async () => {
     const consumer = createRepoFromFixture('consumer', 'skills-status-empty');
 

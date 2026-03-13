@@ -2,9 +2,25 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createRepoFromFixture, runCLI, runCLIJson } from './fixtures.js';
+import { createInstalledMultiSkillFixture, createRepoFromFixture, runCLI, runCLIJson } from './fixtures.js';
 
 describe('agentpack skills missing', () => {
+  it('does not report exported self-references as missing for a healthy multi-skill install', () => {
+    const fixture = createInstalledMultiSkillFixture('skills-missing-multi-skill-complete');
+
+    try {
+      const install = runCLI(['skills', 'install', fixture.target], { cwd: fixture.consumer.root });
+      assert.equal(install.exitCode, 0, install.stderr);
+
+      const result = runCLIJson(['skills', 'missing', '@alavida-ai/prd-development'], { cwd: fixture.consumer.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.equal(result.json.count, 0);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
   it('shows no missing dependencies when the installed environment is complete', () => {
     const monorepo = createRepoFromFixture('monorepo', 'skills-missing-complete-source');
     const consumer = createRepoFromFixture('consumer', 'skills-missing-complete-consumer');

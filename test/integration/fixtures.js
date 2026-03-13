@@ -3,7 +3,7 @@
  * Creates temp repos with the full agentpack directory structure.
  */
 
-import { mkdirSync, writeFileSync, rmSync, cpSync } from 'node:fs';
+import { lstatSync, mkdirSync, writeFileSync, rmSync, cpSync, readlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawn, spawnSync } from 'node:child_process';
@@ -327,6 +327,132 @@ export function addPackagedSkill(root, relPath, { skillMd, packageJson }) {
   mkdirSync(skillDir, { recursive: true });
   writeFileSync(join(skillDir, 'SKILL.md'), skillMd);
   writeFileSync(join(skillDir, 'package.json'), JSON.stringify(packageJson, null, 2) + '\n');
+}
+
+export function addMultiSkillPackage(root, relPath, { packageJson, skills }) {
+  const packageDir = join(root, relPath);
+  mkdirSync(packageDir, { recursive: true });
+  writeFileSync(join(packageDir, 'package.json'), JSON.stringify(packageJson, null, 2) + '\n');
+
+  for (const skill of skills) {
+    const skillDir = join(packageDir, skill.path);
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(join(skillDir, 'SKILL.md'), skill.skillMd);
+  }
+}
+
+export function createInstalledMultiSkillFixture(name = 'multi-skill') {
+  const source = createTempRepo(`${name}-source`);
+  const consumer = createRepoFromFixture('consumer', `${name}-consumer`);
+
+  addPackagedSkill(source.root, 'packages/foundation-primer', {
+    skillMd: `---
+name: foundation-primer
+description: Foundation primer.
+metadata:
+  sources: []
+requires: []
+---
+
+# Foundation Primer
+`,
+    packageJson: {
+      name: '@alavida-ai/foundation-primer',
+      version: '1.0.0',
+      files: ['SKILL.md'],
+    },
+  });
+
+  addMultiSkillPackage(source.root, 'packages/prd-development', {
+    packageJson: {
+      name: '@alavida-ai/prd-development',
+      version: '0.1.1',
+      files: ['skills'],
+      agentpack: {
+        skills: {
+          'prd-development': { path: 'skills/prd-development/SKILL.md' },
+          'proto-persona': { path: 'skills/proto-persona/SKILL.md' },
+          'problem-statement': { path: 'skills/problem-statement/SKILL.md' },
+        },
+      },
+      dependencies: {
+        '@alavida-ai/foundation-primer': 'file:../foundation-primer',
+      },
+    },
+    skills: [
+      {
+        path: 'skills/prd-development',
+        skillMd: `---
+name: prd-development
+description: Root workflow.
+metadata:
+  sources: []
+requires:
+  - @alavida-ai/prd-development:problem-statement
+  - @alavida-ai/prd-development:proto-persona
+---
+
+# PRD Development
+`,
+      },
+      {
+        path: 'skills/proto-persona',
+        skillMd: `---
+name: proto-persona
+description: Proto persona.
+metadata:
+  sources: []
+requires: []
+---
+
+# Proto Persona
+`,
+      },
+      {
+        path: 'skills/problem-statement',
+        skillMd: `---
+name: problem-statement
+description: Problem statement.
+metadata:
+  sources: []
+requires:
+  - @alavida-ai/prd-development:proto-persona
+---
+
+# Problem Statement
+`,
+      },
+    ],
+  });
+
+  return {
+    source,
+    consumer,
+    target: join(source.root, 'packages', 'prd-development'),
+    cleanup() {
+      source.cleanup();
+      consumer.cleanup();
+    },
+  };
+}
+
+export function readPathState(pathValue) {
+  try {
+    const stat = lstatSync(pathValue);
+    return {
+      exists: true,
+      isSymlink: stat.isSymbolicLink(),
+      isDirectory: stat.isDirectory(),
+      target: stat.isSymbolicLink() ? readlinkSync(pathValue) : null,
+    };
+  } catch {
+    return {
+      exists: false,
+      isSymlink: false,
+      isDirectory: false,
+      target: null,
+    };
+  }
 }
 
 /**

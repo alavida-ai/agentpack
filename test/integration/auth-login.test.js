@@ -74,6 +74,49 @@ function runLogin(args, {
 }
 
 describe('agentpack auth login', () => {
+  it('uses the default Alavida scope and verification package when only registry is overridden', async () => {
+    const repo = createTempRepo('auth-login-defaults');
+    const env = createHomeEnv();
+
+    try {
+      await withRegistryServer((req, res) => {
+        if (req.headers.authorization !== 'Bearer secret-token') {
+          res.writeHead(401);
+          res.end('unauthorized');
+          return;
+        }
+
+        if (req.url !== '/%40alavida-ai%2Fagentpack-auth-probe') {
+          res.writeHead(404);
+          res.end('not found');
+          return;
+        }
+
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ 'dist-tags': { latest: '1.0.0' } }));
+      }, async (registryUrl) => {
+        const result = await runLogin(
+          ['auth', 'login', '--registry', registryUrl],
+          {
+            cwd: repo.root,
+            env,
+            input: 'secret-token\n',
+          }
+        );
+
+        assert.equal(result.exitCode, 0, result.stderr);
+        assert.match(result.stdout, /Configured auth for @alavida-ai/);
+
+        const config = JSON.parse(readFileSync(join(env.XDG_CONFIG_HOME, 'agentpack', 'config.json'), 'utf-8'));
+        assert.equal(config.scope, '@alavida-ai');
+        assert.equal(config.registry, registryUrl);
+        assert.equal(config.verificationPackage, '@alavida-ai/agentpack-auth-probe');
+      });
+    } finally {
+      repo.cleanup();
+    }
+  });
+
   it('opens the browser hint, prompts for a token, and writes config on success', async () => {
     const repo = createTempRepo('auth-login-success');
     const env = createHomeEnv();
@@ -139,8 +182,29 @@ describe('agentpack auth login', () => {
         );
 
         assert.equal(result.exitCode, 1, result.stdout);
-        assert.match(result.stderr, /credential/i);
+        assert.match(result.stderr, /rejected/i);
       });
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('fails clearly when the registry is unreachable', async () => {
+    const repo = createTempRepo('auth-login-unreachable');
+    const env = createHomeEnv();
+
+    try {
+      const result = await runLogin(
+        ['auth', 'login', '--registry', 'http://127.0.0.1:9'],
+        {
+          cwd: repo.root,
+          env,
+          input: 'secret-token\n',
+        }
+      );
+
+      assert.equal(result.exitCode, 1, result.stdout);
+      assert.match(result.stderr, /could not be reached/i);
     } finally {
       repo.cleanup();
     }

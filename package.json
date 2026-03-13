@@ -3,6 +3,9 @@
   "version": "0.1.5",
   "description": "Package-backed skills lifecycle CLI for agent skills and plugins",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "bin": {
     "agentpack": "bin/agentpack.js",
     "intent": "bin/intent.js"

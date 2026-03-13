@@ -35,6 +35,7 @@ import {
   writeBuildState,
 } from '../domain/skills/skill-provenance.js';
 import { readUserConfig } from '../infrastructure/fs/user-config-repository.js';
+import { readUserCredentials } from '../infrastructure/fs/user-credentials-repository.js';
 import { getUserNpmrcPath, readUserNpmrc } from '../infrastructure/fs/user-npmrc-repository.js';
 import { resolveRegistryConfig } from '../domain/auth/registry-resolution.js';
 import { startSkillDevWorkbench } from '../application/skills/start-skill-dev-workbench.js';
@@ -644,12 +645,14 @@ function readRepoNpmRegistryConfig(repoRoot, scope = null) {
     : {};
   const scopes = scope ? [scope] : MANAGED_PACKAGE_SCOPES;
   const matchedScope = scopes.find((candidate) => config[`${candidate}:registry`]) || scope || scopes[0] || null;
+  const registry = matchedScope ? (config[`${matchedScope}:registry`] || null) : null;
+  const authKey = registry ? `//${new URL(registry).host}/:_authToken` : null;
 
   return {
     npmrcPath: existsSync(npmrcPath) ? npmrcPath : null,
     scope: matchedScope,
-    registry: matchedScope ? (config[`${matchedScope}:registry`] || null) : null,
-    authToken: config['//npm.pkg.github.com/:_authToken'] || null,
+    registry,
+    authToken: authKey ? (config[authKey] || null) : null,
     alwaysAuth: String(config['always-auth'] || '').toLowerCase() === 'true',
   };
 }
@@ -758,6 +761,22 @@ function resolveRegistryAuthToken(rawValue) {
     return process.env[envMatch[1]] || null;
   }
   return rawValue;
+}
+
+function buildNpmRegistryEnv(repoRoot, env = process.env) {
+  const effective = readEffectiveRegistryConfig(repoRoot, null, env);
+  const authToken = effective.authToken || null;
+  const envMatch = authToken?.match(/^\$\{([^}]+)\}$/) || null;
+  if (!envMatch) return env;
+  if (env[envMatch[1]]) return env;
+
+  const credentials = readUserCredentials({ env });
+  if (!credentials?.token) return env;
+
+  return {
+    ...env,
+    [envMatch[1]]: credentials.token,
+  };
 }
 
 async function fetchRegistryLatestVersion(packageName, {
@@ -1428,6 +1447,7 @@ export function installSkills(targets, { cwd = process.cwd() } = {}) {
 
   execFileSync('npm', ['install', '--no-save', ...uniqueInstallTargets], {
     cwd: repoRoot,
+    env: buildNpmRegistryEnv(repoRoot, process.env),
     encoding: 'utf-8',
     stdio: ['pipe', 'pipe', 'pipe'],
   });
@@ -1818,6 +1838,7 @@ export function uninstallSkills(target, { cwd = process.cwd() } = {}) {
   if (nextInstallTargets.length > 0) {
     execFileSync('npm', ['install', '--no-save', ...nextInstallTargets], {
       cwd: repoRoot,
+      env: buildNpmRegistryEnv(repoRoot, process.env),
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });

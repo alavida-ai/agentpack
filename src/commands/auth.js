@@ -8,6 +8,13 @@ export function authCommand() {
   const cmd = new Command('auth')
     .description('Configure and inspect package registry authentication');
 
+  cmd.addHelpText('after', `
+Defaults:
+  Scope: @alavida-ai
+  Registry: https://npm.pkg.github.com
+  Token: GitHub personal access token with package read access
+`);
+
   cmd
     .command('login')
     .description('Configure GitHub Packages authentication for this machine')

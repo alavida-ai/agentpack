@@ -9,6 +9,41 @@ import { AgentpackError, EXIT_CODES } from '../../utils/errors.js';
 
 const GITHUB_TOKEN_URL = 'https://github.com/settings/tokens';
 
+function buildVerificationFailure(verification) {
+  if (verification.status === 'invalid') {
+    return new AgentpackError('The GitHub personal access token was rejected by GitHub Packages', {
+      code: 'auth_verification_failed',
+      exitCode: EXIT_CODES.GENERAL,
+    });
+  }
+
+  if (verification.status === 'insufficient_permissions') {
+    return new AgentpackError('The GitHub personal access token does not have package read access', {
+      code: 'auth_verification_failed',
+      exitCode: EXIT_CODES.GENERAL,
+    });
+  }
+
+  if (verification.status === 'unreachable') {
+    return new AgentpackError('GitHub Packages could not be reached during verification', {
+      code: 'auth_verification_failed',
+      exitCode: EXIT_CODES.GENERAL,
+    });
+  }
+
+  if (verification.status === 'not_configured') {
+    return new AgentpackError('Authentication verification is not configured for this machine', {
+      code: 'auth_verification_not_configured',
+      exitCode: EXIT_CODES.GENERAL,
+    });
+  }
+
+  return new AgentpackError('The saved credential was rejected by the configured registry', {
+    code: 'auth_verification_failed',
+    exitCode: EXIT_CODES.GENERAL,
+  });
+}
+
 export async function login({
   env = process.env,
   scope = null,
@@ -24,6 +59,8 @@ export async function login({
   };
 
   openBrowser(GITHUB_TOKEN_URL);
+  output.write(`Configuring GitHub Packages auth for ${nextConfig.scope}`);
+  output.write('Use a GitHub personal access token with package read access.');
 
   const rl = readline.createInterface({ input, output });
   try {
@@ -42,10 +79,7 @@ export async function login({
     });
 
     if (verification.status !== 'valid') {
-      throw new AgentpackError('The saved credential was rejected by the configured registry', {
-        code: 'auth_verification_failed',
-        exitCode: EXIT_CODES.GENERAL,
-      });
+      throw buildVerificationFailure(verification);
     }
 
     const managedEntries = {

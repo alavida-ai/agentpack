@@ -5,9 +5,9 @@ import { homedir } from 'node:os';
 const DEFAULT_CONFIG = {
   version: 1,
   provider: 'github-packages',
-  scope: '@alavida',
+  scope: '@alavida-ai',
   registry: 'https://npm.pkg.github.com',
-  verificationPackage: null,
+  verificationPackage: '@alavida-ai/agentpack-auth-probe',
   managedNpmKeys: [],
 };
 

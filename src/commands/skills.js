@@ -136,6 +136,8 @@ export function skillsCommand() {
       output.write(`Outdated Skills: ${result.outdatedCount}`);
       output.write(`Deprecated Skills: ${result.deprecatedCount}`);
       output.write(`Incomplete Skills: ${result.incompleteCount}`);
+      output.write(`Runtime Drifted Skills: ${result.runtimeDriftCount}`);
+      output.write(`Orphaned Materializations: ${result.orphanedMaterializationCount}`);
       output.write(`Registry Configured: ${result.registry.configured}`);
 
       if (result.outdated.length > 0) {
@@ -168,6 +170,28 @@ export function skillsCommand() {
             output.write(`  missing: ${missing.packageName}`);
             output.write(`  recommended: ${missing.recommendedCommand}`);
           }
+        }
+      }
+
+      if (result.runtimeDrift.length > 0) {
+        output.write('');
+        output.write('Runtime Drift:');
+        for (const install of result.runtimeDrift) {
+          output.write(`- ${install.packageName}`);
+          for (const issue of install.issues) {
+            output.write(`  issue: ${issue.code}`);
+            output.write(`  target: ${issue.target}`);
+            if (issue.runtimeName) output.write(`  runtime: ${issue.runtimeName}`);
+          }
+        }
+      }
+
+      if (result.orphanedMaterializations.length > 0) {
+        output.write('');
+        output.write('Orphaned Materializations:');
+        for (const entry of result.orphanedMaterializations) {
+          output.write(`- ${entry.target}`);
+          output.write(`  issue: ${entry.code}`);
         }
       }
     });
@@ -459,6 +483,9 @@ export function skillsCommand() {
         output.write(`  direct: ${install.direct}`);
         output.write(`  version: ${install.packageVersion}`);
         output.write(`  source: ${install.sourcePackagePath}`);
+        if (install.skills?.length > 0) {
+          output.write(`  skills: ${install.skills.map((skill) => skill.name).join(', ')}`);
+        }
         for (const materialization of install.materializations) {
           output.write(`  materialized: ${materialization.target} (${materialization.mode})`);
         }

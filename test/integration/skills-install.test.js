@@ -1,9 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, lstatSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
-import { addPackagedSkill, createRepoFromFixture, createTempRepo, runCLI, runCLIJsonAsync } from './fixtures.js';
+import { addMultiSkillPackage, addPackagedSkill, createRepoFromFixture, createTempRepo, runCLI, runCLIJsonAsync } from './fixtures.js';
 
 function npmPack(cwd) {
   const npmCli = process.env.npm_execpath;
@@ -22,6 +22,160 @@ function npmPack(cwd) {
 }
 
 describe('agentpack skills install', () => {
+  it('materializes exported entries for a multi-skill package and ignores unrelated ambient packages', () => {
+    const source = createTempRepo('skills-install-multi-skill-source');
+    const consumer = createRepoFromFixture('consumer', 'skills-install-multi-skill-consumer');
+
+    try {
+      addPackagedSkill(source.root, 'packages/foundation-primer', {
+        skillMd: `---
+name: foundation-primer
+description: Foundation primer.
+metadata:
+  sources: []
+requires: []
+---
+
+# Foundation Primer
+`,
+        packageJson: {
+          name: '@alavida-ai/foundation-primer',
+          version: '1.0.0',
+          files: ['SKILL.md'],
+        },
+      });
+
+      addMultiSkillPackage(source.root, 'packages/prd-development', {
+        packageJson: {
+          name: '@alavida-ai/prd-development',
+          version: '0.1.1',
+          files: ['skills'],
+          agentpack: {
+            skills: {
+              'prd-development': { path: 'skills/prd-development/SKILL.md' },
+              'proto-persona': { path: 'skills/proto-persona/SKILL.md' },
+              'problem-statement': { path: 'skills/problem-statement/SKILL.md' },
+            },
+          },
+          dependencies: {
+            '@alavida-ai/foundation-primer': 'file:../foundation-primer',
+          },
+        },
+        skills: [
+          {
+            path: 'skills/prd-development',
+            skillMd: `---
+name: prd-development
+description: Root workflow.
+metadata:
+  sources: []
+requires: []
+---
+
+# PRD Development
+`,
+          },
+          {
+            path: 'skills/proto-persona',
+            skillMd: `---
+name: proto-persona
+description: Proto persona.
+metadata:
+  sources: []
+requires: []
+---
+
+# Proto Persona
+`,
+          },
+          {
+            path: 'skills/problem-statement',
+            skillMd: `---
+name: problem-statement
+description: Problem statement.
+metadata:
+  sources: []
+requires: []
+---
+
+# Problem Statement
+`,
+          },
+        ],
+      });
+
+      addPackagedSkill(consumer.root, 'node_modules/@alavida-ai/unrelated-skill', {
+        skillMd: `---
+name: unrelated-skill
+description: Ambient unrelated package.
+metadata:
+  sources: []
+requires: []
+---
+
+# Unrelated Skill
+`,
+        packageJson: {
+          name: '@alavida-ai/unrelated-skill',
+          version: '9.9.9',
+          files: ['SKILL.md'],
+        },
+      });
+
+      const target = join(source.root, 'packages', 'prd-development');
+      const result = runCLI(['skills', 'install', target], { cwd: consumer.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.match(result.stdout, /@alavida-ai\/prd-development/);
+      assert.match(result.stdout, /@alavida-ai\/foundation-primer/);
+      assert.doesNotMatch(result.stdout, /@alavida-ai\/unrelated-skill/);
+
+      assert.ok(existsSync(join(consumer.root, '.claude', 'skills', 'prd-development')));
+      assert.ok(existsSync(join(consumer.root, '.claude', 'skills', 'prd-development:proto-persona')));
+      assert.ok(existsSync(join(consumer.root, '.claude', 'skills', 'prd-development:problem-statement')));
+      assert.ok(existsSync(join(consumer.root, '.agents', 'skills', 'prd-development:proto-persona')));
+      assert.equal(existsSync(join(consumer.root, '.claude', 'skills', 'unrelated-skill')), false);
+
+      const installState = JSON.parse(readFileSync(join(consumer.root, '.agentpack', 'install.json'), 'utf-8'));
+      assert.ok(installState.installs['@alavida-ai/prd-development']);
+      assert.ok(installState.installs['@alavida-ai/foundation-primer']);
+      assert.equal(installState.installs['@alavida-ai/unrelated-skill'], undefined);
+    } finally {
+      source.cleanup();
+      consumer.cleanup();
+    }
+  });
+
+  it('reconciles existing managed symlinks during install', () => {
+    const monorepo = createRepoFromFixture('monorepo', 'skills-install-existing-links-source');
+    const consumer = createRepoFromFixture('consumer', 'skills-install-existing-links-consumer');
+
+    try {
+      mkdirSync(join(consumer.root, '.claude', 'skills'), { recursive: true });
+      mkdirSync(join(consumer.root, '.agents', 'skills'), { recursive: true });
+      symlinkSync(
+        join(monorepo.root, 'domains', 'value', 'methodology', 'gary-provost'),
+        join(consumer.root, '.claude', 'skills', 'value-copywriting'),
+        'dir'
+      );
+      symlinkSync(
+        join(monorepo.root, 'domains', 'value', 'methodology', 'gary-provost'),
+        join(consumer.root, '.agents', 'skills', 'value-copywriting'),
+        'dir'
+      );
+
+      const target = join(monorepo.root, 'domains', 'value', 'skills', 'copywriting');
+      const result = runCLI(['skills', 'install', target], { cwd: consumer.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.ok(lstatSync(join(consumer.root, '.claude', 'skills', 'value-copywriting')).isSymbolicLink());
+      assert.ok(lstatSync(join(consumer.root, '.agents', 'skills', 'value-copywriting')).isSymbolicLink());
+    } finally {
+      monorepo.cleanup();
+      consumer.cleanup();
+    }
+  });
+
   it('installs one packaged skill plus its dependency and materializes both', () => {
     const monorepo = createRepoFromFixture('monorepo', 'skills-install-source');
     const consumer = createRepoFromFixture('consumer', 'skills-install-consumer');

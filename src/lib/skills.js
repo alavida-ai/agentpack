@@ -19,11 +19,14 @@ import {
   removeSkillLinksByNames,
 } from '../infrastructure/runtime/materialize-skills.js';
 import {
+  buildCanonicalSkillRequirement,
   normalizeDisplayPath,
   normalizeRepoPath,
   parseSkillFrontmatterFile,
+  readInstalledSkillExports,
   readPackageMetadata,
 } from '../domain/skills/skill-model.js';
+import { inspectMaterializedSkills } from '../infrastructure/runtime/inspect-materialized-skills.js';
 import {
   buildStateRecordForPackageDir,
   compareRecordedSources,
@@ -1265,6 +1268,36 @@ function listInstalledPackageDirs(nodeModulesDir) {
   return packageDirs;
 }
 
+function findInstalledPackageDir(nodeModulesDir, packageName) {
+  if (!packageName) return null;
+  const packageDir = join(nodeModulesDir, ...packageName.split('/'));
+  return existsSync(packageDir) ? packageDir : null;
+}
+
+function resolveInstalledPackageClosure(repoRoot, directTargetMap) {
+  const nodeModulesDir = join(repoRoot, 'node_modules');
+  const queue = [...directTargetMap.keys()];
+  const seen = new Set();
+  const packageDirs = [];
+
+  while (queue.length > 0) {
+    const packageName = queue.shift();
+    if (seen.has(packageName)) continue;
+    seen.add(packageName);
+
+    const packageDir = findInstalledPackageDir(nodeModulesDir, packageName);
+    if (!packageDir) continue;
+
+    packageDirs.push(packageDir);
+    const packageMetadata = readPackageMetadata(packageDir);
+    for (const dependencyName of Object.keys(packageMetadata.dependencies || {})) {
+      queue.push(dependencyName);
+    }
+  }
+
+  return packageDirs.sort();
+}
+
 function collectLocalInstallTargets(initialTarget) {
   const resolvedTarget = resolve(initialTarget);
   const queue = [resolvedTarget];
@@ -1346,10 +1379,11 @@ export function installSkills(targets, { cwd = process.cwd() } = {}) {
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 
+  const resolvedPackageDirs = resolveInstalledPackageClosure(repoRoot, directTargetMap);
   return rebuildInstallState(repoRoot, directTargetMap, {
-    listInstalledPackageDirs,
-    parseSkillFrontmatterFile,
+    packageDirs: resolvedPackageDirs,
     readPackageMetadata,
+    readInstalledSkillExports,
     normalizeRelativePath,
   });
 }
@@ -1360,11 +1394,14 @@ export function inspectSkillsEnv({ cwd = process.cwd() } = {}) {
   const installs = Object.entries(state.installs || {})
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([packageName, install]) => ({
-      ...readInstalledSkillLifecycle(repoRoot, install.source_package_path),
+      ...(install.skills?.length > 0
+        ? readInstalledSkillLifecycleFromRecord(install)
+        : readInstalledSkillLifecycle(repoRoot, install.source_package_path)),
       packageName,
       direct: install.direct,
       packageVersion: install.package_version,
       sourcePackagePath: install.source_package_path,
+      skills: install.skills || [],
       materializations: install.materializations || [],
     }));
 
@@ -1403,8 +1440,64 @@ function readInstalledSkillLifecycle(repoRoot, sourcePackagePath) {
   };
 }
 
+function readInstalledSkillLifecycleFromRecord(install) {
+  const primarySkill = (install.skills || []).find((entry) => entry.runtime_name === entry.name)
+    || (install.skills || [])[0]
+    || null;
+
+  if (!primarySkill) {
+    return {
+      requires: [],
+      status: null,
+      replacement: null,
+      message: null,
+    };
+  }
+
+  return {
+    requires: primarySkill.requires || [],
+    status: primarySkill.status || null,
+    replacement: primarySkill.replacement || null,
+    message: primarySkill.message || null,
+  };
+}
+
 function buildInstallCommand(packageName) {
   return `agentpack skills install ${packageName}`;
+}
+
+function buildInstalledRequirementSet(installs) {
+  const installed = new Set();
+
+  for (const install of installs) {
+    if (install.packageName) installed.add(install.packageName);
+    for (const skill of install.skills || []) {
+      const requirement = buildCanonicalSkillRequirement(install.packageName, skill.name);
+      if (requirement) installed.add(requirement);
+    }
+  }
+
+  return installed;
+}
+
+function buildInstalledRequirementRecords(installs) {
+  return installs.map((install) => {
+    const requires = new Set();
+
+    for (const skill of install.skills || []) {
+      for (const requirement of skill.requires || []) {
+        requires.add(requirement);
+      }
+    }
+
+    return {
+      packageName: install.packageName,
+      name: null,
+      skillFile: install.sourcePackagePath ? `${install.sourcePackagePath}/SKILL.md` : null,
+      direct: install.direct,
+      requires: [...requires].sort((a, b) => a.localeCompare(b)),
+    };
+  });
 }
 
 function listLocalWorkbenchSkillRecords(repoRoot) {
@@ -1492,14 +1585,8 @@ export function inspectMissingSkillDependencies({
 } = {}) {
   const repoRoot = findRepoRoot(cwd);
   const env = inspectSkillsEnv({ cwd });
-  const installed = new Set(env.installs.map((install) => install.packageName));
-  const installedRecords = env.installs.map((install) => ({
-    packageName: install.packageName,
-    name: null,
-    skillFile: install.sourcePackagePath ? `${install.sourcePackagePath}/SKILL.md` : null,
-    direct: install.direct,
-    requires: install.requires,
-  }));
+  const installed = buildInstalledRequirementSet(env.installs);
+  const installedRecords = buildInstalledRequirementRecords(env.installs);
   const localWorkbenchRecords = listLocalWorkbenchSkillRecords(repoRoot);
 
   let records = [...installedRecords, ...localWorkbenchRecords];
@@ -1600,9 +1687,11 @@ export async function listOutdatedSkills({
 
 export async function inspectSkillsStatus({ cwd = process.cwd() } = {}) {
   const env = inspectSkillsEnv({ cwd });
+  const state = readInstallState(env.repoRoot);
   const registry = inspectRegistryConfig({ cwd });
   const outdatedResult = await listOutdatedSkills({ cwd });
   const missingResult = inspectMissingSkillDependencies({ cwd });
+  const runtimeInspection = inspectMaterializedSkills(env.repoRoot, state);
 
   const installedCount = env.installs.length;
   const directCount = env.installs.filter((install) => install.direct).length;
@@ -1619,13 +1708,23 @@ export async function inspectSkillsStatus({ cwd = process.cwd() } = {}) {
   const deprecatedCount = deprecated.length;
   const incomplete = missingResult.skills;
   const incompleteCount = missingResult.count;
+  const runtimeDrift = runtimeInspection.runtimeDrift;
+  const runtimeDriftCount = runtimeInspection.runtimeDriftCount;
+  const orphanedMaterializations = runtimeInspection.orphanedMaterializations;
+  const orphanedMaterializationCount = runtimeInspection.orphanedMaterializationCount;
 
   let health = 'healthy';
   if (!registry.configured) {
     health = installedCount > 0 || outdatedCount > 0 ? 'attention-needed' : 'needs-config';
-  } else if (outdatedCount > 0 || deprecatedCount > 0 || incompleteCount > 0) {
+  } else if (
+    outdatedCount > 0
+    || deprecatedCount > 0
+    || incompleteCount > 0
+    || runtimeDriftCount > 0
+    || orphanedMaterializationCount > 0
+  ) {
     health = 'attention-needed';
-  } else if (incompleteCount > 0) {
+  } else if (incompleteCount > 0 || runtimeDriftCount > 0 || orphanedMaterializationCount > 0) {
     health = 'attention-needed';
   }
 
@@ -1637,10 +1736,14 @@ export async function inspectSkillsStatus({ cwd = process.cwd() } = {}) {
     outdatedCount,
     deprecatedCount,
     incompleteCount,
+    runtimeDriftCount,
+    orphanedMaterializationCount,
     registry,
     outdated: outdatedResult.skills,
     deprecated,
     incomplete,
+    runtimeDrift,
+    orphanedMaterializations,
     installs: env.installs,
     health,
   };
@@ -1667,10 +1770,11 @@ export function uninstallSkills(target, { cwd = process.cwd() } = {}) {
     });
   }
 
+  const resolvedPackageDirs = resolveInstalledPackageClosure(repoRoot, nextDirectTargetMap);
   const nextState = rebuildInstallState(repoRoot, nextDirectTargetMap, {
-    listInstalledPackageDirs,
-    parseSkillFrontmatterFile,
+    packageDirs: resolvedPackageDirs,
     readPackageMetadata,
+    readInstalledSkillExports,
     normalizeRelativePath,
   });
   const remainingTargets = new Set(

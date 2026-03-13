@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, rmSync, symlinkSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, rmSync, symlinkSync, unlinkSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { writeInstallState } from '../fs/install-state-repository.js';
 
@@ -7,7 +7,17 @@ function ensureDir(pathValue) {
 }
 
 export function removePathIfExists(pathValue) {
-  rmSync(pathValue, { recursive: true, force: true });
+  try {
+    const stat = lstatSync(pathValue);
+    if (stat.isSymbolicLink() || stat.isFile()) {
+      unlinkSync(pathValue);
+      return;
+    }
+    rmSync(pathValue, { recursive: true, force: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') return;
+    throw error;
+  }
 }
 
 export function ensureSkillLink(repoRoot, baseDir, skillName, skillDir, normalizeDisplayPath) {
@@ -25,9 +35,13 @@ export function removeSkillLinks(repoRoot, name, normalizeDisplayPath) {
     join(repoRoot, '.claude', 'skills', name),
     join(repoRoot, '.agents', 'skills', name),
   ]) {
-    if (!existsSync(pathValue)) continue;
-    removePathIfExists(pathValue);
-    removed.push(normalizeDisplayPath(repoRoot, pathValue));
+    try {
+      removePathIfExists(pathValue);
+      removed.push(normalizeDisplayPath(repoRoot, pathValue));
+    } catch (error) {
+      if (error?.code === 'ENOENT') continue;
+      throw error;
+    }
   }
   return removed;
 }
@@ -50,9 +64,13 @@ export function removeSkillLinksByPaths(repoRoot, paths, normalizeDisplayPath) {
     const pathValue = resolve(repoRoot, relativePath);
     const inAllowedRoot = allowedRoots.some((root) => pathValue === root || pathValue.startsWith(`${root}/`));
     if (!inAllowedRoot) continue;
-    if (!existsSync(pathValue)) continue;
-    removePathIfExists(pathValue);
-    removed.push(normalizeDisplayPath(repoRoot, pathValue));
+    try {
+      removePathIfExists(pathValue);
+      removed.push(normalizeDisplayPath(repoRoot, pathValue));
+    } catch (error) {
+      if (error?.code === 'ENOENT') continue;
+      throw error;
+    }
   }
   return [...new Set(removed)];
 }
@@ -63,31 +81,62 @@ function ensureSymlink(targetPath, linkPath) {
   symlinkSync(targetPath, linkPath, 'dir');
 }
 
+function inferPackageRuntimeNamespace(packageName) {
+  return packageName?.split('/').pop() || null;
+}
+
+function buildRuntimeName(packageName, exportedSkills, entry) {
+  if (exportedSkills.length <= 1) return entry.name;
+
+  const namespace = inferPackageRuntimeNamespace(packageName);
+  if (!namespace) return entry.name;
+  if (entry.name === namespace) return namespace;
+  return `${namespace}:${entry.name}`;
+}
+
 export function buildInstallRecord(repoRoot, packageDir, directTargetMap, {
-  parseSkillFrontmatterFile,
   readPackageMetadata,
+  readInstalledSkillExports,
   normalizeRelativePath,
 } = {}) {
   const packageMetadata = readPackageMetadata(packageDir);
   if (!packageMetadata.packageName) return null;
-
-  const skillMetadata = parseSkillFrontmatterFile(join(packageDir, 'SKILL.md'));
-  const skillDirName = skillMetadata.name;
+  const exportedSkills = readInstalledSkillExports(packageDir);
+  if (exportedSkills.length === 0) return null;
   const materializations = [];
+  const skills = [];
 
-  const claudeTargetAbs = join(repoRoot, '.claude', 'skills', skillDirName);
-  ensureSymlink(packageDir, claudeTargetAbs);
-  materializations.push({
-    target: normalizeRelativePath(relative(repoRoot, claudeTargetAbs)),
-    mode: 'symlink',
-  });
+  for (const entry of exportedSkills) {
+    const runtimeName = buildRuntimeName(packageMetadata.packageName, exportedSkills, entry);
+    const skillMaterializations = [];
 
-  const agentsTargetAbs = join(repoRoot, '.agents', 'skills', skillDirName);
-  ensureSymlink(packageDir, agentsTargetAbs);
-  materializations.push({
-    target: normalizeRelativePath(relative(repoRoot, agentsTargetAbs)),
-    mode: 'symlink',
-  });
+    const claudeTargetAbs = join(repoRoot, '.claude', 'skills', runtimeName);
+    ensureSymlink(entry.skillDir, claudeTargetAbs);
+    skillMaterializations.push({
+      target: normalizeRelativePath(relative(repoRoot, claudeTargetAbs)),
+      mode: 'symlink',
+    });
+
+    const agentsTargetAbs = join(repoRoot, '.agents', 'skills', runtimeName);
+    ensureSymlink(entry.skillDir, agentsTargetAbs);
+    skillMaterializations.push({
+      target: normalizeRelativePath(relative(repoRoot, agentsTargetAbs)),
+      mode: 'symlink',
+    });
+
+    materializations.push(...skillMaterializations);
+    skills.push({
+      name: entry.name,
+      runtime_name: runtimeName,
+      source_skill_path: normalizeRelativePath(relative(repoRoot, entry.skillDir)),
+      source_skill_file: normalizeRelativePath(relative(repoRoot, entry.skillFile)),
+      requires: entry.requires,
+      status: entry.status,
+      replacement: entry.replacement,
+      message: entry.message,
+      materializations: skillMaterializations,
+    });
+  }
 
   return {
     packageName: packageMetadata.packageName,
@@ -95,26 +144,23 @@ export function buildInstallRecord(repoRoot, packageDir, directTargetMap, {
     requestedTarget: directTargetMap.get(packageMetadata.packageName) || null,
     packageVersion: packageMetadata.packageVersion,
     sourcePackagePath: normalizeRelativePath(relative(repoRoot, packageDir)),
+    skills,
     materializations,
   };
 }
 
 export function rebuildInstallState(repoRoot, directTargetMap, {
-  listInstalledPackageDirs,
-  parseSkillFrontmatterFile,
+  packageDirs = [],
   readPackageMetadata,
+  readInstalledSkillExports,
   normalizeRelativePath,
 } = {}) {
-  const packageDirs = listInstalledPackageDirs(join(repoRoot, 'node_modules'));
   const installs = {};
 
   for (const packageDir of packageDirs) {
-    const skillFile = join(packageDir, 'SKILL.md');
-    if (!existsSync(skillFile)) continue;
-
     const record = buildInstallRecord(repoRoot, packageDir, directTargetMap, {
-      parseSkillFrontmatterFile,
       readPackageMetadata,
+      readInstalledSkillExports,
       normalizeRelativePath,
     });
     if (!record) continue;
@@ -124,6 +170,7 @@ export function rebuildInstallState(repoRoot, directTargetMap, {
       requested_target: record.requestedTarget,
       package_version: record.packageVersion,
       source_package_path: record.sourcePackagePath,
+      skills: record.skills,
       materializations: record.materializations,
     };
   }

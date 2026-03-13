@@ -1,5 +1,4 @@
 ---
-"@alavida/agentpack": patch
 "@alavida-ai/agentpack-auth-probe": minor
 ---
 

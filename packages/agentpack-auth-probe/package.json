@@ -1,0 +1,16 @@
+{
+  "name": "@alavida-ai/agentpack-auth-probe",
+  "version": "0.1.0",
+  "description": "Verification probe package for agentpack GitHub Packages authentication.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alavida-ai/agentpack.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "files": [
+    "README.md"
+  ]
+}

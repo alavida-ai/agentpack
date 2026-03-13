@@ -1,8 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { addMultiSkillPackage, addPackagedSkill, createRepoFromFixture, createTempRepo, runCLI, runCLIJsonAsync } from './fixtures.js';
 
 function npmPack(cwd) {
@@ -19,6 +20,17 @@ function npmPack(cwd) {
     const tarballName = execFileSync(npmBinary, ['pack'], { cwd, encoding: 'utf-8' }).trim();
     return readFileSync(join(cwd, tarballName));
   });
+}
+
+function createHomeEnv() {
+  const home = mkdtempSync(join(tmpdir(), 'agentpack-skills-install-home-'));
+  return {
+    HOME: home,
+    XDG_CONFIG_HOME: join(home, '.config-root'),
+    cleanup() {
+      rmSync(home, { recursive: true, force: true });
+    },
+  };
 }
 
 describe('agentpack skills install', () => {
@@ -336,6 +348,161 @@ requires:
       assert.ok(existsSync(join(consumer.root, '.claude', 'skills', 'methodology-gary-provost')));
     } finally {
       await new Promise((resolve) => server.close(resolve));
+      source.cleanup();
+      consumer.cleanup();
+    }
+  });
+
+  it('falls back to saved machine credentials when repo npmrc expects GITHUB_PACKAGES_TOKEN', async () => {
+    const source = createTempRepo('skills-install-machine-auth-source');
+    const consumer = createRepoFromFixture('consumer', 'skills-install-machine-auth-consumer');
+    const homeEnv = createHomeEnv();
+
+    addPackagedSkill(source.root, 'packages/methodology-gary-provost', {
+      skillMd: `---
+name: methodology-gary-provost
+description: Sentence rhythm guidance from Gary Provost.
+metadata:
+  sources: []
+requires: []
+---
+
+# Gary Provost
+`,
+      packageJson: {
+        name: '@alavida-ai/methodology-gary-provost',
+        version: '1.0.0',
+        files: ['SKILL.md'],
+      },
+    });
+
+    addPackagedSkill(source.root, 'packages/value-proof-points', {
+      skillMd: `---
+name: value-proof-points
+description: Evidence-backed proof points for value messaging.
+metadata:
+  sources: []
+requires:
+  - @alavida-ai/methodology-gary-provost
+---
+
+# Value Proof Points
+`,
+      packageJson: {
+        name: '@alavida-ai/value-proof-points',
+        version: '1.0.1',
+        files: ['SKILL.md'],
+        dependencies: {
+          '@alavida-ai/methodology-gary-provost': '^1.0.0',
+        },
+      },
+    });
+
+    const metadataByPath = new Map([
+      ['@alavida-ai/value-proof-points', {
+        name: '@alavida-ai/value-proof-points',
+        'dist-tags': { latest: '1.0.1' },
+        versions: {
+          '1.0.1': {
+            name: '@alavida-ai/value-proof-points',
+            version: '1.0.1',
+            dist: { tarball: 'http://127.0.0.1:0/tarballs/value-proof-points-1.0.1.tgz' },
+            dependencies: {
+              '@alavida-ai/methodology-gary-provost': '^1.0.0',
+            },
+          },
+        },
+      }],
+      ['@alavida-ai/methodology-gary-provost', {
+        name: '@alavida-ai/methodology-gary-provost',
+        'dist-tags': { latest: '1.0.0' },
+        versions: {
+          '1.0.0': {
+            name: '@alavida-ai/methodology-gary-provost',
+            version: '1.0.0',
+            dist: { tarball: 'http://127.0.0.1:0/tarballs/methodology-gary-provost-1.0.0.tgz' },
+          },
+        },
+      }],
+    ]);
+
+    const tarballs = new Map();
+    tarballs.set(
+      '/tarballs/methodology-gary-provost-1.0.0.tgz',
+      await npmPack(join(source.root, 'packages', 'methodology-gary-provost'))
+    );
+    tarballs.set(
+      '/tarballs/value-proof-points-1.0.1.tgz',
+      await npmPack(join(source.root, 'packages', 'value-proof-points'))
+    );
+
+    const server = createServer((req, res) => {
+      if (req.headers.authorization !== 'Bearer secret-token') {
+        res.writeHead(401);
+        res.end('unauthorized');
+        return;
+      }
+
+      const metadata = metadataByPath.get(decodeURIComponent((req.url || '').replace(/^\//, '')));
+      if (metadata) {
+        const port = server.address().port;
+        const payload = JSON.parse(JSON.stringify(metadata).replaceAll('127.0.0.1:0', `127.0.0.1:${port}`));
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify(payload));
+        return;
+      }
+
+      const tarball = tarballs.get(req.url);
+      if (tarball) {
+        res.writeHead(200, { 'content-type': 'application/octet-stream' });
+        res.end(tarball);
+        return;
+      }
+
+      res.writeHead(404);
+      res.end('not found');
+    });
+
+    try {
+      await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const port = server.address().port;
+
+      writeFileSync(
+        join(consumer.root, '.npmrc'),
+        `@alavida-ai:registry=http://127.0.0.1:${port}\n//127.0.0.1:${port}/:_authToken=\${GITHUB_PACKAGES_TOKEN}\nalways-auth=true\n`
+      );
+
+      mkdirSync(join(homeEnv.XDG_CONFIG_HOME, 'agentpack'), { recursive: true });
+      writeFileSync(
+        join(homeEnv.XDG_CONFIG_HOME, 'agentpack', 'config.json'),
+        JSON.stringify({
+          version: 1,
+          provider: 'github-packages',
+          scope: '@alavida-ai',
+          registry: `http://127.0.0.1:${port}`,
+          verificationPackage: '@alavida-ai/value-proof-points',
+          managedNpmKeys: [],
+        }, null, 2) + '\n'
+      );
+      writeFileSync(
+        join(homeEnv.XDG_CONFIG_HOME, 'agentpack', 'credentials.json'),
+        JSON.stringify({ token: 'secret-token' }, null, 2) + '\n'
+      );
+
+      const result = await runCLIJsonAsync(['skills', 'install', '@alavida-ai/value-proof-points'], {
+        cwd: consumer.root,
+        env: {
+          HOME: homeEnv.HOME,
+          XDG_CONFIG_HOME: homeEnv.XDG_CONFIG_HOME,
+        },
+      });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.ok(result.json.installs['@alavida-ai/value-proof-points']);
+      assert.ok(result.json.installs['@alavida-ai/methodology-gary-provost']);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+      homeEnv.cleanup();
       source.cleanup();
       consumer.cleanup();
     }

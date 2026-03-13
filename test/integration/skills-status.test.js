@@ -1,9 +1,23 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInstalledMultiSkillFixture, createRepoFromFixture, runCLI, runCLIJson, runCLIJsonAsync } from './fixtures.js';
+import { tmpdir } from 'node:os';
+
+function createHomeEnv() {
+  const home = mkdtempSync(join(tmpdir(), 'agentpack-skills-status-home-'));
+  return {
+    env: {
+      HOME: home,
+      XDG_CONFIG_HOME: join(home, '.config-root'),
+    },
+    cleanup() {
+      rmSync(home, { recursive: true, force: true });
+    },
+  };
+}
 
 describe('agentpack skills status', () => {
   it('does not mark a healthy multi-skill install incomplete for exported self-references', () => {
@@ -24,9 +38,10 @@ describe('agentpack skills status', () => {
 
   it('shows a healthy empty environment when nothing is installed', async () => {
     const consumer = createRepoFromFixture('consumer', 'skills-status-empty');
+    const home = createHomeEnv();
 
     try {
-      const result = runCLI(['skills', 'status'], { cwd: consumer.root });
+      const result = runCLI(['skills', 'status'], { cwd: consumer.root, env: home.env });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.match(result.stdout, /Installed Skills: 0/);
@@ -34,6 +49,7 @@ describe('agentpack skills status', () => {
       assert.match(result.stdout, /Registry Configured: false/);
       assert.match(result.stdout, /Health: needs-config/);
     } finally {
+      home.cleanup();
       consumer.cleanup();
     }
   });

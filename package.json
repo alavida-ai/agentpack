@@ -23,8 +23,8 @@
     "smoke:monorepo": "node scripts/smoke-monorepo.mjs",
     "docs:dev": "cd docs && mint dev",
     "changeset": "changeset",
-    "version-packages": "changeset version",
-    "release": "changeset publish",
+    "version-packages": "node scripts/version-packages.mjs",
+    "release": "node scripts/release.mjs",
     "intent:validate": "npx @tanstack/intent validate",
     "build:dashboard": "node scripts/build-dashboard.mjs"
   },

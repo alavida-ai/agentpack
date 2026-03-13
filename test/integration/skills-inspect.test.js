@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { addPackagedSkill, createTempRepo, runCLI } from './fixtures.js';
+import { addPackagedSkill, createAuthoredMultiSkillFixture, createTempRepo, runCLI, runCLIJson } from './fixtures.js';
 
 function createSkillFixture() {
   const repo = createTempRepo('skills-inspect');
@@ -193,6 +193,75 @@ requires: []
 
       assert.equal(result.exitCode, 4);
       assert.match(result.stderr, /Error: skill not found/i);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('inspects a multi-skill package by package name and lists exported skills', () => {
+    const repo = createAuthoredMultiSkillFixture('skills-inspect-multi-skill-package');
+
+    try {
+      const result = runCLIJson(['skills', 'inspect', '@alavida-ai/planning-kit'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.equal(result.json.packageName, '@alavida-ai/planning-kit');
+      assert.equal(result.json.kind, 'package');
+      assert.deepEqual(
+        result.json.exports.map((entry) => entry.name).sort(),
+        ['kickoff', 'recap']
+      );
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('inspects a multi-skill package export by skill directory', () => {
+    const repo = createAuthoredMultiSkillFixture('skills-inspect-multi-skill-export-dir');
+
+    try {
+      const result = runCLI(['skills', 'inspect', 'workbenches/planning-kit/skills/kickoff'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.match(result.stdout, /Skill: kickoff/);
+      assert.match(result.stdout, /Package: @alavida-ai\/planning-kit/);
+      assert.match(result.stdout, /Path: workbenches\/planning-kit\/skills\/kickoff\/SKILL\.md/);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('shows wrapper metadata when present', () => {
+    const repo = createTempRepo('skills-inspect-wraps');
+
+    try {
+      addPackagedSkill(repo.root, 'skills/branded-diagram', {
+        skillMd: `---
+name: branded-diagram
+description: Render the branded diagram workflow.
+wraps: "@vendor/diagram-kit:generate-diagram"
+overrides:
+  - references/brand.md
+metadata:
+  sources: []
+requires: []
+---
+
+# Branded Diagram
+`,
+        packageJson: {
+          name: '@alavida-ai/branded-diagram',
+          version: '1.0.0',
+          files: ['SKILL.md'],
+        },
+      });
+
+      const result = runCLI(['skills', 'inspect', 'skills/branded-diagram'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.match(result.stdout, /Wraps: @vendor\/diagram-kit:generate-diagram/);
+      assert.match(result.stdout, /Overrides:/);
+      assert.match(result.stdout, /references\/brand\.md/);
     } finally {
       repo.cleanup();
     }

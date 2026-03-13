@@ -2,7 +2,14 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createRepoFromFixture, createTempRepo, createValidateFixture, runCLI, runCLIJson } from './fixtures.js';
+import {
+  createAuthoredMultiSkillFixture,
+  createRepoFromFixture,
+  createTempRepo,
+  createValidateFixture,
+  runCLI,
+  runCLIJson,
+} from './fixtures.js';
 
 describe('agentpack skills validate', () => {
   it('validates one packaged skill successfully', () => {
@@ -33,6 +40,39 @@ describe('agentpack skills validate', () => {
       assert.equal(result.exitCode, 0, result.stderr);
       assert.match(result.stdout, /Validated Skills: 3/);
       assert.match(result.stdout, /Valid Skills: 3/);
+      assert.match(result.stdout, /Invalid Skills: 0/);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('validates all exports in an authored multi-skill package when targeting the package directory', () => {
+    const repo = createAuthoredMultiSkillFixture('skills-validate-multi-skill-package');
+
+    try {
+      const result = runCLIJson(['skills', 'validate', 'workbenches/planning-kit'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.equal(result.json.valid, true);
+      assert.equal(result.json.count, 2);
+      assert.deepEqual(
+        result.json.skills.map((skill) => skill.name).sort(),
+        ['kickoff', 'recap']
+      );
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('discovers authored multi-skill packages in no-args validate mode', () => {
+    const repo = createAuthoredMultiSkillFixture('skills-validate-multi-skill-all');
+
+    try {
+      const result = runCLI(['skills', 'validate'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.match(result.stdout, /Validated Skills: 2/);
+      assert.match(result.stdout, /Valid Skills: 2/);
       assert.match(result.stdout, /Invalid Skills: 0/);
     } finally {
       repo.cleanup();
@@ -299,6 +339,87 @@ metadata:
       assert.equal(staleResult.exitCode, 0, staleResult.stderr);
       assert.match(staleResult.stdout, /Stale Skills: 1/);
       assert.match(staleResult.stdout, /@alavida-ai\/agonda-prioritisation/);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('prunes removed authored build-state entries on no-args validate', () => {
+    const repo = createTempRepo('skills-validate-prune-removed');
+
+    try {
+      mkdirSync(join(repo.root, '.agentpack'), { recursive: true });
+      mkdirSync(join(repo.root, 'skills', 'current-skill'), { recursive: true });
+
+      writeFileSync(
+        join(repo.root, '.agentpack', 'build-state.json'),
+        JSON.stringify(
+          {
+            version: 1,
+            skills: {
+              '@alavida-ai/current-skill': {
+                package_version: '0.0.1',
+                skill_path: 'skills/current-skill',
+                skill_file: 'skills/current-skill/SKILL.md',
+                sources: {},
+                requires: [],
+              },
+              '@alavida-ai/removed-skill': {
+                package_version: '0.0.1',
+                skill_path: 'skills/removed-skill',
+                skill_file: 'skills/removed-skill/SKILL.md',
+                sources: {},
+                requires: [],
+              },
+            },
+          },
+          null,
+          2
+        ) + '\n'
+      );
+
+      writeFileSync(
+        join(repo.root, 'skills', 'current-skill', 'SKILL.md'),
+        `---
+name: current-skill
+description: Still present.
+metadata:
+  sources: []
+requires: []
+---
+
+# Current Skill
+`
+      );
+
+      writeFileSync(
+        join(repo.root, 'skills', 'current-skill', 'package.json'),
+        JSON.stringify(
+          {
+            name: '@alavida-ai/current-skill',
+            version: '1.0.0',
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida-ai/agentpack.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            files: ['SKILL.md'],
+            dependencies: {},
+          },
+          null,
+          2
+        ) + '\n'
+      );
+
+      const result = runCLI(['skills', 'validate'], { cwd: repo.root });
+      const buildState = JSON.parse(readFileSync(join(repo.root, '.agentpack', 'build-state.json'), 'utf-8'));
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.ok(buildState.skills['@alavida-ai/current-skill']);
+      assert.equal(buildState.skills['@alavida-ai/current-skill'].package_version, '1.0.0');
+      assert.equal(buildState.skills['@alavida-ai/removed-skill'], undefined);
     } finally {
       repo.cleanup();
     }

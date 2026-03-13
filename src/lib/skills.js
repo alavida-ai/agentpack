@@ -34,6 +34,9 @@ import {
   readBuildState,
   writeBuildState,
 } from '../domain/skills/skill-provenance.js';
+import { readUserConfig } from '../infrastructure/fs/user-config-repository.js';
+import { getUserNpmrcPath, readUserNpmrc } from '../infrastructure/fs/user-npmrc-repository.js';
+import { resolveRegistryConfig } from '../domain/auth/registry-resolution.js';
 import { startSkillDevWorkbench } from '../application/skills/start-skill-dev-workbench.js';
 import { AgentpackError, EXIT_CODES, NetworkError, NotFoundError, ValidationError } from '../utils/errors.js';
 
@@ -651,14 +654,63 @@ function readRepoNpmRegistryConfig(repoRoot, scope = null) {
   };
 }
 
+function readEffectiveRegistryConfig(repoRoot, scope = null, env = process.env) {
+  const userConfig = readUserConfig({ env });
+  const userNpmrc = readUserNpmrc({ env });
+  const repoConfig = readRepoNpmRegistryConfig(repoRoot, scope);
+  const userScope = MANAGED_PACKAGE_SCOPES.find((candidate) => userNpmrc[`${candidate}:registry`]) || null;
+  const resolvedScope = scope
+    || (repoConfig.registry ? repoConfig.scope : null)
+    || userScope
+    || userConfig.scope
+    || repoConfig.scope
+    || MANAGED_PACKAGE_SCOPES[0]
+    || null;
+  const resolved = resolveRegistryConfig({
+    scope: resolvedScope,
+    defaults: {
+      registry: userConfig.registry,
+      verificationPackage: userConfig.verificationPackage,
+    },
+    userNpmrc,
+    repoNpmrc: repoConfig.registry ? {
+      [`${repoConfig.scope}:registry`]: repoConfig.registry,
+      ...(repoConfig.authToken ? { [`//${new URL(repoConfig.registry).host}/:_authToken`]: repoConfig.authToken } : {}),
+    } : {},
+  });
+
+  let npmrcPath = null;
+  if (resolved.source === 'repo') {
+    npmrcPath = repoConfig.npmrcPath;
+  } else if (resolved.source === 'user') {
+    npmrcPath = getUserNpmrcPath({ env });
+  }
+
+  const alwaysAuth = resolved.source === 'repo'
+    ? repoConfig.alwaysAuth
+    : String(userNpmrc['always-auth'] || '').toLowerCase() === 'true';
+
+  return {
+    scope: resolved.scope,
+    npmrcPath,
+    registry: resolved.registry,
+    authToken: resolved.authToken,
+    alwaysAuth,
+    source: resolved.source,
+    configured: resolved.source !== 'default' && Boolean(resolved.registry),
+  };
+}
+
 export function inspectRegistryConfig({
   cwd = process.cwd(),
   scope = null,
+  env = process.env,
 } = {}) {
   const repoRoot = findRepoRoot(cwd);
-  const { npmrcPath, scope: resolvedScope, registry, authToken, alwaysAuth } = readRepoNpmRegistryConfig(
+  const { npmrcPath, scope: resolvedScope, registry, authToken, alwaysAuth, source, configured } = readEffectiveRegistryConfig(
     repoRoot,
-    scope
+    scope,
+    env
   );
 
   let auth = {
@@ -691,10 +743,11 @@ export function inspectRegistryConfig({
     scope: resolvedScope,
     repoRoot,
     npmrcPath: npmrcPath ? normalizeDisplayPath(repoRoot, npmrcPath) : null,
-    configured: Boolean(registry),
-    registry,
+    configured,
+    registry: configured ? registry : null,
     auth,
     alwaysAuth,
+    source,
   };
 }
 

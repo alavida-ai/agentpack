@@ -1,6 +1,12 @@
+import { writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 
 export function openBrowser(url) {
+  if (process.env.AGENTPACK_BROWSER_CAPTURE_PATH) {
+    writeFileSync(process.env.AGENTPACK_BROWSER_CAPTURE_PATH, `${url}\n`);
+    return;
+  }
+
   if (process.env.AGENTPACK_DISABLE_BROWSER === '1') return;
 
   const command = process.platform === 'darwin'

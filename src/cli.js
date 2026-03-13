@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { createRequire } from 'node:module';
 import { formatError, AgentpackError, EXIT_CODES } from './utils/errors.js';
 import { output } from './utils/output.js';
+import { authCommand } from './commands/auth.js';
 import { skillsCommand } from './commands/skills.js';
 import { pluginCommand } from './commands/plugin.js';
 
@@ -21,6 +22,7 @@ export function createProgram() {
     .option('--workbench <path>', 'Override workbench context (name or path)');
 
   program.addCommand(skillsCommand());
+  program.addCommand(authCommand());
   program.addCommand(pluginCommand());
 
   program.addHelpText('after', `

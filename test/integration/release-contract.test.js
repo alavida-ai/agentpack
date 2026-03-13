@@ -25,6 +25,10 @@ describe('release contract', () => {
       join(repoRoot, 'packages', 'agentpack-release', 'package.json'),
       'utf-8'
     ));
+    const trackerChangelog = readFileSync(
+      join(repoRoot, 'packages', 'agentpack-release', 'CHANGELOG.md'),
+      'utf-8'
+    );
     const changelog = readFileSync(join(repoRoot, 'CHANGELOG.md'), 'utf-8');
 
     assert.match(workflow, /branches:\s*\n\s*-\s*main/);
@@ -42,6 +46,7 @@ describe('release contract', () => {
     assert.equal(changesetConfig.privatePackages?.tag, false);
     assert.equal(trackerPackageJson.name, '@alavida/agentpack-release');
     assert.equal(trackerPackageJson.private, true);
+    assert.match(trackerChangelog, /^# @alavida\/agentpack-release/m);
   });
 
   it('documents the merged skills dev and plugin diagnostics behavior without worktree paths', () => {

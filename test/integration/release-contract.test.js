@@ -21,6 +21,7 @@ describe('release contract', () => {
     const workflow = readFileSync(join(repoRoot, '.github', 'workflows', 'release.yml'), 'utf-8');
     const packageJson = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8'));
     const changesetConfig = JSON.parse(readFileSync(join(repoRoot, '.changeset', 'config.json'), 'utf-8'));
+    const releaseScript = readFileSync(join(repoRoot, 'scripts', 'release.mjs'), 'utf-8');
     const trackerPackageJson = JSON.parse(readFileSync(
       join(repoRoot, 'packages', 'agentpack-release', 'package.json'),
       'utf-8'
@@ -50,6 +51,8 @@ describe('release contract', () => {
     assert.equal(trackerPackageJson.name, '@alavida/agentpack-release');
     assert.equal(trackerPackageJson.private, true);
     assert.match(trackerChangelog, /^# @alavida\/agentpack-release/m);
+    assert.doesNotMatch(releaseScript, /changeset', 'publish'/);
+    assert.match(releaseScript, /readJsonFromGit\('HEAD\^'/);
   });
 
   it('documents the merged skills dev and plugin diagnostics behavior without worktree paths', () => {

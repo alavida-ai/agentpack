@@ -34,6 +34,9 @@ describe('release contract', () => {
     assert.match(workflow, /branches:\s*\n\s*-\s*main/);
     assert.match(workflow, /changesets\/action@/);
     assert.match(workflow, /commit:\s*"chore: version packages"/);
+    assert.match(workflow, /@alavida-ai:registry=https:\/\/npm\.pkg\.github\.com/);
+    assert.match(workflow, /\/\/npm\.pkg\.github\.com\/:_authToken=\$\{GITHUB_PACKAGES_TOKEN:-\$GITHUB_TOKEN\}/);
+    assert.match(workflow, /npm view @alavida-ai\/agentpack-auth-probe version --registry https:\/\/npm\.pkg\.github\.com/);
     assert.doesNotMatch(workflow, /tags:\s*\n\s*-\s*'v\*'/);
     assert.doesNotMatch(workflow, /commit:\s*chore:\s*version packages/);
     assert.match(changelog, /^# Changelog/m);

@@ -36,15 +36,20 @@ jobs:
       - name: Create .npmrc
         run: |
           cat << EOF > "$HOME/.npmrc"
+          @alavida-ai:registry=https://npm.pkg.github.com
           //registry.npmjs.org/:_authToken=$NPM_TOKEN
+          //npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN:-$GITHUB_TOKEN}
           EOF
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Verify npm publish auth
         run: |
           npm whoami
           npm view @alavida/agentpack version
+          npm view @alavida-ai/agentpack-auth-probe version --registry https://npm.pkg.github.com
 
       - name: Create release pull request or publish
         uses: changesets/action@v1

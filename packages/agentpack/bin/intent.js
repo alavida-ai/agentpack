@@ -49,10 +49,10 @@ try {
   if (e?.code === 'ERR_MODULE_NOT_FOUND' || e?.code === 'MODULE_NOT_FOUND') {
     console.error('@tanstack/intent is not installed.');
     console.error('');
-    console.error('Install it as a dev dependency:');
+    console.error('Install it as a dev dependency:')
     console.error('  npm add -D @tanstack/intent');
     console.error('');
-    console.error('Or run directly:');
+    console.error('Or run directly:')
     console.error('  npx @tanstack/intent@latest list');
     process.exit(1);
   }

@@ -9,7 +9,7 @@ import {
   listStaleSkills,
   resolveInstallTargets,
   uninstallSkills,
-} from '../src/lib/skills.js';
+} from '../packages/agentpack/src/lib/skills.js';
 
 function parseArgs(argv) {
   const args = { repo: null, workbench: 'domains/value/workbenches/consumer/website-dev' };

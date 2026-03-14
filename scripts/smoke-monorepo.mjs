@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { generateBuildState, generateSkillsCatalog } from '../src/lib/skills.js';
+import { generateBuildState, generateSkillsCatalog } from '../packages/agentpack/src/lib/skills.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

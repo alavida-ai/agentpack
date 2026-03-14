@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { addMultiSkillPackage, addPackagedSkill, createRepoFromFixture, createTempRepo } from './fixtures.js';
-import { generateBuildState, generateSkillsCatalog } from '../../src/lib/skills.js';
+import { generateBuildState, generateSkillsCatalog } from '../../packages/agentpack/src/lib/skills.js';
 
 describe('agentpack skills authoring metadata generation', () => {
   it('generates skills catalog deterministically from the fixture monorepo', () => {

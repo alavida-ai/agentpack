@@ -1,5 +1,3 @@
 #!/usr/bin/env node
 
-import { run } from '../src/cli.js';
-
-run(process.argv);
+import '../packages/agentpack/bin/agentpack.js';

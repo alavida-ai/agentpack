@@ -8,7 +8,7 @@ import {
   hashFile,
   readBuildState,
   writeBuildState,
-} from '../../src/domain/skills/skill-provenance.js';
+} from '../../packages/agentpack/src/domain/skills/skill-provenance.js';
 import { createTempRepo } from '../integration/fixtures.js';
 
 describe('skill provenance', () => {

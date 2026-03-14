@@ -8,7 +8,7 @@ import {
   getUserCredentialsPath,
   readUserCredentials,
   writeUserCredentials,
-} from '../../src/infrastructure/fs/user-credentials-repository.js';
+} from '../../packages/agentpack/src/infrastructure/fs/user-credentials-repository.js';
 
 const cleanupPaths = [];
 

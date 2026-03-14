@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { addPackagedSkill, createTempRepo, startCLI } from './fixtures.js';
-import { hashFile } from '../../src/domain/skills/skill-provenance.js';
+import { hashFile } from '../../packages/agentpack/src/domain/skills/skill-provenance.js';
 
 function extractWorkbenchUrl(output) {
   const match = output.match(/Workbench URL: (http:\/\/127\.0\.0\.1:\d+)/);

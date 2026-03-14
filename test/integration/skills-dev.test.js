@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { addPackagedSkill, createAuthoredMultiSkillFixture, createTempRepo, runCLI, runCLIJson, startCLI } from './fixtures.js';
-import { startSkillDev } from '../../src/lib/skills.js';
+import { startSkillDev } from '../../packages/agentpack/src/lib/skills.js';
 
 async function waitUntil(predicate, timeoutMs = 1000) {
   const start = Date.now();

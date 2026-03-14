@@ -1,7 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
@@ -82,5 +84,78 @@ describe('release contract', () => {
     assert.match(sandboxPlan, /domains\/[A-Za-z0-9/_-]*workbenches\//);
     assert.doesNotMatch(sandboxSpec, /workbench\.json/);
     assert.doesNotMatch(sandboxPlan, /workbench\.json/);
+  });
+
+  it('publishes the root package even when the latest commit did not bump package.json', () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'agentpack-release-script-'));
+    const binDir = join(tempRoot, 'bin');
+    const scriptsDir = join(tempRoot, 'scripts');
+    const commandLogPath = join(tempRoot, 'npm-commands.log');
+    const npmStubPath = join(binDir, 'npm');
+
+    try {
+      mkdirSync(binDir, { recursive: true });
+      mkdirSync(scriptsDir, { recursive: true });
+      writeFileSync(commandLogPath, '');
+
+      writeFileSync(
+        npmStubPath,
+        `#!/usr/bin/env node
+const fs = require('node:fs');
+const logPath = process.env.NPM_STUB_LOG_PATH;
+const args = process.argv.slice(2);
+fs.appendFileSync(logPath, args.join(' ') + '\\n');
+if (args[0] === 'view') {
+  process.stdout.write('0.1.6\\n');
+  process.exit(0);
+}
+if (args[0] === 'publish') {
+  process.exit(0);
+}
+process.exit(1);
+`
+      );
+      chmodSync(npmStubPath, 0o755);
+
+      writeFileSync(
+        join(tempRoot, 'package.json'),
+        `${JSON.stringify({ name: '@alavida/agentpack', version: '0.1.6' }, null, 2)}\n`
+      );
+      writeFileSync(join(tempRoot, 'README.md'), '# Agentpack\n');
+      writeFileSync(join(scriptsDir, 'release.mjs'), readFileSync(join(repoRoot, 'scripts', 'release.mjs'), 'utf-8'));
+
+      execFileSync('git', ['init'], { cwd: tempRoot, stdio: 'ignore' });
+      execFileSync('git', ['config', 'user.name', 'Test User'], { cwd: tempRoot, stdio: 'ignore' });
+      execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: tempRoot, stdio: 'ignore' });
+      execFileSync('git', ['add', '.'], { cwd: tempRoot, stdio: 'ignore' });
+      execFileSync('git', ['commit', '-m', 'initial'], { cwd: tempRoot, stdio: 'ignore' });
+
+      writeFileSync(
+        join(tempRoot, 'package.json'),
+        `${JSON.stringify({ name: '@alavida/agentpack', version: '0.1.7' }, null, 2)}\n`
+      );
+      execFileSync('git', ['add', 'package.json'], { cwd: tempRoot, stdio: 'ignore' });
+      execFileSync('git', ['commit', '-m', 'version bump'], { cwd: tempRoot, stdio: 'ignore' });
+
+      writeFileSync(join(tempRoot, 'README.md'), '# Agentpack\n\nHotfix note.\n');
+      execFileSync('git', ['add', 'README.md'], { cwd: tempRoot, stdio: 'ignore' });
+      execFileSync('git', ['commit', '-m', 'follow-up fix'], { cwd: tempRoot, stdio: 'ignore' });
+
+      execFileSync('node', ['scripts/release.mjs'], {
+        cwd: tempRoot,
+        env: {
+          ...process.env,
+          PATH: `${binDir}:${process.env.PATH}`,
+          NPM_STUB_LOG_PATH: commandLogPath,
+        },
+        stdio: 'ignore',
+      });
+
+      const commandLog = readFileSync(commandLogPath, 'utf-8');
+      assert.match(commandLog, /^view @alavida\/agentpack version --registry https:\/\/registry\.npmjs\.org\/$/m);
+      assert.match(commandLog, /^publish$/m);
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
   });
 });

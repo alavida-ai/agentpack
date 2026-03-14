@@ -60,8 +60,10 @@ function listVersionBumpedPackages() {
       const currentPackage = readJson(join(repoRoot, manifestPath));
       const previousPackage = readJsonFromGit('HEAD^', manifestPath);
 
-      if (!previousPackage) return null;
-      if (previousPackage.version === currentPackage.version) return null;
+      if (manifestPath !== 'package.json') {
+        if (!previousPackage) return null;
+        if (previousPackage.version === currentPackage.version) return null;
+      }
       if (currentPackage.private) return null;
 
       return {

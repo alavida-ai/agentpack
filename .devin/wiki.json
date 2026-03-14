@@ -1,0 +1,304 @@
+{
+  "repo_notes": [
+    {
+      "content": "This repository is a workspace/monorepo. The root package.json is a private workspace manager and is not the published @alavida/agentpack package. The actual published CLI package lives in packages/agentpack. Documentation must treat packages/agentpack as the source of truth for the agentpack and intent binaries, package metadata, runtime behavior, shipped skills, and most implementation details."
+    },
+    {
+      "content": "Prioritize these areas when generating documentation: packages/agentpack, test/integration, docs, and tla. The integration tests are an important behavioral contract and should be used to describe current command behavior, especially for multi-skill packages, install/materialization, env/status, auth fallback, and skills dev behavior."
+    },
+    {
+      "content": "Multi-skill packages are a first-class concept in this repo. Do not assume one package equals one root SKILL.md. Packages may export multiple skills via package.json agentpack.skills, with SKILL.md files nested under skills/*/SKILL.md. Documentation should explain authored package discovery, exported skill resolution, materialization of exported entries, and target resolution across inspect, validate, install, env, and dev."
+    },
+    {
+      "content": "When repo-level and package-level files disagree, prefer the current package-level implementation under packages/agentpack and verify against the test suite. Some top-level docs may lag behind the implementation, so avoid over-indexing on root README/package.json without checking packages/agentpack and test/integration."
+    }
+  ],
+  "pages": [
+    {
+      "title": "Overview",
+      "purpose": "High-level introduction to agentpack: what it is, the Knowledge as a Package philosophy, the workspace layout, and how the major subsystems relate. Explain explicitly that the repo root is a private workspace manager and the published package lives in packages/agentpack. Link to deeper pages for CLI behavior, domain model, plugins, workbench, state files, auth, tests, and formal models.",
+      "page_notes": [
+        {
+          "content": "Explain the workspace split explicitly: root package.json manages the workspace; packages/agentpack is the published package. Do not describe the root package.json as the CLI package."
+        }
+      ]
+    },
+    {
+      "title": "Getting Started",
+      "purpose": "Installation, prerequisites, initial configuration, and the quickstart workflow for new users. Cover npm installation, the agentpack CLI binary, the intent binary wrapper, repo expectations, and the first authoring and install flows.",
+      "parent": "Overview",
+      "page_notes": [
+        {
+          "content": "Use packages/agentpack/package.json as the source of truth for package version, bin entrypoints, engines, and publish metadata. Do not describe the root package.json as defining the published CLI."
+        }
+      ]
+    },
+    {
+      "title": "Core Concepts and Architecture",
+      "purpose": "Explains the fundamental model: source knowledge -> SKILL.md -> packaged skill -> plugin/runtime artifact. Covers artifact types, lifecycle stages, authored vs installed state, and the separation between authoring, distribution, materialization, and runtime.",
+      "parent": "Overview",
+      "page_notes": [
+        {
+          "content": "Treat multi-skill packages as part of the core architecture, not an edge case. Packages can export one or many skills via agentpack.skills."
+        }
+      ]
+    },
+    {
+      "title": "CLI Reference",
+      "purpose": "Overview of the agentpack CLI program structure, global flags, exit codes, and the top-level command groups: skills, plugin, and auth. Link to child pages for each command group.",
+      "page_notes": [
+        {
+          "content": "Anchor CLI documentation in packages/agentpack/bin and packages/agentpack/src/commands. Avoid inferring command structure from old top-level package metadata."
+        }
+      ]
+    },
+    {
+      "title": "Skills Commands",
+      "purpose": "Detailed reference for all agentpack skills subcommands: inspect, validate, dev, stale, install, uninstall, status, env, missing, unlink, and registry. Cover flags, output formats, exit codes, and target-resolution rules.",
+      "parent": "CLI Reference",
+      "page_notes": [
+        {
+          "content": "Use test/integration as a behavioral contract for current command behavior. Cover path targets, package-name targets, exported-skill targets, multi-skill authored packages, installed packages, and ambiguity/error cases."
+        }
+      ]
+    },
+    {
+      "title": "Plugin Commands",
+      "purpose": "Detailed reference for all agentpack plugin subcommands: inspect, validate, build, and dev. Cover plugin directory structure, bundle manifests, diagnostic error codes, dependency closure behavior, and bundled-skills.json.",
+      "parent": "CLI Reference",
+      "page_notes": [
+        {
+          "content": "Document current plugin validation/build behavior from packages/agentpack/src/lib/plugins.js and the integration tests. Keep plugin-local skills and packaged skill dependencies distinct."
+        }
+      ]
+    },
+    {
+      "title": "Auth Commands",
+      "purpose": "Reference for agentpack auth subcommands: login, logout, status, and verify. Cover GitHub Packages authentication flow, credential storage, repo-local .npmrc wiring, fallback behavior, and the auth-probe verification package.",
+      "parent": "CLI Reference",
+      "page_notes": [
+        {
+          "content": "Prefer packages/agentpack/src/application/auth and related infrastructure modules as the source of truth. Include current GitHub Packages fallback behavior verified by tests."
+        }
+      ]
+    },
+    {
+      "title": "Core Domain Model",
+      "purpose": "Overview of the internal domain layer: skill model, skill graph, provenance tracking, package/export catalogs, and plugin definitions. Link to child pages for each major subsystem.",
+      "page_notes": [
+        {
+          "content": "This page should explain package-level exports and skill-level identity clearly. A package may export multiple skills."
+        }
+      ]
+    },
+    {
+      "title": "Skill Model and Frontmatter Parsing",
+      "purpose": "Deep dive into SKILL.md structure, YAML frontmatter schema, the parser in skill-model.js, canonical skill requirement format, wrapper metadata where present, and how package metadata is normalized.",
+      "parent": "Core Domain Model",
+      "page_notes": [
+        {
+          "content": "Document the current parser behavior from packages/agentpack/src/domain/skills/skill-model.js rather than older README assumptions."
+        }
+      ]
+    },
+    {
+      "title": "Skill Graph and Status Propagation",
+      "purpose": "Explains the dependency graph data structure, how nodes are built from package exports, and the stale/affected/current status propagation algorithm, including resolveDependencyClosure and buildSkillStatusMap.",
+      "parent": "Core Domain Model",
+      "page_notes": [
+        {
+          "content": "Graph nodes should reflect exported skills, including multi-skill packages and cross-package requirements."
+        }
+      ]
+    },
+    {
+      "title": "Skill Provenance and Build State",
+      "purpose": "Covers source file hashing, build-state.json structure, stale detection, and the build-state repository. Explain what is recorded for authored packages and how provenance is surfaced in inspect, validate, and workbench flows.",
+      "parent": "Core Domain Model",
+      "page_notes": [
+        {
+          "content": "Use the current .agentpack/build-state.json behavior from code and tests. Avoid outdated assumptions about one skill per package."
+        }
+      ]
+    },
+    {
+      "title": "Skill Catalog and Target Resolution",
+      "purpose": "Explains how agentpack discovers authored and installed skill packages, builds the package/export catalog, and resolves a user-supplied target such as a path, package name, package directory, or export reference to a concrete skill.",
+      "parent": "Core Domain Model",
+      "page_notes": [
+        {
+          "content": "Emphasize that target resolution must support authored multi-skill packages declared through package.json agentpack.skills. Cover package directories, skill directories, SKILL.md paths, package names, and ambiguity handling."
+        }
+      ]
+    },
+    {
+      "title": "Authoring and Validating Skills",
+      "purpose": "Step-by-step guide to creating a packaged skill: writing SKILL.md frontmatter, declaring sources and requires, defining exports in package.json, running skills validate, syncing managed dependencies, and interpreting validation errors.",
+      "page_notes": [
+        {
+          "content": "Document both single-skill and multi-skill authoring patterns. Validation should be described in terms of exported skills declared by package metadata, not only co-located package.json and SKILL.md layouts."
+        }
+      ]
+    },
+    {
+      "title": "Local Development with skills dev",
+      "purpose": "Covers the skills dev command, dev-session.json lifecycle, symlink materialization into .claude/skills and .agents/skills, the file watcher, --no-sync behavior, crash recovery, cleanup, and skills unlink.",
+      "page_notes": [
+        {
+          "content": "Describe only behavior verified in the current code and tests. This area still has active open issues around some multi-skill package and workbench flows, so distinguish shipped behavior from known gaps where needed."
+        }
+      ]
+    },
+    {
+      "title": "Installing and Managing Skills",
+      "purpose": "Covers skills install from local paths and registries, materialization of exported skills, install-state.json tracking, direct vs transitive dependencies, skills status health checks, skills env, skills missing, and uninstall/orphan cleanup.",
+      "page_notes": [
+        {
+          "content": "Document installed packages in terms of exported skills, not just package roots. Cover multi-skill package materialization, env output, status and missing checks, symlink reconciliation, and GitHub Packages auth fallback behavior."
+        }
+      ]
+    },
+    {
+      "title": "Publishing and Distribution",
+      "purpose": "Explains how to publish packaged skills, registry expectations, package metadata requirements, workspace and package boundaries, and consumer install flows.",
+      "page_notes": [
+        {
+          "content": "Document publishing based on the current workspace layout. Prefer packages/agentpack/package.json and current release workflow assumptions over stale root-level command examples."
+        }
+      ]
+    },
+    {
+      "title": "Plugin System",
+      "purpose": "Overview of the plugin architecture: what a plugin is, how it bundles skills, how packaged dependencies are vendored, and how the plugin inspect, validate, and build pipeline fits together. Link to child pages for structure and build details.",
+      "page_notes": [
+        {
+          "content": "Keep the distinction clear between packaged skills, plugin-local skills, and bundled output artifacts."
+        }
+      ]
+    },
+    {
+      "title": "Plugin Structure and Validation",
+      "purpose": "Details the required plugin directory layout, validation rules, diagnostic error codes, dependency expectations, and structured next-step guidance.",
+      "parent": "Plugin System",
+      "page_notes": [
+        {
+          "content": "Use current code paths and tests for plugin diagnostics. Do not invent undocumented plugin metadata fields."
+        }
+      ]
+    },
+    {
+      "title": "Plugin Build Process",
+      "purpose": "Explains how plugin build works: resolving dependency closure, vendoring packaged skills, generating bundled-skills.json, and watch and dev behavior for plugin workflows.",
+      "parent": "Plugin System",
+      "page_notes": [
+        {
+          "content": "Describe packaged skill vendoring and output layout from the current implementation. Note the esbuild-free runtime constraint where relevant."
+        }
+      ]
+    },
+    {
+      "title": "Skill Dev Workbench Dashboard",
+      "purpose": "Overview of the browser-based development workbench: what it shows, how it is launched, and how the server and React frontend interact. Link to child pages for the server and the UI.",
+      "page_notes": [
+        {
+          "content": "This area has active open issues. Prefer current code plus tests over aspirational documentation, and call out known limitations where the implementation is still in flux."
+        }
+      ]
+    },
+    {
+      "title": "Workbench Server and Model API",
+      "purpose": "Covers skill-dev-workbench-server.js HTTP server, the model and action endpoints, the workbench model builders, watcher integration, and runtime constraints.",
+      "parent": "Skill Dev Workbench Dashboard",
+      "page_notes": [
+        {
+          "content": "Document endpoint behavior from the current implementation in packages/agentpack/src/infrastructure/runtime and packages/agentpack/src/application/skills. Be careful around multi-skill package handling because there are still open issues in this area."
+        }
+      ]
+    },
+    {
+      "title": "Dashboard React Frontend",
+      "purpose": "Covers the React and D3 dashboard UI: component structure, graph rendering, inspector and actions, fetch layer, router, and dashboard build process.",
+      "parent": "Skill Dev Workbench Dashboard",
+      "page_notes": [
+        {
+          "content": "Describe current UI behavior and note known readability and interaction gaps rather than assuming ideal graph behavior."
+        }
+      ]
+    },
+    {
+      "title": "State Files Reference",
+      "purpose": "Documents every .agentpack state file: install-state.json, build-state.json, dev-session.json, catalog.json, and config.json. Cover schemas, lifecycle, what is committed vs gitignored, and how the files map to runtime behavior.",
+      "page_notes": [
+        {
+          "content": "Use the current filenames exactly. The install tracking file is install-state.json, not install.json."
+        }
+      ]
+    },
+    {
+      "title": "Registry and Auth Infrastructure",
+      "purpose": "Covers registry resolution hierarchy, repo and user config sources, credential storage, user-config-repository, user-credentials-repository, user-npmrc-repository, and registry resolution and auth fallback behavior.",
+      "page_notes": [
+        {
+          "content": "Prefer the current auth and registry modules under packages/agentpack/src/domain/auth and infrastructure/fs. Include GitHub Packages-specific behavior from the current tests."
+        }
+      ]
+    },
+    {
+      "title": "Materialization and Symlink Management",
+      "purpose": "Deep dive into materialize-skills.js: creating exported-skill links, removing links, rebuilding install state, .claude/skills and .agents/skills targets, and reconciliation after crashes or interrupted installs.",
+      "page_notes": [
+        {
+          "content": "Document that multi-skill packages materialize exported skill entries as discoverable runtime links rather than assuming a single root SKILL.md. Include reconciliation of existing symlinks and install-state rebuild behavior."
+        }
+      ]
+    },
+    {
+      "title": "Formal Verification with TLA+",
+      "purpose": "Overview of the TLA+ models in tla, why they exist, which runtime guarantees they target, and how to run TLC. Link to child pages for each model.",
+      "page_notes": [
+        {
+          "content": "Tie the models back to the current implementation and state files, not older names or layouts."
+        }
+      ]
+    },
+    {
+      "title": "SkillStatus Model",
+      "purpose": "Documents the SkillStatus.tla specification: variables, actions, invariants, and how it maps to current status propagation in the implementation.",
+      "parent": "Formal Verification with TLA+",
+      "page_notes": [
+        {
+          "content": "Map terminology carefully to current skill graph and status code."
+        }
+      ]
+    },
+    {
+      "title": "InstallFlow Model",
+      "purpose": "Documents the InstallFlow.tla specification: install phases, crash scenarios, filesystem and install-state invariants, and mapping to current install and materialization behavior.",
+      "parent": "Formal Verification with TLA+",
+      "page_notes": [
+        {
+          "content": "Use install-state.json terminology consistently."
+        }
+      ]
+    },
+    {
+      "title": "DevSession Model",
+      "purpose": "Documents the DevSession.tla specification: at-most-one-session invariant, PID and liveness checks, crash-recovery cleanup of orphaned links, and mapping to dev-session handling in the implementation.",
+      "parent": "Formal Verification with TLA+",
+      "page_notes": [
+        {
+          "content": "Tie this to current dev-session.json behavior under packages/agentpack."
+        }
+      ]
+    },
+    {
+      "title": "Testing Infrastructure",
+      "purpose": "Overview of the test suite: Node.js native test runner, integration-test fixtures, fixture factories, sandbox and live-validation scripts, and how tests define the behavioral contract for agentpack.",
+      "page_notes": [
+        {
+          "content": "This repo's integration tests are a key source of truth for current behavior. Highlight test/integration as the behavioral contract, especially for multi-skill packages, install and env behavior, materialization, and auth fallback."
+        }
+      ]
+    }
+  ]
+}

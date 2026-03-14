@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveRegistryConfig } from '../../src/domain/auth/registry-resolution.js';
+import { resolveRegistryConfig } from '../../packages/agentpack/src/domain/auth/registry-resolution.js';
 
 describe('registry resolution', () => {
   it('prefers repo-local npmrc over user npmrc and defaults', () => {

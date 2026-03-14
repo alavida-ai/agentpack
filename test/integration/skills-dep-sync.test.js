@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { addPackagedSkill, createTempRepo } from './fixtures.js';
-import { syncSkillDependencies } from '../../src/lib/skills.js';
+import { syncSkillDependencies } from '../../packages/agentpack/src/lib/skills.js';
 
 describe('agentpack skill dependency sync', () => {
   it('adds missing managed requires with a "*" range', () => {

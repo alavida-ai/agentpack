@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildSkillWorkbenchModel } from '../../src/application/skills/build-skill-workbench-model.js';
+import { buildSkillWorkbenchModel } from '../../packages/agentpack/src/application/skills/build-skill-workbench-model.js';
 
 describe('buildSkillWorkbenchModel', () => {
   it('builds a focused graph for one selected skill', () => {

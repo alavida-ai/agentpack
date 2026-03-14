@@ -7,7 +7,7 @@ import {
   getUserConfigPath,
   readUserConfig,
   writeUserConfig,
-} from '../../src/infrastructure/fs/user-config-repository.js';
+} from '../../packages/agentpack/src/infrastructure/fs/user-config-repository.js';
 
 const cleanupPaths = [];
 

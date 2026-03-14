@@ -8,7 +8,7 @@ import {
   readUserNpmrc,
   removeManagedNpmrcEntries,
   writeManagedNpmrcEntries,
-} from '../../src/infrastructure/fs/user-npmrc-repository.js';
+} from '../../packages/agentpack/src/infrastructure/fs/user-npmrc-repository.js';
 
 const cleanupPaths = [];
 

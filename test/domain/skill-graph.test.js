@@ -4,7 +4,7 @@ import {
   buildReverseDependencies,
   buildSkillStatusMap,
   resolveDependencyClosure,
-} from '../../src/domain/skills/skill-graph.js';
+} from '../../packages/agentpack/src/domain/skills/skill-graph.js';
 
 describe('skill graph', () => {
   it('builds reverse dependencies for a graph', () => {

@@ -5,12 +5,13 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
-const outfile = resolve(root, 'src', 'dashboard', 'dist', 'dashboard.js');
+const packageRoot = resolve(root, 'packages', 'agentpack');
+const outfile = resolve(packageRoot, 'src', 'dashboard', 'dist', 'dashboard.js');
 
 mkdirSync(dirname(outfile), { recursive: true });
 
 await build({
-  entryPoints: [resolve(root, 'src', 'dashboard', 'main.jsx')],
+  entryPoints: [resolve(packageRoot, 'src', 'dashboard', 'main.jsx')],
   bundle: true,
   format: 'esm',
   outfile,

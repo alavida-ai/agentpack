@@ -1,0 +1,56 @@
+{
+  "name": "@alavida/agentpack",
+  "version": "0.1.7",
+  "description": "Package-backed skills lifecycle CLI for agent skills and plugins",
+  "type": "module",
+  "bin": {
+    "agentpack": "bin/agentpack.js",
+    "intent": "bin/intent.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "skills",
+    "!skills/_artifacts",
+    "README.md"
+  ],
+  "scripts": {
+    "intent:validate": "npx @tanstack/intent validate",
+    "build:dashboard": "node ../../scripts/build-dashboard.mjs"
+  },
+  "keywords": [
+    "agentpack",
+    "skills",
+    "cli",
+    "alavida"
+  ],
+  "author": "Alavida AI",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alavida-ai/agentpack.git",
+    "directory": "packages/agentpack"
+  },
+  "homepage": "https://docs.alavida.ai",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "intent": {
+    "version": 1,
+    "repo": "alavida-ai/agentpack",
+    "docs": "https://github.com/alavida-ai/agentpack/tree/main/docs"
+  },
+  "dependencies": {
+    "commander": "^13.0.0",
+    "d3": "^7.9.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@tanstack/intent": "^0.0.14"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

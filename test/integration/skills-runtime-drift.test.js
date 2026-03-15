@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import {
   createInstalledMultiSkillFixture,
   readPathState,
+  readMaterializationState,
   runCLI,
   runCLIJson,
 } from './fixtures.js';
@@ -49,6 +50,49 @@ describe('agentpack skills runtime drift', () => {
     }
   });
 
+  it('reads recorded runtime ownership from materialization-state', () => {
+    const fixture = createInstalledMultiSkillFixture('skills-runtime-drift-materialization-state');
+
+    try {
+      const install = runCLI(['skills', 'install', fixture.target], { cwd: fixture.consumer.root });
+      assert.equal(install.exitCode, 0, install.stderr);
+
+      const state = readMaterializationState(fixture.consumer.root);
+      const protoPersona = state.adapters.claude.find((entry) => entry.runtimeName === 'prd-development:proto-persona');
+      protoPersona.target = '.claude/skills/prd-development:proto-persona-renamed';
+      writeDevSession(
+        fixture.consumer.root,
+        JSON.parse(JSON.stringify({
+          version: 1,
+          session_id: 'ignored-dev',
+          status: 'stale',
+          pid: process.pid,
+          repo_root: fixture.consumer.root,
+          target: 'skills/ignored',
+          root_skill: null,
+          linked_skills: [],
+          links: [],
+          started_at: '2026-03-13T12:00:00.000Z',
+          updated_at: '2026-03-13T12:00:00.000Z',
+        }))
+      );
+      writeFileSync(
+        join(fixture.consumer.root, '.agentpack', 'materialization-state.json'),
+        JSON.stringify(state, null, 2) + '\n'
+      );
+
+      const result = runCLIJson(['skills', 'status'], { cwd: fixture.consumer.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.equal(result.json.runtimeDriftCount, 1);
+      assert.equal(result.json.runtimeDrift[0].packageName, '@alavida-ai/prd-development');
+      assert.equal(result.json.runtimeDrift[0].issues[0].target, '.claude/skills/prd-development:proto-persona-renamed');
+      assert.equal(result.json.runtimeDrift[0].issues[0].code, 'missing_path');
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
   it('keeps env declarative when runtime entries drift', () => {
     const fixture = createInstalledMultiSkillFixture('skills-runtime-drift-env');
 
@@ -67,6 +111,30 @@ describe('agentpack skills runtime drift', () => {
       assert.match(env.stdout, /Installed Skills: 2/);
       assert.match(env.stdout, /skills: prd-development, problem-statement, proto-persona/);
       assert.match(env.stdout, /materialized: \.claude\/skills\/prd-development:proto-persona \(symlink\)/);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  it('renders env materializations from materialization-state', () => {
+    const fixture = createInstalledMultiSkillFixture('skills-runtime-drift-env-materialization-state');
+
+    try {
+      const install = runCLI(['skills', 'install', fixture.target], { cwd: fixture.consumer.root });
+      assert.equal(install.exitCode, 0, install.stderr);
+
+      const state = readMaterializationState(fixture.consumer.root);
+      const protoPersona = state.adapters.claude.find((entry) => entry.runtimeName === 'prd-development:proto-persona');
+      protoPersona.target = '.claude/skills/prd-development:proto-persona-renamed';
+      writeFileSync(
+        join(fixture.consumer.root, '.agentpack', 'materialization-state.json'),
+        JSON.stringify(state, null, 2) + '\n'
+      );
+
+      const env = runCLI(['skills', 'env'], { cwd: fixture.consumer.root });
+
+      assert.equal(env.exitCode, 0, env.stderr);
+      assert.match(env.stdout, /materialized: \.claude\/skills\/prd-development:proto-persona-renamed \(symlink\)/);
     } finally {
       fixture.cleanup();
     }

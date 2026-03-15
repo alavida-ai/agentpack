@@ -1,6 +1,7 @@
 import { existsSync, lstatSync, mkdirSync, rmSync, symlinkSync, unlinkSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { writeInstallState } from '../fs/install-state-repository.js';
+import { writeMaterializationState } from '../fs/materialization-state-repository.js';
 
 function ensureDir(pathValue) {
   mkdirSync(pathValue, { recursive: true });
@@ -94,6 +95,48 @@ function buildRuntimeName(packageName, exportedSkills, entry) {
   return `${namespace}:${entry.name}`;
 }
 
+function buildMaterializationState(installs) {
+  const adapters = {
+    claude: [],
+    agents: [],
+  };
+
+  for (const [packageName, install] of Object.entries(installs)) {
+    for (const skill of install.skills || []) {
+      for (const materialization of skill.materializations || []) {
+        if (materialization.target.startsWith('.claude/')) {
+          adapters.claude.push({
+            packageName,
+            skillName: skill.name,
+            runtimeName: skill.runtime_name,
+            sourceSkillPath: skill.source_skill_path,
+            sourceSkillFile: skill.source_skill_file,
+            ...materialization,
+          });
+          continue;
+        }
+
+        if (materialization.target.startsWith('.agents/')) {
+          adapters.agents.push({
+            packageName,
+            skillName: skill.name,
+            runtimeName: skill.runtime_name,
+            sourceSkillPath: skill.source_skill_path,
+            sourceSkillFile: skill.source_skill_file,
+            ...materialization,
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    version: 1,
+    generated_at: new Date().toISOString(),
+    adapters,
+  };
+}
+
 export function buildInstallRecord(repoRoot, packageDir, directTargetMap, {
   readPackageMetadata,
   readInstalledSkillExports,
@@ -177,5 +220,6 @@ export function rebuildInstallState(repoRoot, directTargetMap, {
 
   const state = { version: 1, installs };
   writeInstallState(repoRoot, state);
+  writeMaterializationState(repoRoot, buildMaterializationState(installs));
   return state;
 }

@@ -3,8 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  createAuthoredMultiSkillFixture,
-  createRepoFromFixture,
+  createScenario,
   createTempRepo,
   createValidateFixture,
   runCLI,
@@ -31,54 +30,6 @@ describe('agentpack skills validate', () => {
     }
   });
 
-  it('validates all authored packaged skills in a repo', () => {
-    const repo = createRepoFromFixture('monorepo', 'skills-validate-all');
-
-    try {
-      const result = runCLI(['skills', 'validate'], { cwd: repo.root });
-
-      assert.equal(result.exitCode, 0, result.stderr);
-      assert.match(result.stdout, /Validated Skills: 3/);
-      assert.match(result.stdout, /Valid Skills: 3/);
-      assert.match(result.stdout, /Invalid Skills: 0/);
-    } finally {
-      repo.cleanup();
-    }
-  });
-
-  it('validates all exports in an authored multi-skill package when targeting the package directory', () => {
-    const repo = createAuthoredMultiSkillFixture('skills-validate-multi-skill-package');
-
-    try {
-      const result = runCLIJson(['skills', 'validate', 'workbenches/planning-kit'], { cwd: repo.root });
-
-      assert.equal(result.exitCode, 0, result.stderr);
-      assert.equal(result.json.valid, true);
-      assert.equal(result.json.count, 2);
-      assert.deepEqual(
-        result.json.skills.map((skill) => skill.name).sort(),
-        ['kickoff', 'recap']
-      );
-    } finally {
-      repo.cleanup();
-    }
-  });
-
-  it('discovers authored multi-skill packages in no-args validate mode', () => {
-    const repo = createAuthoredMultiSkillFixture('skills-validate-multi-skill-all');
-
-    try {
-      const result = runCLI(['skills', 'validate'], { cwd: repo.root });
-
-      assert.equal(result.exitCode, 0, result.stderr);
-      assert.match(result.stdout, /Validated Skills: 2/);
-      assert.match(result.stdout, /Valid Skills: 2/);
-      assert.match(result.stdout, /Invalid Skills: 0/);
-    } finally {
-      repo.cleanup();
-    }
-  });
-
   it('returns structured release guidance for a valid packaged skill', () => {
     const repo = createValidateFixture();
 
@@ -98,6 +49,170 @@ describe('agentpack skills validate', () => {
     }
   });
 
+  it('validates all authored compiler-mode skills in a repo without writing build-state', () => {
+    const repo = createScenario({
+      name: 'skills-validate-all-compiler-mode',
+      sources: {
+        'domains/product/knowledge/prd-principles.md': '# Principles\n',
+        'domains/product/knowledge/research-principles.md': '# Research\n',
+      },
+      packages: [
+        {
+          relPath: 'skills/prd-agent',
+          packageJson: {
+            name: '@alavida/prd-agent',
+            version: '1.0.0',
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida-ai/agentpack.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            files: ['SKILL.md'],
+            dependencies: {
+              '@alavida/prd-development': '^1.0.0',
+            },
+          },
+          skillMd: `---
+name: prd-agent
+description: Create strong PRDs.
+---
+
+\`\`\`agentpack
+source principles = "domains/product/knowledge/prd-principles.md"
+\`\`\`
+
+Ground this in [PRD principles](source:principles){context="primary source material"}.
+`,
+        },
+        {
+          relPath: 'skills/research-agent',
+          packageJson: {
+            name: '@alavida/research-agent',
+            version: '1.0.0',
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida-ai/agentpack.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            files: ['SKILL.md'],
+            dependencies: {
+              '@alavida/prd-development': '^1.0.0',
+            },
+          },
+          skillMd: `---
+name: research-agent
+description: Perform research.
+---
+
+\`\`\`agentpack
+source principles = "domains/product/knowledge/research-principles.md"
+\`\`\`
+
+Ground this in [research principles](source:principles){context="primary source material"}.
+`,
+        },
+      ],
+    });
+
+    try {
+      const result = runCLI(['skills', 'validate'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.match(result.stdout, /Validated Skills: 2/);
+      assert.match(result.stdout, /Valid Skills: 2/);
+      assert.match(result.stdout, /Invalid Skills: 0/);
+      assert.equal(existsSync(join(repo.root, '.agentpack', 'build-state.json')), false);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('flags legacy authored skills during no-target validate', () => {
+    const repo = createScenario({
+      name: 'skills-validate-mixed-authoring',
+      sources: {
+        'domains/product/knowledge/prd-principles.md': '# Principles\n',
+        'domains/value/knowledge/selling-points.md': '# Selling Points\n',
+      },
+      packages: [
+        {
+          relPath: 'skills/prd-agent',
+          packageJson: {
+            name: '@alavida/prd-agent',
+            version: '1.0.0',
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida-ai/agentpack.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            files: ['SKILL.md'],
+            dependencies: {
+              '@alavida/prd-development': '^1.0.0',
+            },
+          },
+          skillMd: `---
+name: prd-agent
+description: Create strong PRDs.
+---
+
+\`\`\`agentpack
+source principles = "domains/product/knowledge/prd-principles.md"
+\`\`\`
+
+Ground this in [PRD principles](source:principles){context="primary source material"}.
+`,
+        },
+        {
+          relPath: 'skills/value-copywriting',
+          packageJson: {
+            name: '@alavida/value-copywriting',
+            version: '1.0.0',
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida-ai/agentpack.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            files: ['SKILL.md'],
+          },
+          skillMd: `---
+name: value-copywriting
+description: Legacy authored copywriting skill.
+metadata:
+  sources:
+    - domains/value/knowledge/selling-points.md
+requires: []
+---
+
+# Value Copywriting
+`,
+        },
+      ],
+    });
+
+    try {
+      const result = runCLIJson(['skills', 'validate'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 2);
+      assert.equal(result.json.valid, false);
+      assert.equal(result.json.count, 2);
+      assert.equal(result.json.invalidCount, 1);
+      assert.equal(
+        result.json.skills.find((skill) => skill.packageName === '@alavida/value-copywriting').issues[0].code,
+        'legacy_authoring_not_supported'
+      );
+    } finally {
+      repo.cleanup();
+    }
+  });
+
   it('fails when a declared source file does not exist', () => {
     const repo = createValidateFixture();
 
@@ -108,318 +223,8 @@ describe('agentpack skills validate', () => {
 
       assert.equal(result.exitCode, 2);
       assert.match(result.stdout, /Status: invalid/);
-      assert.match(result.stdout, /missing_source/);
+      assert.match(result.stdout, /bound_source_not_found/);
       assert.match(result.stdout, /domains\/value\/knowledge\/selling-points\.md/);
-    } finally {
-      repo.cleanup();
-    }
-  });
-
-  it('auto-syncs managed requires into package dependencies before validation', () => {
-    const repo = createValidateFixture();
-
-    try {
-      writeFileSync(
-        join(repo.root, 'domains', 'value', 'skills', 'copywriting', 'package.json'),
-        JSON.stringify(
-          {
-            name: '@alavida/value-copywriting',
-            version: '1.2.0',
-            repository: {
-              type: 'git',
-              url: 'git+https://github.com/alavida/knowledge-base.git',
-            },
-            publishConfig: {
-              registry: 'https://npm.pkg.github.com',
-            },
-            files: ['SKILL.md'],
-            dependencies: {},
-          },
-          null,
-          2
-        ) + '\n'
-      );
-
-      const result = runCLIJson(
-        ['skills', 'validate', 'domains/value/skills/copywriting'],
-        { cwd: repo.root }
-      );
-
-      const packageJson = JSON.parse(
-        readFileSync(join(repo.root, 'domains', 'value', 'skills', 'copywriting', 'package.json'), 'utf-8')
-      );
-
-      assert.equal(result.exitCode, 0);
-      assert.equal(result.json.valid, true);
-      assert.equal(result.json.packageName, '@alavida/value-copywriting');
-      assert.equal(result.json.issues.length, 0);
-      assert.equal(packageJson.dependencies['@alavida/methodology-gary-provost'], '*');
-    } finally {
-      repo.cleanup();
-    }
-  });
-
-  it('syncs managed dependencies from metadata.requires before validation', () => {
-    const repo = createTempRepo('skills-validate-metadata-requires');
-
-    try {
-      mkdirSync(join(repo.root, 'domains', 'operations', 'knowledge'), { recursive: true });
-      mkdirSync(
-        join(repo.root, 'domains', 'operations', 'workbenches', 'creator', 'execution-ops', 'skills', 'weekly-planner'),
-        { recursive: true }
-      );
-      writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'plan.yaml'), 'goal: ship\n');
-      writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'workspace-lifecycle.md'), '# Lifecycle\n');
-      writeFileSync(
-        join(repo.root, 'domains', 'operations', 'workbenches', 'creator', 'execution-ops', 'skills', 'weekly-planner', 'SKILL.md'),
-        `---
-name: weekly-planner
-description: Plan the upcoming week against the current plan.
-metadata:
-  sources:
-    - domains/operations/knowledge/plan.yaml
-    - domains/operations/knowledge/workspace-lifecycle.md
-  requires:
-    - "@alavida-ai/agonda-prioritisation"
----
-
-# Weekly Planner
-`
-      );
-      writeFileSync(
-        join(repo.root, 'domains', 'operations', 'workbenches', 'creator', 'execution-ops', 'skills', 'weekly-planner', 'package.json'),
-        JSON.stringify(
-          {
-            name: '@alavida-ai/weekly-planner',
-            version: '1.0.0',
-            repository: {
-              type: 'git',
-              url: 'git+https://github.com/alavida-ai/alavida.git',
-            },
-            publishConfig: {
-              registry: 'https://npm.pkg.github.com',
-            },
-            files: ['SKILL.md'],
-            dependencies: {},
-          },
-          null,
-          2
-        ) + '\n'
-      );
-
-      const result = runCLIJson(
-        ['skills', 'validate', 'domains/operations/workbenches/creator/execution-ops/skills/weekly-planner'],
-        { cwd: repo.root }
-      );
-
-      const packageJson = JSON.parse(
-        readFileSync(
-          join(repo.root, 'domains', 'operations', 'workbenches', 'creator', 'execution-ops', 'skills', 'weekly-planner', 'package.json'),
-          'utf-8'
-        )
-      );
-
-      assert.equal(result.exitCode, 0, result.stderr);
-      assert.equal(result.json.valid, true);
-      assert.equal(packageJson.dependencies['@alavida-ai/agonda-prioritisation'], '*');
-    } finally {
-      repo.cleanup();
-    }
-  });
-
-  it('records build-state for valid source-backed skills so stale detection works', () => {
-    const repo = createTempRepo('skills-validate-build-state');
-
-    try {
-      mkdirSync(join(repo.root, '.agentpack'), { recursive: true });
-      mkdirSync(join(repo.root, 'domains', 'operations', 'knowledge'), { recursive: true });
-      mkdirSync(join(repo.root, 'domains', 'operations', 'skills', 'agonda-prioritisation'), { recursive: true });
-
-      writeFileSync(
-        join(repo.root, '.agentpack', 'build-state.json'),
-        JSON.stringify(
-          {
-            version: 1,
-            skills: {
-              '@alavida-ai/existing-skill': {
-                package_version: '9.9.9',
-                skill_path: 'domains/existing/skills/existing-skill',
-                skill_file: 'domains/existing/skills/existing-skill/SKILL.md',
-                sources: {
-                  'domains/existing/knowledge/source.md': {
-                    hash: 'sha256:existing',
-                  },
-                },
-                requires: ['@alavida-ai/other-skill'],
-              },
-            },
-          },
-          null,
-          2
-        ) + '\n'
-      );
-
-      writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'plan.yaml'), 'goal: ship\n');
-      writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'execution-methodology.md'), '# Execution\n');
-
-      writeFileSync(
-        join(repo.root, 'domains', 'operations', 'skills', 'agonda-prioritisation', 'SKILL.md'),
-        `---
-name: agonda-prioritisation
-description: Check whether work is aligned with the current plan.
-metadata:
-  sources:
-    - domains/operations/knowledge/plan.yaml
-    - domains/operations/knowledge/execution-methodology.md
----
-
-# Agonda Prioritisation
-`
-      );
-
-      writeFileSync(
-        join(repo.root, 'domains', 'operations', 'skills', 'agonda-prioritisation', 'package.json'),
-        JSON.stringify(
-          {
-            name: '@alavida-ai/agonda-prioritisation',
-            version: '1.0.0',
-            repository: {
-              type: 'git',
-              url: 'git+https://github.com/alavida-ai/alavida.git',
-            },
-            publishConfig: {
-              registry: 'https://npm.pkg.github.com',
-            },
-            files: ['SKILL.md'],
-            dependencies: {},
-          },
-          null,
-          2
-        ) + '\n'
-      );
-
-      const validateResult = runCLIJson(
-        ['skills', 'validate', 'domains/operations/skills/agonda-prioritisation'],
-        { cwd: repo.root }
-      );
-
-      const buildStatePath = join(repo.root, '.agentpack', 'build-state.json');
-      const buildState = JSON.parse(readFileSync(buildStatePath, 'utf-8'));
-
-      assert.equal(validateResult.exitCode, 0, validateResult.stderr);
-      assert.equal(validateResult.json.valid, true);
-      assert.equal(existsSync(buildStatePath), true);
-      assert.equal(
-        buildState.skills['@alavida-ai/agonda-prioritisation'].package_version,
-        '1.0.0'
-      );
-      assert.equal(
-        buildState.skills['@alavida-ai/agonda-prioritisation'].skill_path,
-        'domains/operations/skills/agonda-prioritisation'
-      );
-      assert.equal(
-        buildState.skills['@alavida-ai/agonda-prioritisation'].skill_file,
-        'domains/operations/skills/agonda-prioritisation/SKILL.md'
-      );
-      assert.ok(
-        buildState.skills['@alavida-ai/agonda-prioritisation'].sources['domains/operations/knowledge/plan.yaml'].hash.startsWith('sha256:')
-      );
-      assert.deepEqual(
-        buildState.skills['@alavida-ai/agonda-prioritisation'].requires,
-        []
-      );
-      assert.equal(
-        buildState.skills['@alavida-ai/existing-skill'].package_version,
-        '9.9.9'
-      );
-
-      writeFileSync(join(repo.root, 'domains', 'operations', 'knowledge', 'plan.yaml'), 'goal: changed\n');
-
-      const staleResult = runCLI(['skills', 'stale'], { cwd: repo.root });
-      assert.equal(staleResult.exitCode, 0, staleResult.stderr);
-      assert.match(staleResult.stdout, /Stale Skills: 1/);
-      assert.match(staleResult.stdout, /@alavida-ai\/agonda-prioritisation/);
-    } finally {
-      repo.cleanup();
-    }
-  });
-
-  it('prunes removed authored build-state entries on no-args validate', () => {
-    const repo = createTempRepo('skills-validate-prune-removed');
-
-    try {
-      mkdirSync(join(repo.root, '.agentpack'), { recursive: true });
-      mkdirSync(join(repo.root, 'skills', 'current-skill'), { recursive: true });
-
-      writeFileSync(
-        join(repo.root, '.agentpack', 'build-state.json'),
-        JSON.stringify(
-          {
-            version: 1,
-            skills: {
-              '@alavida-ai/current-skill': {
-                package_version: '0.0.1',
-                skill_path: 'skills/current-skill',
-                skill_file: 'skills/current-skill/SKILL.md',
-                sources: {},
-                requires: [],
-              },
-              '@alavida-ai/removed-skill': {
-                package_version: '0.0.1',
-                skill_path: 'skills/removed-skill',
-                skill_file: 'skills/removed-skill/SKILL.md',
-                sources: {},
-                requires: [],
-              },
-            },
-          },
-          null,
-          2
-        ) + '\n'
-      );
-
-      writeFileSync(
-        join(repo.root, 'skills', 'current-skill', 'SKILL.md'),
-        `---
-name: current-skill
-description: Still present.
-metadata:
-  sources: []
-requires: []
----
-
-# Current Skill
-`
-      );
-
-      writeFileSync(
-        join(repo.root, 'skills', 'current-skill', 'package.json'),
-        JSON.stringify(
-          {
-            name: '@alavida-ai/current-skill',
-            version: '1.0.0',
-            repository: {
-              type: 'git',
-              url: 'git+https://github.com/alavida-ai/agentpack.git',
-            },
-            publishConfig: {
-              registry: 'https://npm.pkg.github.com',
-            },
-            files: ['SKILL.md'],
-            dependencies: {},
-          },
-          null,
-          2
-        ) + '\n'
-      );
-
-      const result = runCLI(['skills', 'validate'], { cwd: repo.root });
-      const buildState = JSON.parse(readFileSync(join(repo.root, '.agentpack', 'build-state.json'), 'utf-8'));
-
-      assert.equal(result.exitCode, 0, result.stderr);
-      assert.ok(buildState.skills['@alavida-ai/current-skill']);
-      assert.equal(buildState.skills['@alavida-ai/current-skill'].package_version, '1.0.0');
-      assert.equal(buildState.skills['@alavida-ai/removed-skill'], undefined);
     } finally {
       repo.cleanup();
     }
@@ -501,25 +306,46 @@ requires: []
     }
   });
 
-  it('fails when metadata.status is not a supported lifecycle value', () => {
-    const repo = createValidateFixture();
+  it('rejects legacy target authoring without an agentpack declaration block', () => {
+    const repo = createTempRepo('skills-validate-legacy-authoring');
 
     try {
+      mkdirSync(join(repo.root, 'domains', 'value', 'knowledge'), { recursive: true });
+      mkdirSync(join(repo.root, 'domains', 'value', 'skills', 'copywriting'), { recursive: true });
+      writeFileSync(join(repo.root, 'domains', 'value', 'knowledge', 'selling-points.md'), '# Selling Points\n');
       writeFileSync(
         join(repo.root, 'domains', 'value', 'skills', 'copywriting', 'SKILL.md'),
         `---
 name: value-copywriting
-description: Write copy aligned with Alavida's value messaging and tone.
+description: Write copy aligned with Alavida's value messaging.
 metadata:
   sources:
     - domains/value/knowledge/selling-points.md
-  status: active
-requires:
-  - @alavida/methodology-gary-provost
+requires: []
 ---
 
 # Value Copywriting
 `
+      );
+      writeFileSync(
+        join(repo.root, 'domains', 'value', 'skills', 'copywriting', 'package.json'),
+        JSON.stringify(
+          {
+            name: '@alavida/value-copywriting',
+            version: '1.2.0',
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida/knowledge-base.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            files: ['SKILL.md'],
+            dependencies: {},
+          },
+          null,
+          2
+        ) + '\n'
       );
 
       const result = runCLIJson(
@@ -529,42 +355,62 @@ requires:
 
       assert.equal(result.exitCode, 2);
       assert.equal(result.json.valid, false);
-      assert.equal(result.json.issues[0].code, 'invalid_skill_status');
+      assert.equal(result.json.issues[0].code, 'legacy_authoring_not_supported');
     } finally {
       repo.cleanup();
     }
   });
 
-  it('fails when metadata.replacement is not a package name', () => {
-    const repo = createValidateFixture();
-
-    try {
-      writeFileSync(
-        join(repo.root, 'domains', 'value', 'skills', 'copywriting', 'SKILL.md'),
-        `---
-name: value-copywriting
-description: Write copy aligned with Alavida's value messaging and tone.
-metadata:
-  sources:
-    - domains/value/knowledge/selling-points.md
-  status: deprecated
-  replacement: value-research
-requires:
-  - @alavida/methodology-gary-provost
+  it('validates a compiler-mode skill into compiled state without writing build-state', () => {
+    const repo = createScenario({
+      name: 'skills-validate-compiler-mode',
+      sources: {
+        'domains/product/knowledge/prd-principles.md': '# Principles\n',
+      },
+      packages: [
+        {
+          relPath: 'skills/prd-agent',
+          packageJson: {
+            name: '@alavida/prd-agent',
+            version: '1.0.0',
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida-ai/agentpack.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            files: ['SKILL.md'],
+            dependencies: {
+              '@alavida/prd-development': '^1.0.0',
+            },
+          },
+          skillMd: `---
+name: prd-agent
+description: Create strong PRDs.
 ---
 
-# Value Copywriting
-`
-      );
+\`\`\`agentpack
+import prd from skill "@alavida/prd-development"
+source principles = "domains/product/knowledge/prd-principles.md"
+\`\`\`
 
-      const result = runCLIJson(
-        ['skills', 'validate', 'domains/value/skills/copywriting'],
-        { cwd: repo.root }
-      );
+Use [the PRD method](skill:prd){context="for structuring and reviewing the PRD"}.
+Ground this in [our PRD principles](source:principles){context="primary source material"}.
+`,
+        },
+      ],
+    });
 
-      assert.equal(result.exitCode, 2);
-      assert.equal(result.json.valid, false);
-      assert.equal(result.json.issues[0].code, 'invalid_replacement');
+    try {
+      const result = runCLIJson(['skills', 'validate', 'skills/prd-agent'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr || result.stdout);
+      assert.equal(result.json.valid, true);
+      assert.equal(result.json.packageName, '@alavida/prd-agent');
+      assert.equal(result.json.skillFile, 'skills/prd-agent/SKILL.md');
+      assert.equal(existsSync(join(repo.root, '.agentpack', 'compiled.json')), true);
+      assert.equal(existsSync(join(repo.root, '.agentpack', 'build-state.json')), false);
     } finally {
       repo.cleanup();
     }

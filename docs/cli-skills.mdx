@@ -1,523 +1,75 @@
 ---
 title: "Skills Commands"
-description: "CLI reference for all agentpack skills subcommands"
+description: "CLI reference for the compiler-mode agentpack skills workflow."
 ---
 
-All `agentpack skills` commands are non-interactive and deterministic. They produce structured output suitable for both human reading and agent consumption.
-
-**Exit codes:**
-
-| Code | Meaning |
-|------|---------|
-| `0`  | Success |
-| `1`  | Operational failure (e.g., missing dependency, validation error) |
-| `2`  | Usage or validation error (e.g., bad arguments, unknown flag) |
-
----
-
-## Development
-
-Commands for authoring and testing exported skills locally.
-
-### `skills dev`
-
-Link a skill for local agent testing and launch the development dashboard.
-
-**Usage**
-
-```bash
-agentpack skills dev <target> [flags]
-```
-
-**Arguments**
-
-| Argument | Description |
-|----------|-------------|
-| `<target>` | Path to a package directory, exported skill directory, or `SKILL.md` file |
-
-**Flags**
-
-| Flag | Description |
-|------|-------------|
-| `--no-sync` | Skip syncing `requires` into `package.json` dependencies |
-| `--no-dashboard` | Run in CLI-only mode without launching the browser dashboard |
-
-**Example**
-
-```bash
-$ agentpack skills dev domains/value/packages/value-copywriting
-
-  Linked Skill: value-copywriting
-  Path:         domains/value/packages/value-copywriting/skills/value-copywriting
-  Linked Skills: 3
-  Linked:       .claude/skills/value-copywriting
-  Linked:       .claude/skills/research
-  Linked:       .claude/skills/editorial-principles
-  Synced Added: 1
-  Dashboard:    http://localhost:4800
-
-  Watching for changes...
-```
-
-<Note>
-  If your Claude Code or Codex session was already running before linking, start a fresh session so the runtime rescans `.claude/skills/` and `.agents/skills/`.
-</Note>
-
-<Tip>
-  Use `--no-dashboard` in CI or when you only need the link without the browser workbench:
-  ```bash
-agentpack skills dev domains/value/packages/value-copywriting --no-dashboard
-  ```
-</Tip>
-
----
-
-### `skills unlink`
-
-Remove a dev-linked skill from the local agent discovery paths.
-
-**Usage**
-
-```bash
-agentpack skills unlink <target>
-```
-
-**Arguments**
-
-| Argument | Description |
-|----------|-------------|
-| `<target>` | The exported skill name from SKILL.md frontmatter |
-
-**Example**
-
-```bash
-$ agentpack skills unlink value-copywriting
-
-  Unlinked:  .claude/skills/value-copywriting
-             .agents/skills/value-copywriting
-```
-
----
-
-## Validation
-
-Commands for checking skill structure, metadata, and freshness.
+## Core commands
 
 ### `skills validate`
-
-Validate skill structure and metadata for release readiness.
-
-**Usage**
 
 ```bash
 agentpack skills validate [target]
 ```
 
-**Arguments**
+Checks:
 
-| Argument | Description |
-|----------|-------------|
-| `[target]` | Path to a skill directory, `SKILL.md`, or package name. Omit to validate all authored skills in the repo. |
-
-**Checks performed:**
-
-- `package.json.agentpack.skills` exists and exported paths resolve
-- each exported `SKILL.md` parses successfully
-- `package.json` has `name` and `version`
-- All declared `metadata.sources` exist on disk
-- Every `requires` entry is canonical (`@scope/package:skill`) and cross-package references are backed by `package.json.dependencies`
-- If `package.json.files` exists, it includes the exported skill paths (for example `skills/`)
-
-**Example (single skill, passing)**
-
-```bash
-$ agentpack skills validate domains/value/packages/value-copywriting
-
-  Package: @acme/value-copywriting
-  Status:  valid
-
-  ✓ agentpack.skills exports are declared
-  ✓ exported SKILL.md files parse
-  ✓ package.json has name and version
-  ✓ 3 sources exist
-  ✓ canonical requires align with package dependencies
-  ✓ files includes exported skill paths
-```
-
-**Example (validation failure)**
-
-```bash
-$ agentpack skills validate domains/value/packages/value-copywriting
-
-  Package: @acme/value-copywriting
-  Status:  invalid
-
-  ✓ agentpack.skills exports are declared
-  ✓ package.json has name and version
-  ✗ source not found: domains/value/knowledge/selling-points.md
-  ✓ canonical requires align with package dependencies
-```
-
-<Note>
-  Successful validation updates `.agentpack/build-state.json`. Commit that file so `skills stale` works across CI, teammates, and fresh clones.
-</Note>
-
----
+- compiler-mode `SKILL.md` structure
+- source bindings exist
+- skill imports align with package dependencies
+- package metadata is publishable
 
 ### `skills inspect`
-
-Show metadata summary for a skill.
-
-**Usage**
 
 ```bash
 agentpack skills inspect <target>
 ```
 
-**Arguments**
+Shows the resolved package, source bindings, imported skills, and compiled metadata.
 
-| Argument | Description |
-|----------|-------------|
-| `<target>` | Path to a package directory, exported skill directory, `SKILL.md`, package name, or canonical skill id |
-
-**Example**
+### `skills build`
 
 ```bash
-$ agentpack skills inspect @acme/value-copywriting:value-copywriting
-
-  Name:         value-copywriting
-  Description:  Generate brand-consistent marketing copy
-  Package:      @acme/value-copywriting
-  Version:      1.2.0
-  Skill file:   domains/value/packages/value-copywriting/skills/value-copywriting/SKILL.md
-
-  Sources:
-    domains/value/knowledge/selling-points.md
-    domains/value/knowledge/tone-of-voice.md
-    domains/value/knowledge/brand-guidelines.md
-
-  Requires:
-    @acme/research:research
-    @acme/editorial-principles:editorial-principles
+agentpack skills build <target>
 ```
 
----
+Produces `.agentpack/compiled.json`.
+
+### `skills materialize`
+
+```bash
+agentpack skills materialize
+```
+
+Reads `.agentpack/compiled.json` and emits runtime outputs plus `.agentpack/materialization-state.json`.
+
+### `skills dev`
+
+```bash
+agentpack skills dev <target>
+```
+
+Compiles, materializes, watches for changes, and starts the localhost workbench. Use `--no-dashboard` to skip the browser UI.
 
 ### `skills stale`
-
-Check if skills are stale against the last validated build state.
-
-**Usage**
 
 ```bash
 agentpack skills stale [target]
 ```
 
-**Arguments**
-
-| Argument | Description |
-|----------|-------------|
-| `[target]` | Path to a package directory, exported skill directory, `SKILL.md`, package name, or canonical skill id. Omit to check all authored packages. |
-
-**Example (list mode)**
-
-```bash
-$ agentpack skills stale
-
-  Stale skills: 2
-
-  @acme/value-copywriting    domains/value/skills/copywriting     1 source changed
-  @acme/value-tone-analyzer  domains/value/skills/tone-analyzer   2 sources changed
-```
-
-<Accordion title="Detailed output for a single skill">
-```bash
-$ agentpack skills stale @acme/value-copywriting
-
-  Skill:   @acme/value-copywriting
-  Path:    domains/value/skills/copywriting
-  Status:  stale
-
-  Changed sources:
-    domains/value/knowledge/selling-points.md
-      recorded: sha256:a1b2c3d4...
-      current:  sha256:e5f6a7b8...
-```
-</Accordion>
-
-<Note>
-  Stale detection compares current source hashes to the snapshot in `.agentpack/build-state.json`. If that file was never committed, stale detection will not work on fresh clones or in CI.
-</Note>
-
----
-
-## Installation
-
-Commands for installing and removing published skill packages.
+Reads compiled state and reports changed sources, stale skills, and affected downstream skills.
 
 ### `skills install`
-
-Install a published package and materialize its exported skills for agent discovery.
-
-**Usage**
 
 ```bash
 agentpack skills install <package>
 ```
 
-**Arguments**
-
-| Argument | Description |
-|----------|-------------|
-| `<package>` | npm package name of the skill to install |
-
-**Example**
-
-```bash
-$ agentpack skills install @acme/value-copywriting
-
-  Installed:     @acme/value-copywriting@1.2.0
-  Transitive:    @acme/value-tone-analyzer@0.8.1
-                 @acme/shared-formatting@2.0.0
-  Materialized:  .claude/skills/value-copywriting
-                 .claude/skills/value-tone-analyzer
-                 .claude/skills/shared-formatting
-                 .agents/skills/value-copywriting
-                 .agents/skills/value-tone-analyzer
-                 .agents/skills/shared-formatting
-  State:         .agentpack/install.json updated
-```
-
----
-
-### `skills uninstall`
-
-Remove an installed skill and reconcile the runtime graph.
-
-**Usage**
-
-```bash
-agentpack skills uninstall <package>
-```
-
-**Arguments**
-
-| Argument | Description |
-|----------|-------------|
-| `<package>` | npm package name of the installed skill |
-
-**Example**
-
-```bash
-$ agentpack skills uninstall @acme/value-copywriting
-
-  Uninstalled:  @acme/value-copywriting@1.2.0
-  Removed:      .claude/skills/value-copywriting
-                .agents/skills/value-copywriting
-  Orphaned:     @acme/value-tone-analyzer@0.8.1 (no longer required)
-  Removed:      .claude/skills/value-tone-analyzer
-                .agents/skills/value-tone-analyzer
-  Kept:         @acme/shared-formatting@2.0.0 (still required by @acme/landing-page-writer)
-  State:        .agentpack/install.json updated
-```
-
----
-
-## Inspection
-
-Commands for viewing environment state, dependencies, and registry configuration.
-
-### `skills env`
-
-Show the current skills environment state.
-
-**Usage**
-
-```bash
-agentpack skills env
-```
-
-**Example**
-
-```bash
-$ agentpack skills env
-
-  Repo root:  /Users/dev/acme-project
-
-  Linked skills:
-    value-copywriting → domains/value/skills/copywriting
-
-  Installed skills:
-    @acme/value-tone-analyzer@0.8.1  (direct)
-      .claude/skills/value-tone-analyzer
-      .agents/skills/value-tone-analyzer
-    @acme/shared-formatting@2.0.0   (transitive)
-      .claude/skills/shared-formatting
-      .agents/skills/shared-formatting
-```
-
----
+Resolves packages, updates install state, compiles the resulting graph, and materializes runtime outputs.
 
 ### `skills status`
-
-Show a health summary of all skills in the environment.
-
-**Usage**
 
 ```bash
 agentpack skills status
 ```
 
-**Example**
-
-```bash
-$ agentpack skills status
-
-  Health:     needs attention
-
-  Installed:  4 skills (2 direct, 2 transitive)
-  Outdated:   1
-  Deprecated: 1
-
-  Deprecated skills:
-    @acme/legacy-formatter@1.0.0
-      Replacement: @acme/shared-formatting
-      Message:     Use shared-formatting for updated brand rules
-```
-
----
-
-### `skills dependencies`
-
-Show the dependency graph for a skill.
-
-**Usage**
-
-```bash
-agentpack skills dependencies [target]
-```
-
-**Arguments**
-
-| Argument | Description |
-|----------|-------------|
-| `[target]` | Path to a skill directory, `SKILL.md`, or package name |
-
-**Example**
-
-```bash
-$ agentpack skills dependencies @acme/value-copywriting
-
-  Target: @acme/value-copywriting (authored, current)
-
-  Depends on:
-    @acme/value-tone-analyzer    (authored, stale)
-    @acme/shared-formatting      (authored, current)
-
-  Depended on by:
-    @acme/landing-page-writer    (authored, current)
-```
-
----
-
-### `skills outdated`
-
-Check for newer versions of installed skill packages.
-
-**Usage**
-
-```bash
-agentpack skills outdated
-```
-
-**Example**
-
-```bash
-$ agentpack skills outdated
-
-  Outdated skills: 1
-
-  Package                      Installed  Available  Update
-  @acme/value-tone-analyzer    0.8.1      1.0.0      major
-
-  Recommended:
-    agentpack skills install @acme/value-tone-analyzer
-```
-
-**Example (all current)**
-
-```bash
-$ agentpack skills outdated
-
-  Outdated skills: 0
-
-  All installed skills are up to date.
-```
-
----
-
-### `skills missing`
-
-Show unresolved dependencies across installed skills.
-
-**Usage**
-
-```bash
-agentpack skills missing
-```
-
-**Example**
-
-```bash
-$ agentpack skills missing
-
-  Missing dependencies: 2
-
-  @acme/value-copywriting requires:
-    @acme/value-tone-analyzer    not installed
-
-  @acme/landing-page-writer requires:
-    @acme/shared-formatting      not installed
-
-  Recommended:
-    agentpack skills install @acme/value-tone-analyzer
-    agentpack skills install @acme/shared-formatting
-```
-
-**Example (no missing)**
-
-```bash
-$ agentpack skills missing
-
-  Missing dependencies: 0
-
-  All installed skill dependencies are satisfied.
-```
-
----
-
-### `skills registry`
-
-Show registry configuration and authentication status.
-
-**Usage**
-
-```bash
-agentpack skills registry
-```
-
-**Example**
-
-```bash
-$ agentpack skills registry
-
-  Registry configuration:
-
-  Scope        Registry                          Auth
-  @acme        https://npm.pkg.github.com        configured (always-auth: true)
-  (default)    https://registry.npmjs.org         (none)
-```
-
-<Tip>
-  If your team uses private packages, ensure your `.npmrc` maps your scope to your private registry and has a valid auth token configured.
-</Tip>
+Shows environment health, runtime drift, deprecated packages, and registry configuration.

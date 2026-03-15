@@ -4,7 +4,28 @@ import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, sy
 import { createServer } from 'node:http';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { addMultiSkillPackage, addPackagedSkill, createRepoFromFixture, createTempRepo, runCLI, runCLIJsonAsync } from './fixtures.js';
+import {
+  addMultiSkillPackage,
+  addPackagedSkill,
+  createRepoFromFixture,
+  createTempRepo,
+  readMaterializationState,
+  runCLI,
+  runCLIJsonAsync,
+} from './fixtures.js';
+
+function buildCompilerSkill({ name, description, declarations = '', body = '# Skill\n' }) {
+  return `---
+name: ${name}
+description: ${description}
+---
+
+\`\`\`agentpack
+${declarations}
+\`\`\`
+
+${body}`;
+}
 
 function npmPack(cwd) {
   const npmCli = process.env.npm_execpath;
@@ -40,16 +61,11 @@ describe('agentpack skills install', () => {
 
     try {
       addPackagedSkill(source.root, 'packages/foundation-primer', {
-        skillMd: `---
-name: foundation-primer
-description: Foundation primer.
-metadata:
-  sources: []
-requires: []
----
-
-# Foundation Primer
-`,
+        skillMd: buildCompilerSkill({
+          name: 'foundation-primer',
+          description: 'Foundation primer.',
+          body: '# Foundation Primer\n',
+        }),
         packageJson: {
           name: '@alavida-ai/foundation-primer',
           version: '1.0.0',
@@ -76,57 +92,37 @@ requires: []
         skills: [
           {
             path: 'skills/prd-development',
-            skillMd: `---
-name: prd-development
-description: Root workflow.
-metadata:
-  sources: []
-requires: []
----
-
-# PRD Development
-`,
+            skillMd: buildCompilerSkill({
+              name: 'prd-development',
+              description: 'Root workflow.',
+              body: '# PRD Development\n',
+            }),
           },
           {
             path: 'skills/proto-persona',
-            skillMd: `---
-name: proto-persona
-description: Proto persona.
-metadata:
-  sources: []
-requires: []
----
-
-# Proto Persona
-`,
+            skillMd: buildCompilerSkill({
+              name: 'proto-persona',
+              description: 'Proto persona.',
+              body: '# Proto Persona\n',
+            }),
           },
           {
             path: 'skills/problem-statement',
-            skillMd: `---
-name: problem-statement
-description: Problem statement.
-metadata:
-  sources: []
-requires: []
----
-
-# Problem Statement
-`,
+            skillMd: buildCompilerSkill({
+              name: 'problem-statement',
+              description: 'Problem statement.',
+              body: '# Problem Statement\n',
+            }),
           },
         ],
       });
 
       addPackagedSkill(consumer.root, 'node_modules/@alavida-ai/unrelated-skill', {
-        skillMd: `---
-name: unrelated-skill
-description: Ambient unrelated package.
-metadata:
-  sources: []
-requires: []
----
-
-# Unrelated Skill
-`,
+        skillMd: buildCompilerSkill({
+          name: 'unrelated-skill',
+          description: 'Ambient unrelated package.',
+          body: '# Unrelated Skill\n',
+        }),
         packageJson: {
           name: '@alavida-ai/unrelated-skill',
           version: '9.9.9',
@@ -216,6 +212,13 @@ requires: []
       assert.equal(installState.version, 1);
       assert.equal(installState.installs['@alavida/value-copywriting'].direct, true);
       assert.equal(installState.installs['@alavida/methodology-gary-provost'].direct, false);
+
+      const materializationState = readMaterializationState(consumer.root);
+      assert.ok(materializationState);
+      assert.ok(Array.isArray(materializationState.adapters.claude));
+      assert.ok(Array.isArray(materializationState.adapters.agents));
+      assert.ok(materializationState.adapters.claude.some((entry) => entry.target.endsWith('value-copywriting')));
+      assert.ok(materializationState.adapters.agents.some((entry) => entry.target.endsWith('value-copywriting')));
     } finally {
       monorepo.cleanup();
       consumer.cleanup();
@@ -227,16 +230,11 @@ requires: []
     const consumer = createRepoFromFixture('consumer', 'skills-install-registry-consumer');
 
     addPackagedSkill(source.root, 'packages/methodology-gary-provost', {
-      skillMd: `---
-name: methodology-gary-provost
-description: Sentence rhythm guidance from Gary Provost.
-metadata:
-  sources: []
-requires: []
----
-
-# Gary Provost
-`,
+      skillMd: buildCompilerSkill({
+        name: 'methodology-gary-provost',
+        description: 'Sentence rhythm guidance from Gary Provost.',
+        body: '# Gary Provost\n',
+      }),
       packageJson: {
         name: '@alavida-ai/methodology-gary-provost',
         version: '1.0.0',
@@ -245,17 +243,12 @@ requires: []
     });
 
     addPackagedSkill(source.root, 'packages/value-proof-points', {
-      skillMd: `---
-name: value-proof-points
-description: Evidence-backed proof points for value messaging.
-metadata:
-  sources: []
-requires:
-  - @alavida-ai/methodology-gary-provost
----
-
-# Value Proof Points
-`,
+      skillMd: buildCompilerSkill({
+        name: 'value-proof-points',
+        description: 'Evidence-backed proof points for value messaging.',
+        declarations: 'import provost from skill "@alavida-ai/methodology-gary-provost"',
+        body: '# Value Proof Points\n',
+      }),
       packageJson: {
         name: '@alavida-ai/value-proof-points',
         version: '1.0.1',
@@ -359,16 +352,11 @@ requires:
     const homeEnv = createHomeEnv();
 
     addPackagedSkill(source.root, 'packages/methodology-gary-provost', {
-      skillMd: `---
-name: methodology-gary-provost
-description: Sentence rhythm guidance from Gary Provost.
-metadata:
-  sources: []
-requires: []
----
-
-# Gary Provost
-`,
+      skillMd: buildCompilerSkill({
+        name: 'methodology-gary-provost',
+        description: 'Sentence rhythm guidance from Gary Provost.',
+        body: '# Gary Provost\n',
+      }),
       packageJson: {
         name: '@alavida-ai/methodology-gary-provost',
         version: '1.0.0',
@@ -377,17 +365,12 @@ requires: []
     });
 
     addPackagedSkill(source.root, 'packages/value-proof-points', {
-      skillMd: `---
-name: value-proof-points
-description: Evidence-backed proof points for value messaging.
-metadata:
-  sources: []
-requires:
-  - @alavida-ai/methodology-gary-provost
----
-
-# Value Proof Points
-`,
+      skillMd: buildCompilerSkill({
+        name: 'value-proof-points',
+        description: 'Evidence-backed proof points for value messaging.',
+        declarations: 'import provost from skill "@alavida-ai/methodology-gary-provost"',
+        body: '# Value Proof Points\n',
+      }),
       packageJson: {
         name: '@alavida-ai/value-proof-points',
         version: '1.0.1',

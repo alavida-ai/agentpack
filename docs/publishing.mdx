@@ -9,7 +9,7 @@ You'll walk through the full publish-to-install cycle: publishing a skill packag
 
 ## Prerequisites
 
-- Completed [Building Plugins](/building-plugins)
+- Completed [Skill Dependencies](/skill-dependencies)
 - A GitHub Packages-enabled repository
 - A GitHub token with `read:packages` and `write:packages` scopes
 
@@ -30,7 +30,7 @@ Package: @alavida/copywriting
 Status: valid
 ```
 
-Validation checks that exported skills are declared under `package.json.agentpack.skills`, exported paths resolve, canonical `requires` align with package dependencies, and package metadata is complete.
+Validation checks that exported skills are declared under `package.json.agentpack.skills`, exported paths resolve, compiler-mode skill imports align with package dependencies, and package metadata is complete.
 
 </Step>
 

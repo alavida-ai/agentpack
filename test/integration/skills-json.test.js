@@ -14,17 +14,19 @@ describe('agentpack skills JSON outputs', () => {
         `---
 name: value-copywriting
 description: Write copy aligned with Alavida's value messaging and tone.
-metadata:
-  sources:
-    - domains/value/knowledge/selling-points.md
-    - domains/value/knowledge/tone-of-voice.md
-  status: deprecated
-  replacement: @alavida/value-research
-requires:
-  - @alavida/methodology-gary-provost
+status: deprecated
+replacement: @alavida/value-research
 ---
 
-# Value Copywriting
+\`\`\`agentpack
+import provost from skill "@alavida/methodology-gary-provost"
+source sellingPoints = "domains/value/knowledge/selling-points.md"
+source toneOfVoice = "domains/value/knowledge/tone-of-voice.md"
+\`\`\`
+
+Use [Provost guidance](skill:provost){context="sentence rhythm and cadence guidance for final copy"}.
+Ground this in [current selling points](source:sellingPoints){context="primary source material for value messaging"}.
+Apply [tone of voice](source:toneOfVoice){context="tone constraints for the final copy"}.
 `
       );
 
@@ -48,6 +50,9 @@ requires:
     const repo = createRepoFromFixture('monorepo', 'skills-json-stale');
 
     try {
+      const build = runCLIJson(['skills', 'build', 'domains/value/skills/copywriting'], { cwd: repo.root });
+      assert.equal(build.exitCode, 0, build.stderr);
+
       writeFileSync(
         join(repo.root, 'domains', 'value', 'knowledge', 'tone-of-voice.md'),
         '# Tone Of Voice\n\nBold, direct, and provocative.\n'

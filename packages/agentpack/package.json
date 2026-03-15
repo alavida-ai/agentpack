@@ -1,7 +1,7 @@
 {
   "name": "@alavida/agentpack",
   "version": "0.1.7",
-  "description": "Package-backed skills lifecycle CLI for agent skills and plugins",
+  "description": "Compiler-driven lifecycle CLI for source-backed agent skills",
   "type": "module",
   "bin": {
     "agentpack": "bin/agentpack.js",
@@ -45,7 +45,10 @@
     "commander": "^13.0.0",
     "d3": "^7.9.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
     "@tanstack/intent": "^0.0.14"

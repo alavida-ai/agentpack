@@ -139,9 +139,11 @@ describe('agentpack skills missing', () => {
         `---
 name: proof-points
 description: Use when the user needs proof points.
-requires:
-  - @alavida-ai/value-proof-points
 ---
+
+\`\`\`agentpack
+import valueProofPoints from skill "@alavida-ai/value-proof-points"
+\`\`\`
 
 # Proof Points
 `
@@ -170,9 +172,11 @@ requires:
         `---
 name: proof-points
 description: Use when the user needs proof points.
-requires:
-  - @alavida-ai/value-proof-points
 ---
+
+\`\`\`agentpack
+import valueProofPoints from skill "@alavida-ai/value-proof-points"
+\`\`\`
 
 # Proof Points
 `

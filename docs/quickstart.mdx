@@ -1,9 +1,9 @@
 ---
 title: "Quickstart"
-description: "Install agentpack and see the skill dashboard in under 5 minutes."
+description: "Install agentpack and see a compiler-mode skill graph in under 5 minutes."
 ---
 
-Go from zero to a running skill with the visual dashboard open in under 5 minutes. You need Node.js 18+, npm 9+, and a git repository.
+Go from zero to a running skill with the visual dashboard open in under 5 minutes. You need Node.js 20+, npm, and a git repository.
 
 <Steps>
   <Step title="Install agentpack">
@@ -13,21 +13,20 @@ Go from zero to a running skill with the visual dashboard open in under 5 minute
     ```
   </Step>
 
-  <Step title="Create a skill">
-    A packaged skill is a directory with two files: `SKILL.md` and `package.json`.
+  <Step title="Create a skill package">
+    A minimal compiler-mode skill package needs `SKILL.md` and `package.json` in the same directory.
 
     **`skills/hello-world/SKILL.md`**
     ```markdown
     ---
     name: hello-world
     description: A minimal skill to verify agentpack is working.
-    metadata:
-      sources: []
-    requires: []
     ---
 
-    When the user asks you to say hello, respond with a friendly greeting
-    and mention that this skill was delivered by agentpack.
+    ```agentpack
+    ```
+
+    Respond with a friendly greeting when the user says hello.
     ```
 
     **`skills/hello-world/package.json`**
@@ -40,59 +39,38 @@ Go from zero to a running skill with the visual dashboard open in under 5 minute
   </Step>
 
   <Step title="Run dev mode">
-    From your repo root, point `skills dev` at the skill directory:
+    From your repo root, point `skills dev` at the skill package:
 
     ```bash
     agentpack skills dev skills/hello-world
     ```
 
-    You will see output like this:
-
-    ```
-    Linked Skill: hello-world
-    Path: skills/hello-world
-    Synced Added: 0
-    Synced Removed: 0
-    Linked Skills: 1
-    Linked: .claude/skills/hello-world
-    Workbench URL: http://localhost:5174
-    ```
-
-    agentpack links the skill into `.claude/skills/` so your agent can discover it, then opens the dashboard in your browser.
+    agentpack compiles the skill, links it into `.claude/skills/` and `.agents/skills/`, and starts the workbench.
   </Step>
 
   <Step title="Explore the dashboard">
-    The dashboard renders your skill graph as an interactive DAG. Click the node to open the inspector panel showing sources, dependencies, and lifecycle status. Use the action buttons to validate or check staleness.
-
-    {/* Screenshot: the dashboard with a single "hello-world" node selected, inspector panel open showing name, description, and "current" status */}
+    The dashboard renders your compiled skill graph. Click the node to open the inspector panel showing source bindings, skill imports, and lifecycle status. Use the action buttons to validate or refresh.
   </Step>
 </Steps>
 
 <Tip>
-  If you prefer a CLI-only workflow, pass `--no-dashboard` to skip the browser:
+  If you prefer a CLI-only workflow, pass `--no-dashboard`:
 
   ```bash
   agentpack skills dev --no-dashboard skills/hello-world
   ```
-
-  The skill is still linked and watched for changes. You just won't get the visual graph.
 </Tip>
 
 ## What just happened?
 
-- **Install** gave you the `agentpack` CLI -- the compiler toolchain for skills and plugins.
-- **Create a skill** produced the two required files: `SKILL.md` (authored artifact) and `package.json` (distribution artifact).
-- **Dev mode** synced `requires` into `package.json` dependencies, linked the skill into `.claude/skills/`, and started a file watcher that reloads on edits.
-- **The dashboard** rendered the skill graph with lifecycle status. As you add skills with dependencies, the graph shows the full DAG with staleness propagation.
-
-<Note>
-  The dev session is live -- edit `SKILL.md` and the dashboard updates. When you stop the process (Ctrl+C), links are cleaned up automatically.
-</Note>
+- `SKILL.md` stayed the authored artifact.
+- The `agentpack` block established the compiler contract, even when empty.
+- `skills dev` compiled the package into `.agentpack/compiled.json`.
+- Runtime outputs were recorded in `.agentpack/materialization-state.json`.
+- The dashboard visualized the compiled graph instead of inferring relationships from prose.
 
 ## Next steps
 
-Now that you have agentpack running, build a real skill backed by your team's docs.
-
-<Card title="Build your first skill" icon="hammer" href="/first-skill">
-  Turn existing knowledge docs into a versioned skill with source tracking and dependency declarations.
+<Card title="Model real dependencies" icon="diagram-project" href="/skill-dependencies">
+  Add explicit skill imports and source bindings, then watch the graph update.
 </Card>

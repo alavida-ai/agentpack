@@ -46,7 +46,9 @@ function MetaRow({ label, children }) {
 
 export function InspectorPanel({ node, onClose, onNavigate }) {
   return (
-    <aside style={{
+    <aside
+      data-testid="inspector-panel"
+      style={{
       position: 'fixed',
       top: 0,
       right: 0,
@@ -59,11 +61,13 @@ export function InspectorPanel({ node, onClose, onNavigate }) {
       zIndex: 20,
       display: 'flex',
       flexDirection: 'column',
-    }}>
+      }}
+    >
       {node && (
         <div style={{ padding: '28px 24px', overflowY: 'auto', flex: 1 }}>
           {/* Close button */}
           <button
+            data-testid="inspector-close"
             type="button"
             onClick={onClose}
             style={{
@@ -168,6 +172,7 @@ export function InspectorPanel({ node, onClose, onNavigate }) {
           {/* Navigate into dependency */}
           {node.type === 'dependency' && onNavigate && (
             <button
+              data-testid="inspector-navigate"
               type="button"
               onClick={() => onNavigate(node.packageName)}
               style={{

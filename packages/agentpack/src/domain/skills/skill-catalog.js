@@ -56,6 +56,14 @@ function listSkillPackageDirs(repoRoot, { installed = false } = {}) {
   return results.sort();
 }
 
+export function listAuthoredSkillPackageDirs(repoRoot) {
+  return listSkillPackageDirs(repoRoot);
+}
+
+export function listInstalledSkillPackageDirs(repoRoot) {
+  return listSkillPackageDirs(repoRoot, { installed: true });
+}
+
 function buildCatalogKey(packageName, exportedSkills, entry) {
   if (!packageName) return null;
   if (exportedSkills.length <= 1) return packageName;
@@ -92,7 +100,7 @@ export function readSkillPackage(repoRoot, packageDir, { origin = 'authored' } =
 }
 
 export function listAuthoredSkillPackages(repoRoot) {
-  return listSkillPackageDirs(repoRoot)
+  return listAuthoredSkillPackageDirs(repoRoot)
     .map((packageDir) => {
       try {
         return readSkillPackage(repoRoot, packageDir);
@@ -104,7 +112,7 @@ export function listAuthoredSkillPackages(repoRoot) {
 }
 
 export function listInstalledSkillPackages(repoRoot) {
-  return listSkillPackageDirs(repoRoot, { installed: true })
+  return listInstalledSkillPackageDirs(repoRoot)
     .map((packageDir) => {
       try {
         return readSkillPackage(repoRoot, packageDir, { origin: 'installed' });

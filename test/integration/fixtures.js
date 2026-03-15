@@ -8,6 +8,12 @@ import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+export {
+  assertGraphEdge,
+  createScenario,
+  readCompiledState,
+  readMaterializationState,
+} from './scenario-builder.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI_PATH = join(__dirname, '..', '..', 'bin', 'agentpack.js');
@@ -56,14 +62,13 @@ export function createValidateFixture() {
     skillMd: `---
 name: value-copywriting
 description: Write copy aligned with Alavida's value messaging.
-metadata:
-  sources:
-    - domains/value/knowledge/selling-points.md
-requires:
-  - @alavida/methodology-gary-provost
 ---
 
-# Value Copywriting
+\`\`\`agentpack
+source sellingPoints = "domains/value/knowledge/selling-points.md"
+\`\`\`
+
+Ground this in [selling points](source:sellingPoints){context="primary source material for value messaging"}.
 `,
     packageJson: {
       name: '@alavida/value-copywriting',
@@ -76,9 +81,7 @@ requires:
         registry: 'https://npm.pkg.github.com',
       },
       files: ['SKILL.md'],
-      dependencies: {
-        '@alavida/methodology-gary-provost': '^1.0.0',
-      },
+      dependencies: {},
     },
   });
 
@@ -86,9 +89,6 @@ requires:
     skillMd: `---
 name: methodology-gary-provost
 description: Human writing principles.
-metadata:
-  sources: []
-requires: []
 ---
 
 # Gary Provost
@@ -110,162 +110,6 @@ requires: []
   return repo;
 }
 
-export function createPluginBundleFixture() {
-  const repo = createTempRepo('plugin-bundle');
-
-  addPackagedSkill(repo.root, 'packages/skills/value-proof-points', {
-    skillMd: `---
-name: value-proof-points
-description: Evidence-backed proof points for value messaging.
-metadata:
-  sources: []
-requires:
-  - @alavida-ai/methodology-gary-provost
----
-
-# Value Proof Points
-`,
-    packageJson: {
-      name: '@alavida-ai/value-proof-points',
-      version: '1.0.1',
-      repository: {
-        type: 'git',
-        url: 'git+https://github.com/alavida-ai/alavida.git',
-      },
-      publishConfig: {
-        registry: 'https://npm.pkg.github.com',
-      },
-      files: ['SKILL.md'],
-      dependencies: {
-        '@alavida-ai/methodology-gary-provost': '^1.0.0',
-      },
-    },
-  });
-
-  addPackagedSkill(repo.root, 'packages/skills/value-copywriting', {
-    skillMd: `---
-name: value-copywriting
-description: Messaging and copywriting guidance.
-metadata:
-  sources: []
-requires:
-  - @alavida-ai/methodology-gary-provost
----
-
-# Value Copywriting
-`,
-    packageJson: {
-      name: '@alavida-ai/value-copywriting',
-      version: '1.0.0',
-      repository: {
-        type: 'git',
-        url: 'git+https://github.com/alavida-ai/alavida.git',
-      },
-      publishConfig: {
-        registry: 'https://npm.pkg.github.com',
-      },
-      files: ['SKILL.md'],
-      dependencies: {
-        '@alavida-ai/methodology-gary-provost': '^1.0.0',
-      },
-    },
-  });
-
-  addPackagedSkill(repo.root, 'packages/skills/methodology-gary-provost', {
-    skillMd: `---
-name: methodology-gary-provost
-description: Sentence rhythm guidance from Gary Provost.
-metadata:
-  sources: []
-requires: []
----
-
-# Gary Provost
-`,
-    packageJson: {
-      name: '@alavida-ai/methodology-gary-provost',
-      version: '1.0.0',
-      repository: {
-        type: 'git',
-        url: 'git+https://github.com/alavida-ai/alavida.git',
-      },
-      publishConfig: {
-        registry: 'https://npm.pkg.github.com',
-      },
-      files: ['SKILL.md'],
-    },
-  });
-
-  const pluginDir = join(repo.root, 'plugins', 'website-dev');
-  mkdirSync(join(pluginDir, '.claude-plugin'), { recursive: true });
-  mkdirSync(join(pluginDir, 'skills', 'proof-points'), { recursive: true });
-  mkdirSync(join(pluginDir, 'skills', 'copywriting'), { recursive: true });
-
-  writeFileSync(
-    join(pluginDir, '.claude-plugin', 'plugin.json'),
-    JSON.stringify(
-      {
-        name: 'website-dev',
-        description: 'Website execution harness plugin.',
-      },
-      null,
-      2
-    ) + '\n'
-  );
-
-  writeFileSync(
-    join(pluginDir, 'package.json'),
-    JSON.stringify(
-      {
-        name: '@alavida-ai/plugin-website-dev',
-        version: '0.5.0',
-        publishConfig: {
-          registry: 'https://npm.pkg.github.com',
-        },
-        devDependencies: {
-          '@alavida-ai/value-copywriting': '^1.0.0',
-          '@alavida-ai/value-proof-points': '^1.0.1',
-        },
-        files: ['.claude-plugin', 'skills'],
-      },
-      null,
-      2
-    ) + '\n'
-  );
-
-  writeFileSync(
-    join(pluginDir, 'skills', 'proof-points', 'SKILL.md'),
-    `---
-name: proof-points
-description: Use when the user needs evidence-backed proof.
-metadata:
-  sources: []
-requires:
-  - @alavida-ai/value-proof-points
----
-
-# Proof Points
-`
-  );
-
-  writeFileSync(
-    join(pluginDir, 'skills', 'copywriting', 'SKILL.md'),
-    `---
-name: copywriting
-description: Use when the user needs messaging and copywriting help.
-metadata:
-  sources: []
-requires:
-  - @alavida-ai/value-copywriting
----
-
-# Copywriting
-`
-  );
-
-  return repo;
-}
-
 /**
  * Add workspaces with .workbench markers to a temp repo.
  */
@@ -278,44 +122,6 @@ export function addWorkspaces(root, workspaces) {
     if (ws.domain) lines.push(`domain: ${ws.domain}`);
     if (ws.created) lines.push(`created: ${ws.created}`);
     writeFileSync(join(wsDir, '.workbench'), lines.join('\n') + '\n');
-  }
-}
-
-/**
- * Add a marketplace.json and settings to a temp repo.
- */
-export function addMarketplace(root, { name, plugins }) {
-  mkdirSync(join(root, '.claude-plugin'), { recursive: true });
-
-  writeFileSync(
-    join(root, '.claude-plugin', 'marketplace.json'),
-    JSON.stringify({ name, plugins })
-  );
-}
-
-/**
- * Add a workbench directory with plugin.json, skills, and hooks.
- */
-export function addWorkbench(root, relPath, { pluginJson, skills = [], hooksJson } = {}) {
-  const wbDir = join(root, relPath);
-  mkdirSync(wbDir, { recursive: true });
-  writeFileSync(join(wbDir, 'workbench.json'), JSON.stringify({ primitives: {} }));
-
-  if (pluginJson) {
-    mkdirSync(join(wbDir, '.claude-plugin'), { recursive: true });
-    writeFileSync(join(wbDir, '.claude-plugin', 'plugin.json'), JSON.stringify(pluginJson));
-  }
-
-  for (const skill of skills) {
-    mkdirSync(join(wbDir, 'skills', skill.name), { recursive: true });
-    if (skill.content) {
-      writeFileSync(join(wbDir, 'skills', skill.name, 'SKILL.md'), skill.content);
-    }
-  }
-
-  if (hooksJson) {
-    mkdirSync(join(wbDir, 'hooks'), { recursive: true });
-    writeFileSync(join(wbDir, 'hooks', 'hooks.json'), JSON.stringify(hooksJson));
   }
 }
 
@@ -349,10 +155,10 @@ export function createInstalledMultiSkillFixture(name = 'multi-skill') {
     skillMd: `---
 name: foundation-primer
 description: Foundation primer.
-metadata:
-  sources: []
-requires: []
 ---
+
+\`\`\`agentpack
+\`\`\`
 
 # Foundation Primer
 `,
@@ -385,14 +191,14 @@ requires: []
         skillMd: `---
 name: prd-development
 description: Root workflow.
-metadata:
-  sources: []
-requires:
-  - @alavida-ai/prd-development:problem-statement
-  - @alavida-ai/prd-development:proto-persona
 ---
 
-# PRD Development
+\`\`\`agentpack
+import { problem-statement as problemStatement, proto-persona as protoPersona } from skill "@alavida-ai/prd-development"
+\`\`\`
+
+Use [problem statement](skill:problemStatement){context="subskill dependency for defining the problem"}.
+Use [proto persona](skill:protoPersona){context="subskill dependency for defining the user"}.
 `,
       },
       {
@@ -400,13 +206,13 @@ requires:
         skillMd: `---
 name: proto-persona
 description: Proto persona.
-metadata:
-  sources: []
-requires:
-  - @alavida-ai/foundation-primer
 ---
 
-# Proto Persona
+\`\`\`agentpack
+import foundationPrimer from skill "@alavida-ai/foundation-primer"
+\`\`\`
+
+Use [foundation primer](skill:foundationPrimer){context="supporting methodology dependency"}.
 `,
       },
       {
@@ -414,13 +220,13 @@ requires:
         skillMd: `---
 name: problem-statement
 description: Problem statement.
-metadata:
-  sources: []
-requires:
-  - @alavida-ai/prd-development:proto-persona
 ---
 
-# Problem Statement
+\`\`\`agentpack
+import { proto-persona as protoPersona } from skill "@alavida-ai/prd-development"
+\`\`\`
+
+Use [proto persona](skill:protoPersona){context="subskill dependency for refining the problem framing"}.
 `,
       },
     ],
@@ -439,6 +245,10 @@ requires:
 
 export function createAuthoredMultiSkillFixture(name = 'authored-multi-skill') {
   const repo = createTempRepo(name);
+
+  mkdirSync(join(repo.root, 'domains', 'planning', 'knowledge'), { recursive: true });
+  writeFileSync(join(repo.root, 'domains', 'planning', 'knowledge', 'kickoff.md'), '# Kickoff\n');
+  writeFileSync(join(repo.root, 'domains', 'planning', 'knowledge', 'recap.md'), '# Recap\n');
 
   addMultiSkillPackage(repo.root, 'workbenches/planning-kit', {
     packageJson: {
@@ -465,12 +275,13 @@ export function createAuthoredMultiSkillFixture(name = 'authored-multi-skill') {
         skillMd: `---
 name: kickoff
 description: Plan the kickoff.
-metadata:
-  sources: []
-requires: []
 ---
 
-# Kickoff
+\`\`\`agentpack
+source kickoffSource = "domains/planning/knowledge/kickoff.md"
+\`\`\`
+
+Use [the kickoff source](source:kickoffSource){context="source material for kickoff planning"}.
 `,
       },
       {
@@ -478,12 +289,13 @@ requires: []
         skillMd: `---
 name: recap
 description: Plan the recap.
-metadata:
-  sources: []
-requires: []
 ---
 
-# Recap
+\`\`\`agentpack
+source recapSource = "domains/planning/knowledge/recap.md"
+\`\`\`
+
+Use [the recap source](source:recapSource){context="source material for recap planning"}.
 `,
       },
     ],
@@ -515,12 +327,12 @@ export function readPathState(pathValue) {
  * Run the agentpack CLI with given args against a temp repo.
  * Returns { stdout, stderr, exitCode }.
  */
-export function runCLI(args, { cwd, env = {} } = {}) {
+export function runCLI(args, { cwd, env = {}, timeoutMs = 10000 } = {}) {
   const result = spawnSync('node', [CLI_PATH, ...args], {
     cwd,
     env: { ...process.env, AGENTPACK_DISABLE_BROWSER: '1', ...env },
     encoding: 'utf-8',
-    timeout: 10000,
+    timeout: timeoutMs,
   });
   return {
     stdout: result.stdout || '',

@@ -15,7 +15,7 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["introduction", "quickstart", "first-skill", "skill-dependencies", "building-plugins", "publishing"]
+            "pages": ["introduction", "quickstart", "first-skill", "skill-dependencies", "publishing"]
           },
           {
             "group": "Core Concepts",
@@ -27,7 +27,7 @@
           },
           {
             "group": "CLI Reference",
-            "pages": ["cli-skills", "cli-plugins"]
+            "pages": ["cli-skills"]
           },
           {
             "group": "Reference",

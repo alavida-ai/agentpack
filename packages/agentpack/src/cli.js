@@ -4,7 +4,6 @@ import { formatError, AgentpackError, EXIT_CODES } from './utils/errors.js';
 import { output } from './utils/output.js';
 import { authCommand } from './commands/auth.js';
 import { skillsCommand } from './commands/skills.js';
-import { pluginCommand } from './commands/plugin.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json');
@@ -23,7 +22,6 @@ export function createProgram() {
 
   program.addCommand(skillsCommand());
   program.addCommand(authCommand());
-  program.addCommand(pluginCommand());
 
   program.addHelpText('after', `
 Exit Codes:

@@ -32,6 +32,7 @@ describe('agentpack auth commands', () => {
       assert.equal(result.exitCode, 0, result.stderr);
       assert.match(result.stdout, /\bauth\b/);
       assert.match(result.stdout, /\bskills\b/);
+      assert.doesNotMatch(result.stdout, /\bplugin\b/);
     } finally {
       consumer.cleanup();
     }

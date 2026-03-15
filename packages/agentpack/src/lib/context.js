@@ -112,28 +112,9 @@ export function findAllWorkbenches(cwd = process.cwd()) {
 
 /**
  * Resolve a --workbench flag value to a workbench path.
- * First tries as a marketplace.json alias, then as a direct path.
  */
 export function resolveWorkbenchFlag(nameOrPath, cwd = process.cwd()) {
   const repoRoot = findRepoRoot(cwd);
-
-  // Try marketplace.json alias first
-  const marketplacePath = join(repoRoot, '.claude-plugin', 'marketplace.json');
-  if (existsSync(marketplacePath)) {
-    const marketplace = JSON.parse(readFileSync(marketplacePath, 'utf-8'));
-    const plugin = (marketplace.plugins || []).find((p) => p.name === nameOrPath);
-    if (plugin && plugin.source) {
-      const resolved = resolve(repoRoot, plugin.source);
-      if (existsSync(join(resolved, 'workbench.json'))) {
-        const config = JSON.parse(readFileSync(join(resolved, 'workbench.json'), 'utf-8'));
-        return {
-          path: resolved,
-          relativePath: relative(repoRoot, resolved),
-          config,
-        };
-      }
-    }
-  }
 
   // Try as direct path (absolute or relative to cwd)
   const directPath = resolve(cwd, nameOrPath);
@@ -158,10 +139,10 @@ export function resolveWorkbenchFlag(nameOrPath, cwd = process.cwd()) {
   }
 
   throw new NotFoundError(
-    `Workbench "${nameOrPath}" not found. Not a marketplace alias or valid path.`,
+    `Workbench "${nameOrPath}" not found. Pass a valid path to a directory containing workbench.json.`,
     {
       code: 'workbench_not_found',
-      suggestion: 'Pass a path to a directory containing workbench.json, or run the appropriate marketplace/workbench discovery command if you expose one.',
+      suggestion: 'Pass a path to a directory containing workbench.json.',
     }
   );
 }

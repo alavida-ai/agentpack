@@ -1,6 +1,10 @@
 node_modules/
 package-lock.json
 .worktrees/
+.cache/
+playwright-report/
+test-results/
+eval-results/
 .agentpack/install.json
 .agentpack/dev-session.json
 .agentpack/dist/

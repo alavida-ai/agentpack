@@ -1,0 +1,5 @@
+template = "agentpack-agent-eval"
+
+[metadata]
+owner = "agentpack"
+purpose = "autonomous-agent-eval"

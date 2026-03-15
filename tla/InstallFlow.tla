@@ -1,50 +1,35 @@
 --------------------------- MODULE InstallFlow -----------------------------
-(*
- * Formal specification of agentpack's skill install flow.
+(* 
+ * Formal specification of agentpack's compiler-driven install flow.
  *
- * Models: installSkills() from lib/skills.js
- * and rebuildInstallState() from infrastructure/runtime/materialize-skills.js
+ * Models the hard-cut architecture:
+ *   1. fetch packages into node_modules
+ *   2. compile canonical semantic state
+ *   3. materialize runtime outputs from compiled state
  *
- * The install flow has three phases:
- *   1. npm install (fetch packages)
- *   2. Resolve dependency closure
- *   3. Create symlinks + write install.json (materialization)
- *
- * A crash can occur between any two phases, leaving the system in an
- * inconsistent state. The model checker verifies that:
- *   - After successful install, state matches filesystem
- *   - After crash + reinstall, state converges to consistent
- *   - No skill is materialized without being in install.json (after success)
+ * There is no legacy build-state or migration path in this model.
+ * The canonical semantic truth is the compiled state.
  *)
-EXTENDS Integers, FiniteSets, Sequences, TLC
+EXTENDS Integers, FiniteSets, TLC
 
 CONSTANTS
     Packages,          \* Set of installable packages, e.g. {"X", "Y"}
     PackageDeps        \* Function: package -> set of transitive deps
-                       \* e.g. [X |-> {}, Y |-> {X}]
 
 VARIABLES
-    \* Install process state
-    phase,             \* "idle" | "npm_install" | "resolve" | "materialize" | "done"
+    phase,                \* "idle" | "fetch" | "compile" | "materialize" | "done"
+    nodeModules,          \* Set of packages present in node_modules
+    directInstalls,       \* Set of directly requested packages
+    compiledState,        \* Canonical compiled closure
+    materializationState, \* Recorded adapter ownership derived from compiled state
+    claudeLinks,          \* Runtime outputs for claude adapter
+    agentsLinks,          \* Runtime outputs for agents adapter
+    requested,            \* Packages being installed in current operation
+    resolved,             \* Resolved closure for current operation
+    crashed               \* BOOLEAN - has there been a crash since last clean op?
 
-    \* Filesystem state
-    nodeModules,       \* Set of packages present in node_modules
-    claudeLinks,       \* Set of packages with .claude/skills symlinks
-    agentsLinks,       \* Set of packages with .agents/skills symlinks
-
-    \* Recorded state
-    installJson,       \* Set of packages recorded in install.json
-    installJsonDirect, \* Set of packages marked as direct installs
-
-    \* Install request
-    requested,         \* Set of packages being installed in current operation
-    resolved,          \* Set of packages in resolved closure (direct + transitive)
-
-    \* Crash tracking
-    crashed            \* BOOLEAN — has there been a crash since last successful op?
-
-vars == <<phase, nodeModules, claudeLinks, agentsLinks,
-          installJson, installJsonDirect, requested, resolved, crashed>>
+vars == <<phase, nodeModules, directInstalls, compiledState, materializationState,
+          claudeLinks, agentsLinks, requested, resolved, crashed>>
 
 -----------------------------------------------------------------------------
 (* Type invariant *)
@@ -52,12 +37,13 @@ vars == <<phase, nodeModules, claudeLinks, agentsLinks,
 AllPackages == Packages \union UNION {PackageDeps[p] : p \in Packages}
 
 TypeOK ==
-    /\ phase \in {"idle", "npm_install", "resolve", "materialize", "done"}
+    /\ phase \in {"idle", "fetch", "compile", "materialize", "done"}
     /\ nodeModules \subseteq AllPackages
+    /\ directInstalls \subseteq Packages
+    /\ compiledState \subseteq AllPackages
+    /\ materializationState \subseteq AllPackages
     /\ claudeLinks \subseteq AllPackages
     /\ agentsLinks \subseteq AllPackages
-    /\ installJson \subseteq AllPackages
-    /\ installJsonDirect \subseteq AllPackages
     /\ requested \subseteq Packages
     /\ resolved \subseteq AllPackages
     /\ crashed \in BOOLEAN
@@ -74,10 +60,11 @@ Closure(pkgs) ==
 Init ==
     /\ phase = "idle"
     /\ nodeModules = {}
+    /\ directInstalls = {}
+    /\ compiledState = {}
+    /\ materializationState = {}
     /\ claudeLinks = {}
     /\ agentsLinks = {}
-    /\ installJson = {}
-    /\ installJsonDirect = {}
     /\ requested = {}
     /\ resolved = {}
     /\ crashed = FALSE
@@ -85,111 +72,105 @@ Init ==
 -----------------------------------------------------------------------------
 (* Actions *)
 
-(* User initiates install of a set of packages *)
 BeginInstall(pkgs) ==
     /\ phase = "idle"
     /\ pkgs /= {}
     /\ pkgs \subseteq Packages
-    /\ phase' = "npm_install"
+    /\ phase' = "fetch"
     /\ requested' = pkgs
     /\ resolved' = {}
-    /\ UNCHANGED <<nodeModules, claudeLinks, agentsLinks, installJson, installJsonDirect, crashed>>
+    /\ UNCHANGED <<nodeModules, directInstalls, compiledState, materializationState,
+                   claudeLinks, agentsLinks, crashed>>
 
-(* Phase 1: npm install fetches packages into node_modules *)
-NpmInstall ==
-    /\ phase = "npm_install"
-    /\ LET closure == Closure(requested \union installJsonDirect)
-       IN  nodeModules' = nodeModules \union closure
-    /\ phase' = "resolve"
-    /\ UNCHANGED <<claudeLinks, agentsLinks, installJson, installJsonDirect, requested, resolved, crashed>>
+FetchPackages ==
+    /\ phase = "fetch"
+    /\ LET closure == Closure(requested \union directInstalls)
+       IN /\ nodeModules' = nodeModules \union closure
+          /\ resolved' = closure
+    /\ phase' = "compile"
+    /\ UNCHANGED <<directInstalls, compiledState, materializationState,
+                   claudeLinks, agentsLinks, requested, crashed>>
 
-(* Phase 2: Resolve dependency closure *)
-ResolveClosure ==
-    /\ phase = "resolve"
-    /\ resolved' = Closure(requested \union installJsonDirect)
+CompileState ==
+    /\ phase = "compile"
+    /\ resolved /= {}
+    /\ compiledState' = resolved
+    /\ directInstalls' = requested \union directInstalls
     /\ phase' = "materialize"
-    /\ UNCHANGED <<nodeModules, claudeLinks, agentsLinks, installJson, installJsonDirect, requested, crashed>>
+    /\ UNCHANGED <<nodeModules, materializationState, claudeLinks, agentsLinks,
+                   requested, resolved, crashed>>
 
-(* Phase 3: Create symlinks AND write install.json atomically *)
 Materialize ==
     /\ phase = "materialize"
-    \* Remove old symlinks, create new ones for entire resolved set
-    /\ claudeLinks' = resolved
-    /\ agentsLinks' = resolved
-    \* Write install.json with complete state
-    /\ installJson' = resolved
-    /\ installJsonDirect' = requested \union installJsonDirect
+    /\ claudeLinks' = compiledState
+    /\ agentsLinks' = compiledState
+    /\ materializationState' = compiledState
     /\ phase' = "done"
-    /\ crashed' = FALSE    \* successful materialization clears crash state
-    /\ UNCHANGED <<nodeModules, requested, resolved>>
+    /\ crashed' = FALSE
+    /\ UNCHANGED <<nodeModules, directInstalls, compiledState, requested, resolved>>
 
-(* Install completes, return to idle *)
 CompleteInstall ==
     /\ phase = "done"
     /\ phase' = "idle"
     /\ requested' = {}
     /\ resolved' = {}
-    /\ UNCHANGED <<nodeModules, claudeLinks, agentsLinks, installJson, installJsonDirect, crashed>>
+    /\ UNCHANGED <<nodeModules, directInstalls, compiledState, materializationState,
+                   claudeLinks, agentsLinks, crashed>>
 
-(* --- CRASH ACTIONS --- *)
-(* A crash can happen at any non-idle phase *)
-
-CrashDuringNpmInstall ==
-    /\ phase = "npm_install"
-    \* npm may have partially installed
+CrashDuringFetch ==
+    /\ phase = "fetch"
     /\ \E partial \in SUBSET Closure(requested) :
         nodeModules' = nodeModules \union partial
     /\ phase' = "idle"
     /\ requested' = {}
     /\ resolved' = {}
     /\ crashed' = TRUE
-    /\ UNCHANGED <<claudeLinks, agentsLinks, installJson, installJsonDirect>>
+    /\ UNCHANGED <<directInstalls, compiledState, materializationState,
+                   claudeLinks, agentsLinks>>
 
-CrashDuringResolve ==
-    /\ phase = "resolve"
-    \* Resolution is in-memory, crash just loses it
+CrashDuringCompile ==
+    /\ phase = "compile"
     /\ phase' = "idle"
     /\ requested' = {}
     /\ resolved' = {}
     /\ crashed' = TRUE
-    /\ UNCHANGED <<nodeModules, claudeLinks, agentsLinks, installJson, installJsonDirect>>
+    /\ UNCHANGED <<nodeModules, directInstalls, compiledState, materializationState,
+                   claudeLinks, agentsLinks>>
 
 CrashDuringMaterialize ==
     /\ phase = "materialize"
-    \* Partial symlinks may exist
-    /\ \E partialClaude \in SUBSET resolved :
-       \E partialAgents \in SUBSET resolved :
+    /\ \E partialClaude \in SUBSET compiledState :
+       \E partialAgents \in SUBSET compiledState :
            /\ claudeLinks' = partialClaude
            /\ agentsLinks' = partialAgents
-    \* install.json NOT written (crash before atomic write)
     /\ phase' = "idle"
     /\ requested' = {}
     /\ resolved' = {}
     /\ crashed' = TRUE
-    /\ UNCHANGED <<nodeModules, installJson, installJsonDirect>>
-
-(* --- UNINSTALL --- *)
+    /\ UNCHANGED <<nodeModules, directInstalls, compiledState, materializationState>>
 
 Uninstall(pkg) ==
     /\ phase = "idle"
-    /\ pkg \in installJsonDirect
-    /\ LET remaining == installJsonDirect \ {pkg}
+    /\ pkg \in directInstalls
+    /\ LET remaining == directInstalls \ {pkg}
            newClosure == Closure(remaining)
        IN
+           /\ directInstalls' = remaining
+           /\ compiledState' = newClosure
+           /\ materializationState' = newClosure
            /\ claudeLinks' = newClosure
            /\ agentsLinks' = newClosure
-           /\ installJson' = newClosure
-           /\ installJsonDirect' = remaining
-    /\ UNCHANGED <<nodeModules, phase, requested, resolved, crashed>>
+           /\ crashed' = FALSE
+    /\ UNCHANGED <<nodeModules, phase, requested, resolved>>
 
 Next ==
     \/ \E pkgs \in (SUBSET Packages \ {{}}) : BeginInstall(pkgs)
-    \/ NpmInstall
-    \/ ResolveClosure
+    \/ FetchPackages
+    \/ CompileState
     \/ Materialize
     \/ CompleteInstall
-    \/ CrashDuringNpmInstall
-    \/ CrashDuringResolve
+    \/ CrashDuringFetch
+    \/ CrashDuringCompile
     \/ CrashDuringMaterialize
     \/ \E p \in Packages : Uninstall(p)
 
@@ -198,42 +179,35 @@ Spec == Init /\ [][Next]_vars
 -----------------------------------------------------------------------------
 (* INVARIANTS *)
 
-(* 1. After successful install (no crash), both link dirs match install.json *)
-ConsistentAfterSuccess ==
+CompiledMatchesDirectInstalls ==
     (phase = "idle" /\ ~crashed) =>
-        /\ claudeLinks = installJson
-        /\ agentsLinks = installJson
+        compiledState = Closure(directInstalls)
 
-(* 2. install.json only contains packages that are in node_modules *)
-InstalledPackagesExist ==
-    (phase = "idle" /\ ~crashed) => installJson \subseteq nodeModules
-
-(* 3. Direct installs are a subset of all installs *)
-DirectSubsetOfAll ==
-    ~crashed => (installJsonDirect \subseteq installJson \/ installJson = {})
-
-(* 4. Materialization symmetry: claude and agents links always match (when clean) *)
-MaterializationSymmetry ==
-    (phase = "idle" /\ ~crashed) => claudeLinks = agentsLinks
-
-(* 5. Closure completeness: if Y depends on X and Y is installed, X is too *)
-ClosureComplete ==
+MaterializationDerivedFromCompiled ==
     (phase = "idle" /\ ~crashed) =>
-        \A p \in installJson :
-            p \in Packages => PackageDeps[p] \subseteq installJson
+        materializationState = compiledState
 
-(* 6. CRASH DETECTOR: after crash, filesystem CAN be inconsistent with state.
-   This invariant DOCUMENTS the gap — orphaned symlinks can exist. *)
-CrashCanCauseOrphans ==
+RuntimeMatchesMaterializationState ==
+    (phase = "idle" /\ ~crashed) =>
+        /\ claudeLinks = materializationState
+        /\ agentsLinks = materializationState
+
+CompiledPackagesExist ==
+    (phase = "idle" /\ ~crashed) =>
+        compiledState \subseteq nodeModules
+
+DirectSubsetOfCompiled ==
+    (phase = "idle" /\ ~crashed) =>
+        directInstalls \subseteq compiledState
+
+CrashLeavesRecordedStateSelfConsistent ==
     (phase = "idle" /\ crashed) =>
-        \* At minimum, install.json is still valid on its own
-        installJsonDirect \subseteq installJson \/ installJson = {}
+        directInstalls \subseteq compiledState
 
-(* 7. Recovery: a successful install after crash restores consistency.
-   After Materialize completes, crashed is cleared and all invariants hold. *)
 RecoveryRestoresConsistency ==
     phase = "done" =>
-        /\ claudeLinks = resolved
-        /\ agentsLinks = resolved
+        /\ materializationState = compiledState
+        /\ claudeLinks = compiledState
+        /\ agentsLinks = compiledState
 
 =============================================================================

@@ -6,15 +6,24 @@
     "packages/*"
   ],
   "scripts": {
+    "setup:tla": "bash scripts/setup-tla.sh",
+    "setup:playwright": "playwright install chromium",
+    "test:models": "bash scripts/test-models.sh",
+    "test:registry": "node --test test/integration/skills-registry-install.test.js",
+    "test:e2e": "npm run build:dashboard && playwright test",
+    "test:sandboxes": "node scripts/test-sandboxes.mjs",
+    "test:agent-evals": "node scripts/run-agent-evals.mjs",
     "test": "find test -name '*.test.js' -print0 | xargs -0 node --test",
-    "validate:live": "node scripts/live-validation.mjs",
-    "smoke:monorepo": "node scripts/smoke-monorepo.mjs",
     "docs:dev": "cd docs && mint dev",
     "changeset": "changeset",
     "build:dashboard": "node scripts/build-dashboard.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
-    "esbuild": "^0.25.10"
+    "@e2b/desktop": "^2.2.2",
+    "@playwright/test": "^1.55.0",
+    "e2b": "^2.14.1",
+    "esbuild": "^0.25.10",
+    "verdaccio": "^6.1.6"
   }
 }

@@ -1,10 +1,9 @@
 ---
 name: gary-provost
 description: Sentence rhythm guidance from Gary Provost.
-metadata:
-  sources: []
 ---
 
-# Gary Provost
+```agentpack
+```
 
 Vary sentence length and cadence.

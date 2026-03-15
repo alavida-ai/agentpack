@@ -28,20 +28,27 @@ function writeDevSession(repoRoot, session) {
   writeFileSync(join(repoRoot, '.agentpack', 'dev-session.json'), JSON.stringify(session, null, 2) + '\n');
 }
 
+function buildCompilerSkill({ name, description = 'Copy.', declarations = '', body = '# Skill\n' }) {
+  return `---
+name: ${name}
+description: ${description}
+---
+
+\`\`\`agentpack
+${declarations}
+\`\`\`
+
+${body}
+`;
+}
+
 describe('agentpack skills dev', () => {
   it('links a skill while running and unlinks it on exit', async () => {
     const repo = createTempRepo('skills-dev-basic');
 
     try {
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires: []
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({ name: 'value-copywriting' }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',
@@ -74,14 +81,7 @@ requires: []
 
     try {
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires: []
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({ name: 'value-copywriting' }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',
@@ -111,14 +111,7 @@ requires: []
 
     try {
       addPackagedSkill(repo.root, 'skills/methodology', {
-        skillMd: `---
-name: methodology-gary-provost
-description: Method.
-requires: []
----
-
-# Method
-`,
+        skillMd: buildCompilerSkill({ name: 'methodology-gary-provost', description: 'Method.' }),
         packageJson: {
           name: '@alavida/methodology-gary-provost',
           version: '1.0.0',
@@ -127,15 +120,10 @@ requires: []
       });
 
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires:
-  - @alavida/methodology-gary-provost
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({
+          name: 'value-copywriting',
+          declarations: 'import methodology from skill "@alavida/methodology-gary-provost"',
+        }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',
@@ -174,15 +162,10 @@ requires:
       const skillPath = join(skillDir, 'SKILL.md');
 
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires:
-  - @alavida/methodology-gary-provost
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({
+          name: 'value-copywriting',
+          declarations: 'import methodology from skill "@alavida/methodology-gary-provost"',
+        }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',
@@ -199,15 +182,10 @@ requires:
 
       writeFileSync(
         skillPath,
-        `---
-name: value-copywriting
-description: Copy.
-requires:
-  - @alavida/new-dep
----
-
-# Copy
-`
+        buildCompilerSkill({
+          name: 'value-copywriting',
+          declarations: 'import newDep from skill "@alavida/new-dep"',
+        })
       );
 
       await session.waitForOutput(/Reloaded Skill: value-copywriting/);
@@ -226,15 +204,10 @@ requires:
 
     try {
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires:
-  - @alavida/new-dep
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({
+          name: 'value-copywriting',
+          declarations: 'import newDep from skill "@alavida/new-dep"',
+        }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',
@@ -292,14 +265,7 @@ requires:
 
     try {
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires: []
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({ name: 'value-copywriting' }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',
@@ -325,14 +291,7 @@ requires: []
 
     try {
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires: []
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({ name: 'value-copywriting' }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',
@@ -362,15 +321,10 @@ requires: []
 
     try {
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires:
-  - @alavida/missing-skill
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({
+          name: 'value-copywriting',
+          declarations: 'import missingSkill from skill "@alavida/missing-skill"',
+        }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',
@@ -413,14 +367,7 @@ requires:
       mkdirSync(join(repo.root, 'skills', 'no-pkg'), { recursive: true });
       writeFileSync(
         join(repo.root, 'skills', 'no-pkg', 'SKILL.md'),
-        `---
-name: no-pkg
-description: Test.
-requires: []
----
-
-# No pkg
-`
+        buildCompilerSkill({ name: 'no-pkg', description: 'Test.' })
       );
       const missingPackage = runCLI(['skills', 'dev', 'skills/no-pkg'], { cwd: repo.root });
       assert.equal(missingPackage.exitCode, 1);
@@ -435,14 +382,7 @@ requires: []
 
     try {
       addPackagedSkill(repo.root, 'skills/methodology', {
-        skillMd: `---
-name: methodology-gary-provost
-description: Method.
-requires: []
----
-
-# Method
-`,
+        skillMd: buildCompilerSkill({ name: 'methodology-gary-provost', description: 'Method.' }),
         packageJson: {
           name: '@alavida/methodology-gary-provost',
           version: '1.0.0',
@@ -451,15 +391,10 @@ requires: []
       });
 
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires:
-  - @alavida/methodology-gary-provost
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({
+          name: 'value-copywriting',
+          declarations: 'import methodology from skill "@alavida/methodology-gary-provost"',
+        }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',
@@ -519,14 +454,7 @@ requires:
 
     try {
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires: []
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({ name: 'value-copywriting' }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',

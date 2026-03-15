@@ -1,47 +1,45 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { addPackagedSkill, createAuthoredMultiSkillFixture, createTempRepo, runCLI, runCLIJson } from './fixtures.js';
+import {
+  createScenario,
+  runCLI,
+  runCLIJson,
+} from './fixtures.js';
 
 function createSkillFixture() {
-  const repo = createTempRepo('skills-inspect');
-
-  mkdirSync(join(repo.root, 'domains', 'value', 'knowledge'), { recursive: true });
-  writeFileSync(
-    join(repo.root, 'domains', 'value', 'knowledge', 'selling-points.md'),
-    '# Selling Points\n'
-  );
-  writeFileSync(
-    join(repo.root, 'domains', 'value', 'knowledge', 'tone-of-voice.md'),
-    '# Tone Of Voice\n'
-  );
-
-  addPackagedSkill(repo.root, 'domains/value/skills/copywriting', {
-    skillMd: `---
+  return createScenario({
+    name: 'skills-inspect',
+    sources: {
+      'domains/value/knowledge/selling-points.md': '# Selling Points\n',
+      'domains/value/knowledge/tone-of-voice.md': '# Tone Of Voice\n',
+    },
+    packages: [
+      {
+        relPath: 'domains/value/skills/copywriting',
+        packageJson: {
+          name: '@alavida/value-copywriting',
+          version: '1.2.0',
+          description: "Write copy aligned with Alavida's value messaging and tone.",
+          files: ['SKILL.md'],
+        },
+        skillMd: `---
 name: value-copywriting
 description: Write copy aligned with Alavida's value messaging and tone.
-sources:
-  - domains/value/knowledge/selling-points.md
-  - domains/value/knowledge/tone-of-voice.md
-requires:
-  - @alavida/methodology-gary-provost
 ---
 
-# Value Copywriting
-`,
-    packageJson: {
-      name: '@alavida/value-copywriting',
-      version: '1.2.0',
-      description: "Write copy aligned with Alavida's value messaging and tone.",
-      files: ['SKILL.md'],
-      dependencies: {
-        '@alavida/methodology-gary-provost': '^1.0.0',
-      },
-    },
-  });
+\`\`\`agentpack
+source sellingPoints = "domains/value/knowledge/selling-points.md"
+source toneOfVoice = "domains/value/knowledge/tone-of-voice.md"
+\`\`\`
 
-  return repo;
+Ground this in [selling points](source:sellingPoints){context="primary source material for value messaging"}.
+Apply [tone of voice](source:toneOfVoice){context="tone constraints for the final copy"}.
+`,
+      },
+    ],
+  });
 }
 
 describe('agentpack skills inspect', () => {
@@ -58,8 +56,8 @@ describe('agentpack skills inspect', () => {
       assert.match(result.stdout, /Path: domains\/value\/skills\/copywriting\/SKILL\.md/);
       assert.match(result.stdout, /Sources:/);
       assert.match(result.stdout, /domains\/value\/knowledge\/selling-points\.md/);
-      assert.match(result.stdout, /Requires:/);
-      assert.match(result.stdout, /@alavida\/methodology-gary-provost/);
+      assert.match(result.stdout, /domains\/value\/knowledge\/tone-of-voice\.md/);
+      assert.match(result.stdout, /Requires:\n- none/);
     } finally {
       repo.cleanup();
     }
@@ -79,7 +77,7 @@ describe('agentpack skills inspect', () => {
     }
   });
 
-  it('shows deprecation metadata when present', () => {
+  it('rejects legacy authored skills during inspect', () => {
     const repo = createSkillFixture();
 
     try {
@@ -88,15 +86,8 @@ describe('agentpack skills inspect', () => {
         `---
 name: value-copywriting
 description: Write copy aligned with Alavida's value messaging and tone.
-metadata:
-  sources:
-    - domains/value/knowledge/selling-points.md
-    - domains/value/knowledge/tone-of-voice.md
-  status: deprecated
-  replacement: @alavida/value-research
-  message: Use the newer research-backed writing workflow.
-requires:
-  - @alavida/methodology-gary-provost
+sources:
+  - domains/value/knowledge/selling-points.md
 ---
 
 # Value Copywriting
@@ -105,81 +96,8 @@ requires:
 
       const result = runCLI(['skills', 'inspect', '@alavida/value-copywriting'], { cwd: repo.root });
 
-      assert.equal(result.exitCode, 0, result.stderr);
-      assert.match(result.stdout, /Status: deprecated/);
-      assert.match(result.stdout, /Replacement: @alavida\/value-research/);
-      assert.match(result.stdout, /Message: Use the newer research-backed writing workflow\./);
-    } finally {
-      repo.cleanup();
-    }
-  });
-
-  it('reads dependencies from metadata.requires', () => {
-    const repo = createTempRepo('skills-inspect-metadata-requires');
-
-    try {
-      addPackagedSkill(repo.root, 'skills/weekly-planner', {
-        skillMd: `---
-name: weekly-planner
-description: Plan the week against current operations priorities.
-metadata:
-  sources:
-    - domains/operations/knowledge/plan.yaml
-  requires:
-    - @alavida-ai/agonda-prioritisation
----
-
-# Weekly Planner
-`,
-        packageJson: {
-          name: '@alavida-ai/weekly-planner',
-          version: '1.0.0',
-          files: ['SKILL.md'],
-          dependencies: {
-            '@alavida-ai/agonda-prioritisation': '^1.0.0',
-          },
-        },
-      });
-
-      const result = runCLI(['skills', 'inspect', 'skills/weekly-planner'], { cwd: repo.root });
-
-      assert.equal(result.exitCode, 0, result.stderr);
-      assert.match(result.stdout, /Requires:/);
-      assert.match(result.stdout, /@alavida-ai\/agonda-prioritisation/);
-    } finally {
-      repo.cleanup();
-    }
-  });
-
-  it('parses folded multiline descriptions from frontmatter', () => {
-    const repo = createTempRepo('skills-inspect-folded-description');
-
-    try {
-      addPackagedSkill(repo.root, 'skills/digest-book', {
-        skillMd: `---
-name: digest-book
-description: >
-  Convert a PDF book into structured markdown.
-  Keep the concept index navigable.
-requires: []
----
-
-# Digest Book
-`,
-        packageJson: {
-          name: '@alavida/digest-book',
-          version: '1.0.0',
-          files: ['SKILL.md'],
-        },
-      });
-
-      const result = runCLI(['skills', 'inspect', 'skills/digest-book'], { cwd: repo.root });
-
-      assert.equal(result.exitCode, 0, result.stderr);
-      assert.match(
-        result.stdout,
-        /Description: Convert a PDF book into structured markdown\. Keep the concept index navigable\./
-      );
+      assert.equal(result.exitCode, 2);
+      assert.match(result.stderr, /legacy skill\.md authoring is not supported/i);
     } finally {
       repo.cleanup();
     }
@@ -199,7 +117,60 @@ requires: []
   });
 
   it('inspects a multi-skill package by package name and lists exported skills', () => {
-    const repo = createAuthoredMultiSkillFixture('skills-inspect-multi-skill-package');
+    const repo = createScenario({
+      name: 'skills-inspect-multi-skill-package',
+      packages: [
+        {
+          relPath: 'workbenches/planning-kit',
+          packageJson: {
+            name: '@alavida-ai/planning-kit',
+            version: '0.1.0',
+            files: ['skills'],
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida-ai/agentpack.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            agentpack: {
+              skills: {
+                kickoff: { path: 'skills/kickoff/SKILL.md' },
+                recap: { path: 'skills/recap/SKILL.md' },
+              },
+            },
+          },
+          files: {
+            'skills/kickoff/SKILL.md': `---
+name: kickoff
+description: Plan the kickoff.
+---
+
+\`\`\`agentpack
+source agenda = "domains/planning/knowledge/kickoff-agenda.md"
+\`\`\`
+
+Use [the kickoff agenda](source:agenda){context="source material for kickoff planning"}.
+`,
+            'skills/recap/SKILL.md': `---
+name: recap
+description: Plan the recap.
+---
+
+\`\`\`agentpack
+source checklist = "domains/planning/knowledge/recap-checklist.md"
+\`\`\`
+
+Use [the recap checklist](source:checklist){context="source material for recap planning"}.
+`,
+          },
+        },
+      ],
+      sources: {
+        'domains/planning/knowledge/kickoff-agenda.md': '# Kickoff Agenda\n',
+        'domains/planning/knowledge/recap-checklist.md': '# Recap Checklist\n',
+      },
+    });
 
     try {
       const result = runCLIJson(['skills', 'inspect', '@alavida-ai/planning-kit'], { cwd: repo.root });
@@ -217,7 +188,60 @@ requires: []
   });
 
   it('inspects a multi-skill package export by skill directory', () => {
-    const repo = createAuthoredMultiSkillFixture('skills-inspect-multi-skill-export-dir');
+    const repo = createScenario({
+      name: 'skills-inspect-multi-skill-export-dir',
+      packages: [
+        {
+          relPath: 'workbenches/planning-kit',
+          packageJson: {
+            name: '@alavida-ai/planning-kit',
+            version: '0.1.0',
+            files: ['skills'],
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida-ai/agentpack.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            agentpack: {
+              skills: {
+                kickoff: { path: 'skills/kickoff/SKILL.md' },
+                recap: { path: 'skills/recap/SKILL.md' },
+              },
+            },
+          },
+          files: {
+            'skills/kickoff/SKILL.md': `---
+name: kickoff
+description: Plan the kickoff.
+---
+
+\`\`\`agentpack
+source agenda = "domains/planning/knowledge/kickoff-agenda.md"
+\`\`\`
+
+Use [the kickoff agenda](source:agenda){context="source material for kickoff planning"}.
+`,
+            'skills/recap/SKILL.md': `---
+name: recap
+description: Plan the recap.
+---
+
+\`\`\`agentpack
+source checklist = "domains/planning/knowledge/recap-checklist.md"
+\`\`\`
+
+Use [the recap checklist](source:checklist){context="source material for recap planning"}.
+`,
+          },
+        },
+      ],
+      sources: {
+        'domains/planning/knowledge/kickoff-agenda.md': '# Kickoff Agenda\n',
+        'domains/planning/knowledge/recap-checklist.md': '# Recap Checklist\n',
+      },
+    });
 
     try {
       const result = runCLI(['skills', 'inspect', 'workbenches/planning-kit/skills/kickoff'], { cwd: repo.root });
@@ -231,37 +255,49 @@ requires: []
     }
   });
 
-  it('shows wrapper metadata when present', () => {
-    const repo = createTempRepo('skills-inspect-wraps');
-
-    try {
-      addPackagedSkill(repo.root, 'skills/branded-diagram', {
-        skillMd: `---
-name: branded-diagram
-description: Render the branded diagram workflow.
-wraps: "@vendor/diagram-kit:generate-diagram"
-overrides:
-  - references/brand.md
-metadata:
-  sources: []
-requires: []
+  it('inspects a compiler-mode skill from compiled state', () => {
+    const repo = createScenario({
+      name: 'skills-inspect-compiler-mode',
+      sources: {
+        'domains/product/knowledge/prd-principles.md': '# Principles\n',
+      },
+      packages: [
+        {
+          relPath: 'skills/prd-agent',
+          packageJson: {
+            name: '@alavida/prd-agent',
+            version: '1.0.0',
+            files: ['SKILL.md'],
+          },
+          skillMd: `---
+name: prd-agent
+description: Create strong PRDs.
 ---
 
-# Branded Diagram
+\`\`\`agentpack
+import prd, { proto-persona as persona } from skill "@alavida/prd-development"
+source principles = "domains/product/knowledge/prd-principles.md"
+\`\`\`
+
+Use [the PRD method](skill:prd){context="for structuring and reviewing the PRD"}.
+Use [the proto persona workflow](skill:persona){context="for shaping the target user profile before drafting the PRD"}.
+Ground this in [our PRD principles](source:principles){context="primary source material"}.
 `,
-        packageJson: {
-          name: '@alavida-ai/branded-diagram',
-          version: '1.0.0',
-          files: ['SKILL.md'],
         },
-      });
+      ],
+    });
 
-      const result = runCLI(['skills', 'inspect', 'skills/branded-diagram'], { cwd: repo.root });
+    try {
+      const result = runCLIJson(['skills', 'inspect', 'skills/prd-agent'], { cwd: repo.root });
 
-      assert.equal(result.exitCode, 0, result.stderr);
-      assert.match(result.stdout, /Wraps: @vendor\/diagram-kit:generate-diagram/);
-      assert.match(result.stdout, /Overrides:/);
-      assert.match(result.stdout, /references\/brand\.md/);
+      assert.equal(result.exitCode, 0, result.stderr || result.stdout);
+      assert.equal(result.json.kind, 'export');
+      assert.equal(result.json.name, 'prd-agent');
+      assert.equal(result.json.packageName, '@alavida/prd-agent');
+      assert.equal(result.json.packageVersion, '1.0.0');
+      assert.equal(result.json.skillFile, 'skills/prd-agent/SKILL.md');
+      assert.deepEqual(result.json.sources, ['domains/product/knowledge/prd-principles.md']);
+      assert.deepEqual(result.json.requires, ['@alavida/prd-development', '@alavida/prd-development:proto-persona']);
     } finally {
       repo.cleanup();
     }

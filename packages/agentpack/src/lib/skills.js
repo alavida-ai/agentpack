@@ -1,14 +1,14 @@
 import { existsSync, readFileSync, readdirSync, watch, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { buildCompiledStateUseCase } from '../application/skills/build-compiled-state.js';
 import { findAllWorkbenches, findRepoRoot, findWorkbenchContext, resolveWorkbenchFlag } from './context.js';
 import {
-  buildReverseDependencies,
   buildSkillGraph,
-  buildSkillStatusMap,
-  readNodeStatus,
 } from '../domain/skills/skill-graph.js';
 import { readInstallState } from '../infrastructure/fs/install-state-repository.js';
+import { readCompiledState } from '../infrastructure/fs/compiled-state-repository.js';
+import { readMaterializationState } from '../infrastructure/fs/materialization-state-repository.js';
 import { readDevSession, writeDevSession, removeDevSession } from '../infrastructure/fs/dev-session-repository.js';
 import {
   ensureSkillLink,
@@ -29,13 +29,8 @@ import {
 import { listAuthoredSkillPackages } from '../domain/skills/skill-catalog.js';
 import { resolveSingleSkillTarget, resolveSkillTarget } from '../domain/skills/skill-target-resolution.js';
 import { inspectMaterializedSkills } from '../infrastructure/runtime/inspect-materialized-skills.js';
-import {
-  buildStateRecordForPackageDir,
-  compareRecordedSources,
-  hashFile,
-  readBuildState,
-  writeBuildState,
-} from '../domain/skills/skill-provenance.js';
+import { compileSkillDocument } from '../domain/compiler/skill-compiler.js';
+import { hashFile } from '../domain/compiler/source-hash.js';
 import { readUserConfig } from '../infrastructure/fs/user-config-repository.js';
 import { readUserCredentials } from '../infrastructure/fs/user-credentials-repository.js';
 import { getUserNpmrcPath, readUserNpmrc } from '../infrastructure/fs/user-npmrc-repository.js';
@@ -45,6 +40,37 @@ import { AgentpackError, EXIT_CODES, NetworkError, NotFoundError, ValidationErro
 
 const GITHUB_PACKAGES_REGISTRY = 'https://npm.pkg.github.com';
 const MANAGED_PACKAGE_SCOPES = ['@alavida', '@alavida-ai'];
+
+function isCompilerModeDocument(content) {
+  return content.includes('```agentpack');
+}
+
+function readCompilerSkillDocument(skillFilePath) {
+  const content = readFileSync(skillFilePath, 'utf-8');
+  if (!isCompilerModeDocument(content)) {
+    throw new ValidationError(
+      'Legacy SKILL.md authoring is not supported. Use an `agentpack` declaration block and explicit body references.',
+      {
+        code: 'legacy_authoring_not_supported',
+        path: skillFilePath,
+      }
+    );
+  }
+
+  return compileSkillDocument(content);
+}
+
+function listCompilerSkillRequirements(compiledDocument) {
+  return [...new Set(
+    Object.values(compiledDocument.skillImports).map((entry) => entry.target)
+  )].sort((a, b) => a.localeCompare(b));
+}
+
+function listCompilerPackageDependencies(compiledDocument) {
+  return [...new Set(
+    Object.values(compiledDocument.skillImports).map((entry) => entry.packageSpecifier)
+  )].sort((a, b) => a.localeCompare(b));
+}
 
 function isManagedPackageName(packageName) {
   return typeof packageName === 'string'
@@ -67,26 +93,26 @@ function resolveDevLinkedSkills(repoRoot, rootSkillDir) {
     seenDirs.add(skillDir);
 
     const skillFile = join(skillDir, 'SKILL.md');
-    const metadata = parseSkillFrontmatterFile(skillFile);
+    const compiled = readCompilerSkillDocument(skillFile);
     const packageMetadata = readPackageMetadata(skillDir);
+    const requirements = listCompilerSkillRequirements(compiled);
 
     linkedSkills.push({
-      name: metadata.name,
+      name: compiled.metadata.name,
       skillDir,
-      requires: metadata.requires,
+      requires: requirements,
       packageName: packageMetadata.packageName,
     });
 
-    for (const requirement of metadata.requires) {
-      const dependencyDir = findPackageDirByName(repoRoot, requirement)
-        || join(repoRoot, 'node_modules', ...requirement.split('/'));
-      if (!existsSync(dependencyDir)) {
+    for (const requirement of requirements) {
+      let dependency;
+      try {
+        dependency = resolveSingleSkillTarget(repoRoot, requirement);
+      } catch {
         unresolved.add(requirement);
         continue;
       }
-      if (!existsSync(join(dependencyDir, 'SKILL.md'))) continue;
-      if (!existsSync(join(dependencyDir, 'package.json'))) continue;
-      queue.push(dependencyDir);
+      queue.push(dependency.export.skillDirPath);
     }
   }
 
@@ -171,6 +197,21 @@ function readPackageJson(packageDir) {
     packageJsonPath,
     packageJson: JSON.parse(readFileSync(packageJsonPath, 'utf-8')),
   };
+}
+
+function maybeBuildCompiledState(target, { cwd = process.cwd() } = {}) {
+  const repoRoot = findRepoRoot(cwd);
+  let resolved;
+  try {
+    resolved = resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false });
+  } catch {
+    return null;
+  }
+
+  const content = readFileSync(resolved.export.skillFilePath, 'utf-8');
+  if (!content.includes('```agentpack')) return null;
+
+  return buildCompiledStateUseCase(target, { cwd });
 }
 
 function isProcessAlive(pid) {
@@ -269,7 +310,10 @@ function reconcileDevSession(repoRoot) {
 
 export function syncSkillDependencies(skillDir) {
   const required = [...new Set(
-    readInstalledSkillExports(skillDir).flatMap((entry) => entry.requires || [])
+    readInstalledSkillExports(skillDir).flatMap((entry) => {
+      const compiled = readCompilerSkillDocument(entry.skillFile);
+      return listCompilerPackageDependencies(compiled);
+    })
   )].sort((a, b) => a.localeCompare(b));
   const { packageJsonPath, packageJson } = readPackageJson(skillDir);
   const nextDependencies = { ...(packageJson.dependencies || {}) };
@@ -477,6 +521,7 @@ export function startSkillDev(target, {
     }
   };
 
+  maybeBuildCompiledState(target, { cwd });
   initialResult = enrichResult(applyDevResult(devSkill(target, { cwd, sync })));
   const ready = Promise.resolve(startOrRefreshWorkbench())
     .then(() => {
@@ -497,7 +542,10 @@ export function startSkillDev(target, {
     clearTimeout(timer);
     timer = setTimeout(() => {
       Promise.resolve()
-        .then(() => applyDevResult(devSkill(target, { cwd, sync })))
+        .then(() => {
+          maybeBuildCompiledState(target, { cwd });
+          return applyDevResult(devSkill(target, { cwd, sync }));
+        })
         .then(async (result) => {
           await startOrRefreshWorkbench();
           return enrichResult(result);
@@ -727,6 +775,7 @@ export function inspectRegistryConfig({
     mode: 'missing',
     key: null,
     value: null,
+    redacted: false,
   };
 
   if (authToken) {
@@ -737,13 +786,15 @@ export function inspectRegistryConfig({
         mode: 'env',
         key: envMatch[1],
         value: null,
+        redacted: false,
       };
     } else {
       auth = {
         configured: true,
         mode: 'literal',
         key: null,
-        value: authToken,
+        value: null,
+        redacted: true,
       };
     }
   }
@@ -858,123 +909,12 @@ export function inspectSkill(target, { cwd = process.cwd() } = {}) {
   };
 }
 
-function buildAuthoredSkillGraph(repoRoot) {
-  return buildSkillGraph(repoRoot, listPackagedSkillDirs(repoRoot), {
-    parseSkillFrontmatterFile,
-    readPackageMetadata,
-    findPackageDirByName,
-    normalizeDisplayPath,
-  });
-}
-
-function buildInstalledSkillGraph(repoRoot) {
-  const installState = readInstallState(repoRoot);
-  const directInstallNames = new Set(
-    Object.entries(installState.installs || {})
-      .filter(([, install]) => install.direct)
-      .map(([packageName]) => packageName)
-  );
-
-  return buildSkillGraph(repoRoot, listInstalledPackageDirs(join(repoRoot, 'node_modules')), {
-    directInstallNames,
-    parseSkillFrontmatterFile,
-    readPackageMetadata,
-    findPackageDirByName,
-    normalizeDisplayPath,
-  });
-}
-
-function buildSkillStatusMapForRepo(repoRoot) {
-  const nodes = buildAuthoredSkillGraph(repoRoot);
-  const staleSkills = new Set(listStaleSkills({ cwd: repoRoot }).map((skill) => skill.packageName));
-  return buildSkillStatusMap(nodes, staleSkills);
-}
-
-export function inspectSkillDependencies(target, {
-  cwd = process.cwd(),
-  discoveryRoot = process.env.AGENTPACK_DISCOVERY_ROOT,
-} = {}) {
-  const repoRoot = findRepoRoot(cwd);
-  const authoredNodes = buildAuthoredSkillGraph(repoRoot);
-  const installedNodes = buildInstalledSkillGraph(repoRoot);
-  const statusRoot = discoveryRoot ? resolve(discoveryRoot) : repoRoot;
-  const statusMap = buildSkillStatusMapForRepo(statusRoot);
-
-  const authoredTarget = authoredNodes.get(target) || null;
-  const installedTarget = installedNodes.get(target) || null;
-
-  let graph = null;
-  let nodes = null;
-  let node = null;
-
-  if (authoredTarget) {
-    graph = 'authored';
-    nodes = authoredNodes;
-    node = authoredTarget;
-  } else if (installedTarget) {
-    graph = 'installed';
-    nodes = installedNodes;
-    node = installedTarget;
-  } else {
-    const targetPath = resolveSkillFileTarget(repoRoot, target);
-    if (targetPath) {
-      const packageDir = dirname(targetPath);
-      const packageMetadata = readPackageMetadata(packageDir);
-      if (packageMetadata.packageName && authoredNodes.has(packageMetadata.packageName)) {
-        graph = 'authored';
-        nodes = authoredNodes;
-        node = authoredNodes.get(packageMetadata.packageName);
-      }
-    }
-  }
-
-  if (!node || !nodes || !graph) {
-    throw new NotFoundError('skill dependency graph target not found', {
-      code: 'skill_graph_target_not_found',
-      suggestion: `Target: ${target}`,
-    });
-  }
-
-  const reverseDependencies = buildReverseDependencies(nodes).get(node.packageName) || [];
-
-  return {
-    graph,
-    name: node.name,
-    packageName: node.packageName,
-    packageVersion: node.packageVersion,
-    skillPath: node.skillPath,
-    skillFile: node.skillFile,
-    direct: graph === 'installed' ? node.direct : null,
-    status: readNodeStatus(statusMap, node.packageName),
-    dependencies: node.dependencies.map((packageName) => {
-      const dependencyNode = nodes.get(packageName);
-      return {
-        packageName,
-        packageVersion: dependencyNode?.packageVersion || null,
-        skillPath: dependencyNode?.skillPath || null,
-        direct: graph === 'installed' ? dependencyNode?.direct || false : null,
-        status: readNodeStatus(statusMap, packageName),
-      };
-    }),
-    reverseDependencies: reverseDependencies.map((packageName) => {
-      const dependencyNode = nodes.get(packageName);
-      return {
-        packageName,
-        packageVersion: dependencyNode?.packageVersion || null,
-        skillPath: dependencyNode?.skillPath || null,
-        direct: graph === 'installed' ? dependencyNode?.direct || false : null,
-        status: readNodeStatus(statusMap, packageName),
-      };
-    }),
-  };
-}
-
 function isPublishedSkillFile(files, relativeSkillFile) {
   if (!files) return true;
   return files.some((entry) => entry === relativeSkillFile || relativeSkillFile.startsWith(`${entry}/`));
 }
 
-function validatePackagedSkillExport(repoRoot, pkg, skillExport) {
+export function validatePackagedSkillExport(repoRoot, pkg, skillExport) {
   const packageMetadata = readPackageMetadata(pkg.packageDir);
   const issues = [];
 
@@ -1089,40 +1029,6 @@ export function validateSkills(target, { cwd = process.cwd() } = {}) {
   const validCount = skills.filter((skill) => skill.valid).length;
   const invalidCount = skills.length - validCount;
 
-  if (validCount > 0) {
-    const buildState = readBuildState(repoRoot);
-
-    if (!target) {
-      const authoredKeys = new Set(targets.map((entry) => entry.export.key));
-      for (const key of Object.keys(buildState.skills || {})) {
-        if (authoredKeys.has(key)) continue;
-        delete buildState.skills[key];
-      }
-    }
-
-    for (const targetEntry of targets) {
-      const result = skills.find((skill) => skill.key === targetEntry.export.key);
-      if (!result?.valid) continue;
-
-      const sources = {};
-      for (const sourcePath of targetEntry.export.sources || []) {
-        sources[sourcePath] = {
-          hash: hashFile(join(repoRoot, sourcePath)),
-        };
-      }
-
-      buildState.skills[targetEntry.export.key] = {
-        package_version: targetEntry.package.packageVersion,
-        skill_path: targetEntry.export.skillPath,
-        skill_file: targetEntry.export.skillFile,
-        sources,
-        requires: targetEntry.export.requires,
-      };
-    }
-
-    writeBuildState(repoRoot, buildState);
-  }
-
   return {
     valid: invalidCount === 0,
     count: skills.length,
@@ -1223,59 +1129,35 @@ export function generateSkillsCatalog({ cwd = process.cwd() } = {}) {
   };
 }
 
-export function generateBuildState({ cwd = process.cwd() } = {}) {
-  const repoRoot = findRepoRoot(cwd);
-  const skills = {};
-
-  for (const skill of listAuthoredPackagedSkills(repoRoot)) {
-    const sources = {};
-    for (const sourcePath of skill.sources) {
-      sources[sourcePath] = {
-        hash: hashFile(join(repoRoot, sourcePath)),
-      };
-    }
-
-    skills[skill.key] = {
-      package_version: skill.packageVersion,
-      skill_path: skill.skillPath,
-      skill_file: skill.skillFile,
-      sources,
-      requires: skill.requires,
-      ...(skill.wraps ? { wraps: skill.wraps } : {}),
-      ...(skill.overrides?.length ? { overrides: skill.overrides } : {}),
-    };
-  }
-
-  return {
-    version: 1,
-    skills,
-  };
-}
-
 export function listStaleSkills({ cwd = process.cwd() } = {}) {
   const repoRoot = findRepoRoot(cwd);
-  const buildState = readBuildState(repoRoot);
-  const staleSkills = [];
-
-  for (const packageDir of listPackagedSkillDirs(repoRoot)) {
-    const packageMetadata = readPackageMetadata(packageDir);
-    if (!packageMetadata.packageName) continue;
-
-    const record = buildState.skills?.[packageMetadata.packageName];
-    if (!record) continue;
-
-    const changedSources = compareRecordedSources(repoRoot, record);
-    if (changedSources.length === 0) continue;
-
-    staleSkills.push({
-      packageName: packageMetadata.packageName,
-      skillPath: normalizeDisplayPath(repoRoot, packageDir),
-      skillFile: normalizeDisplayPath(repoRoot, join(packageDir, 'SKILL.md')),
-      changedSources,
+  const compiledState = readCompiledState(repoRoot);
+  if (!compiledState) {
+    throw new NotFoundError('compiled state not found', {
+      code: 'compiled_state_not_found',
+      suggestion: 'Run `agentpack skills build <target>` first.',
     });
   }
 
-  return staleSkills.sort((a, b) => a.packageName.localeCompare(b.packageName));
+  return (compiledState.skills || [])
+    .map((skill) => {
+      const changedSources = (compiledState.sourceFiles || [])
+        .map((sourceFile) => ({
+          path: sourceFile.path,
+          recorded: sourceFile.hash,
+          current: hashFile(join(repoRoot, sourceFile.path)),
+        }))
+        .filter((entry) => entry.recorded !== entry.current);
+
+      return {
+        packageName: skill.packageName,
+        skillPath: skill.skillPath,
+        skillFile: skill.skillFile,
+        changedSources,
+      };
+    })
+    .filter((skill) => skill.changedSources.length > 0)
+    .sort((a, b) => a.packageName.localeCompare(b.packageName));
 }
 
 export function inspectStaleSkill(target, { cwd = process.cwd() } = {}) {
@@ -1453,6 +1335,21 @@ export function installSkills(targets, { cwd = process.cwd() } = {}) {
 export function inspectSkillsEnv({ cwd = process.cwd() } = {}) {
   const repoRoot = findRepoRoot(cwd);
   const state = readInstallState(repoRoot);
+  const materializationState = readMaterializationState(repoRoot);
+  const materializationsByPackage = new Map();
+
+  for (const entries of Object.values(materializationState?.adapters || {})) {
+    for (const entry of entries || []) {
+      if (!entry.packageName) continue;
+      const current = materializationsByPackage.get(entry.packageName) || [];
+      current.push({
+        target: entry.target,
+        mode: entry.mode,
+      });
+      materializationsByPackage.set(entry.packageName, current);
+    }
+  }
+
   const installs = Object.entries(state.installs || {})
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([packageName, install]) => ({
@@ -1464,7 +1361,7 @@ export function inspectSkillsEnv({ cwd = process.cwd() } = {}) {
       packageVersion: install.package_version,
       sourcePackagePath: install.source_package_path,
       skills: install.skills || [],
-      materializations: install.materializations || [],
+      materializations: materializationsByPackage.get(packageName) || install.materializations || [],
     }));
 
   return {
@@ -1578,13 +1475,13 @@ function listLocalWorkbenchSkillRecords(repoRoot) {
       if (!existsSync(skillFile)) continue;
       if (existsSync(join(skillDir, 'package.json'))) continue;
 
-      const metadata = parseSkillFrontmatterFile(skillFile);
+      const compiled = readCompilerSkillDocument(skillFile);
       records.push({
         packageName: null,
-        name: metadata.name,
+        name: compiled.metadata.name,
         skillFile: normalizeDisplayPath(repoRoot, skillFile),
         direct: true,
-        requires: metadata.requires,
+        requires: listCompilerPackageDependencies(compiled),
       });
     }
   }
@@ -1668,13 +1565,13 @@ export function inspectMissingSkillDependencies({
       if (packageMetadata.packageName) {
         records = installedRecords.filter((install) => install.packageName === packageMetadata.packageName);
       } else {
-        const metadata = parseSkillFrontmatterFile(skillFile);
+        const compiled = readCompilerSkillDocument(skillFile);
         records = [{
           packageName: null,
-          name: metadata.name,
+          name: compiled.metadata.name,
           skillFile: normalizeDisplayPath(repoRoot, skillFile),
           direct: true,
-          requires: metadata.requires,
+          requires: listCompilerPackageDependencies(compiled),
         }];
       }
     }
@@ -1881,8 +1778,8 @@ function resolvePackageDirsFromWorkbench(workbench, repoRoot) {
     const skillFile = join(skillsDir, entry.name, 'SKILL.md');
     if (!existsSync(skillFile)) continue;
 
-    const metadata = parseSkillFrontmatterFile(skillFile);
-    for (const requirement of metadata.requires) {
+    const compiled = readCompilerSkillDocument(skillFile);
+    for (const requirement of listCompilerPackageDependencies(compiled)) {
       const packageDir = findPackageDirByName(repoRoot, requirement);
       if (packageDir) {
         packageDirs.push(packageDir);

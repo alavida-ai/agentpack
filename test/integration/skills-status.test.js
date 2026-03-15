@@ -113,6 +113,30 @@ describe('agentpack skills status', () => {
     }
   });
 
+  it('redacts literal registry auth tokens in JSON status output', async () => {
+    const consumer = createRepoFromFixture('consumer', 'skills-status-auth-redaction');
+
+    try {
+      writeFileSync(
+        join(consumer.root, '.npmrc'),
+        '@alavida:registry=https://npm.pkg.github.com\n'
+          + '//npm.pkg.github.com/:_authToken=secret-token\n'
+          + 'always-auth=true\n'
+      );
+
+      const result = runCLIJson(['skills', 'status'], { cwd: consumer.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.equal(result.json.registry.configured, true);
+      assert.equal(result.json.registry.auth.configured, true);
+      assert.equal(result.json.registry.auth.mode, 'literal');
+      assert.equal(result.json.registry.auth.value, null);
+      assert.equal(result.json.registry.auth.redacted, true);
+    } finally {
+      consumer.cleanup();
+    }
+  });
+
   it('surfaces deprecated installed skills in status output', async () => {
     const monorepo = createRepoFromFixture('monorepo', 'skills-status-deprecated-source');
     const consumer = createRepoFromFixture('consumer', 'skills-status-deprecated-consumer');
@@ -123,18 +147,20 @@ describe('agentpack skills status', () => {
         `---
 name: value-copywriting
 description: Write copy aligned with Alavida's value messaging and tone.
-metadata:
-  sources:
-    - domains/value/knowledge/selling-points.md
-    - domains/value/knowledge/tone-of-voice.md
-  status: deprecated
-  replacement: @alavida/value-research
-  message: Use the research skill instead.
-requires:
-  - @alavida/methodology-gary-provost
+status: deprecated
+replacement: @alavida/value-research
+message: Use the research skill instead.
 ---
 
-# Value Copywriting
+\`\`\`agentpack
+import provost from skill "@alavida/methodology-gary-provost"
+source sellingPoints = "domains/value/knowledge/selling-points.md"
+source toneOfVoice = "domains/value/knowledge/tone-of-voice.md"
+\`\`\`
+
+Use [Provost guidance](skill:provost){context="sentence rhythm and cadence guidance for final copy"}.
+Ground this in [current selling points](source:sellingPoints){context="primary source material for value messaging"}.
+Apply [tone of voice](source:toneOfVoice){context="tone constraints for the final copy"}.
 `
       );
 

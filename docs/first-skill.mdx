@@ -1,274 +1,93 @@
 ---
 title: "Create Your First Skill"
-description: "Build a skill from source knowledge, validate it, and make it discoverable by agents"
+description: "Build a compiler-mode skill from source knowledge, validate it, and make it discoverable by agents."
 ---
 
 ## What you'll build
 
-You'll create a **copywriting package** that exports one `copywriting` skill module. By the end, it will be validated, linked for local development, and visible in the agentpack dashboard.
-
-**Scenario:** Your team has brand guidelines in markdown files. You want every agent in the repo to follow them consistently, without copy-pasting instructions into every prompt.
-
-## Prerequisites
-
-- Node.js 18+
-- agentpack installed globally: `npm install -g @alavida/agentpack`
-- A git repository to work in
+You'll create a **copywriting package** with one exported `copywriting` skill. By the end, it will be validated, compiled, linked for local development, and visible in the dashboard.
 
 ## Directory layout
 
-Here is what you'll create by the end of this tutorial:
-
-```
+```text
 your-repo/
 ├── domains/
 │   └── brand/
 │       ├── knowledge/
-│       │   └── tone-of-voice.md        ← source knowledge (the truth)
+│       │   └── tone-of-voice.md
 │       └── skills/
 │           └── copywriting/
-│               ├── package.json        ← package and distribution metadata
-│               └── skills/
-│                   └── copywriting/
-│                       └── SKILL.md    ← exported skill artifact
+│               ├── package.json
+│               └── SKILL.md
 └── .claude/
     └── skills/
-        └── copywriting/                ← symlink (created by agentpack skills dev)
 ```
 
 <Steps>
+  <Step title="Write the source knowledge">
+    ```markdown
+    # Tone of Voice
 
-<Step title="Write the source knowledge">
+    - Warm but direct
+    - Active voice always
+    - Avoid unexplained jargon
+    ```
+  </Step>
 
-Source knowledge files are the raw truth your skill is built from. These are the markdown documents your team already maintains -- brand guides, style docs, research principles.
+  <Step title="Create the skill">
+    ```markdown
+    ---
+    name: copywriting
+    description: Brand-consistent copywriting using company tone guidance.
+    ---
 
-Create the knowledge directory and write a tone-of-voice guide:
+    ```agentpack
+    source tone = "domains/brand/knowledge/tone-of-voice.md"
+    ```
 
-```bash
-mkdir -p domains/brand/knowledge
-```
+    Apply [tone guidance](source:tone){context="primary source of tone constraints for customer-facing copy"}.
+    ```
+  </Step>
 
-```markdown tone-of-voice.md
-# Tone of Voice
-
-## Principles
-
-- **Warm but direct.** We don't hedge. We speak to the reader like a trusted friend
-  who happens to know the answer.
-- **Confident, not arrogant.** State what we know. Acknowledge what we don't.
-- **Active voice.** "We built this" not "This was built by us."
-
-## Word choices
-
-- Say "you" not "the user"
-- Say "simple" not "easy" (nothing is easy when you're stuck)
-- Say "works with" not "integrates with"
-
-## What to avoid
-
-- Jargon without explanation
-- Exclamation marks in body copy
-- Marketing superlatives ("best-in-class", "world-class", "cutting-edge")
-```
-
-<Tip>
-Knowledge files are plain markdown. There is no special format -- just write what you'd put in a style guide or wiki page. The skill will reference these files as its sources.
-</Tip>
-
-</Step>
-
-<Step title="Create the SKILL.md">
-
-`SKILL.md` is the compiled skill artifact. Its frontmatter declares the skill's identity, its source provenance, and any dependencies. The body contains the instructions agents will follow.
-
-```bash
-mkdir -p domains/brand/skills/copywriting/skills/copywriting
-```
-
-```markdown domains/brand/skills/copywriting/skills/copywriting/SKILL.md
----
-name: copywriting
-description: Brand-consistent copywriting using company tone and voice principles
-metadata:
-  sources:
-    - domains/brand/knowledge/tone-of-voice.md
-requires: []
----
-
-## Instructions
-
-When writing copy for the brand, follow these guidelines:
-
-1. Read and internalize the tone-of-voice principles before drafting.
-2. Use active voice throughout. Address the reader as "you."
-3. Avoid jargon unless you explain it in the same sentence.
-4. Never use marketing superlatives.
-5. Keep sentences varied in length. Mix short and long for rhythm.
-
-## When to use this skill
-
-- Landing page copy
-- Product descriptions
-- Email sequences
-- Help center articles
-
-## When NOT to use this skill
-
-- Internal engineering docs (use a technical writing skill instead)
-- Legal or compliance copy (requires legal review)
-```
-
-The `metadata.sources` array lists the knowledge files this skill was built from. agentpack uses these paths for provenance tracking and stale detection -- if someone updates `tone-of-voice.md`, agentpack knows this skill may need a refresh.
-
-</Step>
-
-<Step title="Create the package.json">
-
-Every exported skill module ships inside an npm package. The `package.json` provides the package identity, version, and export map that npm and agentpack need for distribution.
-
-```json package.json
-{
-  "name": "@alavida/copywriting",
-  "version": "0.1.0",
-  "description": "Brand-consistent copywriting using company tone and voice principles",
-  "files": ["skills/"],
-  "agentpack": {
-    "skills": {
-      "copywriting": {
-        "path": "skills/copywriting/SKILL.md"
+  <Step title="Create the package metadata">
+    ```json
+    {
+      "name": "@alavida/copywriting",
+      "version": "0.1.0",
+      "files": ["SKILL.md"],
+      "repository": {
+        "type": "git",
+        "url": "git+https://github.com/your-org/knowledge-base.git"
+      },
+      "publishConfig": {
+        "registry": "https://npm.pkg.github.com"
       }
     }
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/your-org/knowledge-base.git"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  }
-}
-```
+    ```
+  </Step>
 
-<Note>
-The `files` array must include the exported skill paths. `agentpack.skills` is the explicit package contract for which runtime modules the package ships.
-</Note>
+  <Step title="Validate and build">
+    ```bash
+    agentpack skills validate domains/brand/skills/copywriting
+    agentpack skills build @alavida/copywriting
+    ```
+  </Step>
 
-</Step>
+  <Step title="Run dev mode">
+    ```bash
+    agentpack skills dev domains/brand/skills/copywriting
+    ```
 
-<Step title="Validate the skill">
-
-Run `agentpack skills validate` to check that the skill is structurally sound and ready for use.
-
-```bash
-agentpack skills validate domains/brand/skills/copywriting
-```
-
-Expected output:
-
-```
-Package: @alavida/copywriting
-Status: valid
-```
-
-If validation fails, the output tells you exactly what to fix -- missing fields, unresolvable sources, or mismatched dependencies.
-
-</Step>
-
-<Step title="Start dev mode">
-
-Run `agentpack skills dev` to link the skill into the agent discovery directories and launch the visual dashboard.
-
-```bash
-agentpack skills dev domains/brand/skills/copywriting
-```
-
-Expected output:
-
-```
-Linked Skill: copywriting
-Path: domains/brand/skills/copywriting/skills/copywriting
-Synced Added: 0
-Synced Removed: 0
-Linked Skills: 1
-Linked: .claude/skills/copywriting
-Workbench URL: http://localhost:3000
-Note: if your current agent session was already running, start a fresh session
-to pick up newly linked skills.
-```
-
-This does three things:
-1. **Symlinks** the exported skill into `.claude/skills/copywriting` and `.agents/skills/copywriting` so agents can discover it
-2. **Starts the dashboard** at `http://localhost:3000` with a visual skill graph
-3. **Watches** your skill directory and source files for changes -- edits trigger an automatic reload
-
-{/* Screenshot: dashboard showing a single "copywriting" skill node with a provenance edge connecting it to the tone-of-voice.md source file */}
-
-<Tip>
-If you only want the symlinks without the dashboard, pass `--no-dashboard`:
-
-```bash
-agentpack skills dev --no-dashboard domains/brand/skills/copywriting
-```
-</Tip>
-
-The dev process keeps running. When you stop it (Ctrl+C), the symlinks are automatically removed.
-
-</Step>
-
-<Step title="Inspect the skill">
-
-In a separate terminal, run `agentpack skills inspect` to see the full skill metadata:
-
-```bash
-agentpack skills inspect domains/brand/skills/copywriting
-```
-
-Expected output:
-
-```
-Skill: copywriting
-Description: Brand-consistent copywriting using company tone and voice principles
-Package: @alavida/copywriting
-Version: 0.1.0
-Path: domains/brand/skills/copywriting/skills/copywriting/SKILL.md
-
-Sources:
-- domains/brand/knowledge/tone-of-voice.md
-
-Requires:
-- none
-```
-
-This is the same information the dashboard displays, in a terminal-friendly format. Use `--json` for machine-readable output.
-
-{/* Screenshot: terminal showing the agentpack skills inspect output for the copywriting skill */}
-
-</Step>
-
+    This compiles the skill, materializes runtime links, and starts the dashboard.
+  </Step>
 </Steps>
 
-## What just happened
+## What agentpack manages
 
-You created a skill using the agentpack compiler model:
+- `.agentpack/compiled.json` for semantic state
+- `.agentpack/materialization-state.json` for runtime ownership
+- `.claude/skills/` and `.agents/skills/` as runtime outputs
 
-| Step | What it is |
-|---|---|
-| `tone-of-voice.md` | Source knowledge (the truth your team maintains) |
-| `SKILL.md` | Compiled exported skill artifact (instructions + provenance metadata) |
-| `package.json` | Package metadata plus explicit exported skill map |
-| `.claude/skills/copywriting` | Runtime materialization (how agents discover it) |
+## Next step
 
-Your skill is now discoverable by any agent in this repo. Start a new Claude Code or Codex session, and the agent will see the copywriting skill and follow its instructions.
-
-## Next steps
-
-Your skill has no dependencies yet. In the next tutorial, you'll connect skills together so agents can compose capabilities.
-
-<CardGroup cols={2}>
-  <Card title="Skill Dependencies" icon="diagram-project" href="/skill-dependencies">
-    Learn how to declare and manage dependencies between skills
-  </Card>
-  <Card title="CLI Reference" icon="terminal" href="/cli-skills">
-    Full reference for all agentpack skills commands
-  </Card>
-</CardGroup>
+Add cross-skill dependencies with explicit `import ... from skill` declarations and contextual body references.

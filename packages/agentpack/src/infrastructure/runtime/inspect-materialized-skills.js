@@ -1,6 +1,7 @@
 import { lstatSync, readlinkSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { readDevSession } from '../fs/dev-session-repository.js';
+import { readMaterializationState } from '../fs/materialization-state-repository.js';
 
 function readPathType(pathValue) {
   try {
@@ -82,6 +83,7 @@ export function inspectMaterializedSkills(repoRoot, state) {
   const runtimeDrift = [];
   const ownedTargets = new Set();
   const devSession = readDevSession(repoRoot);
+  const materializationState = readMaterializationState(repoRoot);
 
   if (devSession?.status === 'active') {
     for (const target of devSession.links || []) {
@@ -89,28 +91,53 @@ export function inspectMaterializedSkills(repoRoot, state) {
     }
   }
 
-  for (const [packageName, install] of Object.entries(state.installs || {})) {
-    const issues = [];
+  const issuesByPackage = new Map();
+  const recordedAdapters = materializationState?.adapters
+    ? Object.values(materializationState.adapters).flatMap((entries) => entries || [])
+    : [];
 
-    for (const skill of install.skills || []) {
-      for (const materialization of skill.materializations || []) {
-        ownedTargets.add(materialization.target);
-        const issue = inspectRecordedMaterialization(repoRoot, {
-          target: materialization.target,
-          expectedSourcePath: skill.source_skill_path,
-          packageName,
-          runtimeName: skill.runtime_name,
-        });
-        if (issue) issues.push(issue);
+  if (recordedAdapters.length > 0) {
+    for (const entry of recordedAdapters) {
+      ownedTargets.add(entry.target);
+      const issue = inspectRecordedMaterialization(repoRoot, {
+        target: entry.target,
+        expectedSourcePath: entry.sourceSkillPath || entry.source || '',
+        packageName: entry.packageName || null,
+        runtimeName: entry.runtimeName || null,
+      });
+      if (!issue || !issue.packageName) continue;
+      const issues = issuesByPackage.get(issue.packageName) || [];
+      issues.push(issue);
+      issuesByPackage.set(issue.packageName, issues);
+    }
+  } else {
+    for (const [packageName, install] of Object.entries(state.installs || {})) {
+      const issues = [];
+
+      for (const skill of install.skills || []) {
+        for (const materialization of skill.materializations || []) {
+          ownedTargets.add(materialization.target);
+          const issue = inspectRecordedMaterialization(repoRoot, {
+            target: materialization.target,
+            expectedSourcePath: skill.source_skill_path,
+            packageName,
+            runtimeName: skill.runtime_name,
+          });
+          if (issue) issues.push(issue);
+        }
+      }
+
+      if (issues.length > 0) {
+        issuesByPackage.set(packageName, issues);
       }
     }
+  }
 
-    if (issues.length > 0) {
-      runtimeDrift.push({
-        packageName,
-        issues,
-      });
-    }
+  for (const [packageName, issues] of issuesByPackage.entries()) {
+    runtimeDrift.push({
+      packageName,
+      issues,
+    });
   }
 
   const orphanedMaterializations = [];

@@ -54,6 +54,9 @@ name: local-only
 description: Local only skill.
 ---
 
+\`\`\`agentpack
+\`\`\`
+
 # Local Only
 `
       );

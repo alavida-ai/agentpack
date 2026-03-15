@@ -332,6 +332,9 @@ export function SkillGraph({
       const sourceGs = sourceGroup.selectAll('g')
         .data(sourceNodes)
         .join('g')
+        .attr('data-node-id', (n) => n.id)
+        .attr('data-node-type', (n) => n.type)
+        .attr('data-node-status', (n) => n.status)
         .attr('transform', (n) => {
           const p = posMap.get(n.id);
           return `translate(${p.x},${p.y})`;
@@ -389,6 +392,9 @@ export function SkillGraph({
     const nodeGs = nodeGroup.selectAll('g')
       .data(skillNodeData)
       .join('g')
+      .attr('data-node-id', (d) => d.data.data.id)
+      .attr('data-node-type', (d) => d.data.data.type)
+      .attr('data-node-status', (d) => d.data.data.status)
       .attr('transform', (d) => `translate(${d.x},${d.y + treeTopPad})`)
       .style('cursor', 'pointer')
       .on('click', (_, d) => onSelect(d.data.data.id))
@@ -476,7 +482,7 @@ export function SkillGraph({
 
   }, [model, selectedId, labelsVisible, knowledgeVisible, onSelect, onHover, onHoverEnd]);
 
-  return <svg ref={svgRef} style={{ flex: 1, minHeight: 0 }} />;
+  return <svg data-testid="skill-graph" ref={svgRef} style={{ flex: 1, minHeight: 0 }} />;
 }
 
 function highlightConnected(node, model, posMap, g) {

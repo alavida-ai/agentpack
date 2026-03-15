@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
+import { compileSkillDocument } from '../compiler/skill-compiler.js';
 import { NotFoundError, ValidationError } from '../../utils/errors.js';
 
 function parseScalar(value) {
@@ -146,15 +147,21 @@ export function parseSkillFrontmatterFile(skillFilePath) {
     requires: Array.isArray(fields.metadata?.requires)
       ? fields.metadata.requires
       : (Array.isArray(fields.requires) ? fields.requires : []),
-    status: typeof fields.metadata?.status === 'string' ? fields.metadata.status : null,
-    replacement: typeof fields.metadata?.replacement === 'string' ? fields.metadata.replacement : null,
-    message: typeof fields.metadata?.message === 'string' ? fields.metadata.message : null,
+    status: typeof fields.status === 'string'
+      ? fields.status
+      : (typeof fields.metadata?.status === 'string' ? fields.metadata.status : null),
+    replacement: typeof fields.replacement === 'string'
+      ? fields.replacement
+      : (typeof fields.metadata?.replacement === 'string' ? fields.metadata.replacement : null),
+    message: typeof fields.message === 'string'
+      ? fields.message
+      : (typeof fields.metadata?.message === 'string' ? fields.metadata.message : null),
     wraps: typeof fields.metadata?.wraps === 'string'
       ? fields.metadata.wraps
       : (typeof fields.wraps === 'string' ? fields.wraps : null),
-    overrides: Array.isArray(fields.metadata?.overrides)
-      ? fields.metadata.overrides
-      : (Array.isArray(fields.overrides) ? fields.overrides : []),
+    overrides: Array.isArray(fields.overrides)
+      ? fields.overrides
+      : (Array.isArray(fields.metadata?.overrides) ? fields.metadata.overrides : []),
   };
 }
 
@@ -199,6 +206,38 @@ export function buildCanonicalSkillRequirement(packageName, skillName) {
   return `${packageName}:${skillName}`;
 }
 
+function isCompilerModeDocument(content) {
+  return content.includes('```agentpack');
+}
+
+function readCompilerSkillExport(skillFile) {
+  const content = readFileSync(skillFile, 'utf-8');
+  if (!isCompilerModeDocument(content)) {
+    throw new ValidationError(
+      'Legacy SKILL.md authoring is not supported. Use an `agentpack` declaration block and explicit body references.',
+      {
+        code: 'legacy_authoring_not_supported',
+        path: skillFile,
+      }
+    );
+  }
+
+  const compiled = compileSkillDocument(content);
+  const metadata = parseSkillFrontmatterFile(skillFile);
+
+  return {
+    name: compiled.metadata.name,
+    description: compiled.metadata.description,
+    sources: Object.values(compiled.sourceBindings).map((entry) => entry.sourcePath),
+    requires: Object.values(compiled.skillImports).map((entry) => entry.target),
+    status: metadata.status,
+    replacement: metadata.replacement,
+    message: metadata.message,
+    wraps: metadata.wraps,
+    overrides: metadata.overrides,
+  };
+}
+
 export function readInstalledSkillExports(packageDir) {
   const packageMetadata = readPackageMetadata(packageDir);
   const exports = [];
@@ -211,7 +250,7 @@ export function readInstalledSkillExports(packageDir) {
       const skillFile = join(packageDir, relativeSkillFile);
       if (!existsSync(skillFile)) continue;
 
-      const metadata = parseSkillFrontmatterFile(skillFile);
+      const metadata = readCompilerSkillExport(skillFile);
       exports.push({
         declaredName,
         name: metadata.name,
@@ -237,7 +276,7 @@ export function readInstalledSkillExports(packageDir) {
   const rootSkillFile = join(packageDir, 'SKILL.md');
   if (!existsSync(rootSkillFile)) return [];
 
-  const metadata = parseSkillFrontmatterFile(rootSkillFile);
+  const metadata = readCompilerSkillExport(rootSkillFile);
   return [{
     declaredName: metadata.name,
     name: metadata.name,

@@ -1,10 +1,10 @@
 ---
 name: orchestration-agent
 description: Route website-dev work to the right domain skills.
-requires:
-  - @alavida/value-copywriting
 ---
 
-# Orchestration Agent
+```agentpack
+import valueCopywriting from skill "@alavida/value-copywriting"
+```
 
-Route work to domain skills.
+Use [value copywriting](skill:valueCopywriting){context="domain skill used when routing copy requests"}.

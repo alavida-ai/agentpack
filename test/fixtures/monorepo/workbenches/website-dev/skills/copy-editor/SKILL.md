@@ -1,10 +1,10 @@
 ---
 name: copy-editor
 description: Secondary copy skill that still depends on value copywriting.
-requires:
-  - @alavida/value-copywriting
 ---
 
-# Copy Editor
+```agentpack
+import valueCopywriting from skill "@alavida/value-copywriting"
+```
 
-Reuses the same copywriting package root.
+Use [value copywriting](skill:valueCopywriting){context="shared copywriting dependency for editing work"}.

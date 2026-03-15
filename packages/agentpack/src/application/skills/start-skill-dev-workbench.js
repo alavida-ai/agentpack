@@ -1,13 +1,13 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { parseSkillFrontmatterFile, readPackageMetadata, normalizeDisplayPath } from '../../domain/skills/skill-model.js';
-import { readBuildState, compareRecordedSources } from '../../domain/skills/skill-provenance.js';
-import { buildSkillGraph, buildSkillStatusMap } from '../../domain/skills/skill-graph.js';
+import { hashFile } from '../../domain/compiler/source-hash.js';
 import { buildTransitiveSkillWorkbenchModel } from './build-skill-workbench-model.js';
+import { readCompiledState } from '../../infrastructure/fs/compiled-state-repository.js';
 import { startSkillDevWorkbenchServer } from '../../infrastructure/runtime/skill-dev-workbench-server.js';
 import { openBrowser } from '../../infrastructure/runtime/open-browser.js';
 import { watchSkillWorkbench } from '../../infrastructure/runtime/watch-skill-workbench.js';
 import { runSkillWorkbenchAction } from './run-skill-workbench-action.js';
+import { resolveSingleSkillTarget } from '../../domain/skills/skill-target-resolution.js';
 
 function listPackagedSkillDirs(repoRoot) {
   const stack = [repoRoot];
@@ -85,68 +85,96 @@ function findPackageDirByName(repoRoot, packageName) {
 }
 
 function buildModelForSkill(repoRoot, targetPackageName) {
-  const packageDirs = listPackagedSkillDirs(repoRoot);
-  const skillGraph = buildSkillGraph(repoRoot, packageDirs, {
-    parseSkillFrontmatterFile,
-    readPackageMetadata,
-    findPackageDirByName: (root, name) => findPackageDirByName(root, name),
-    normalizeDisplayPath,
+  const compiledState = readCompiledState(repoRoot);
+  if (compiledState) {
+    const compiledModel = buildModelFromCompiledState(repoRoot, compiledState, targetPackageName);
+    if (compiledModel) return compiledModel;
+  }
+  return null;
+}
+
+function explainCompiledSourceStatus(status) {
+  if (status === 'changed') return 'Changed since compiled state was built';
+  return 'Current against compiled state';
+}
+
+function inferDependencyName(target) {
+  const [packageName, exportedName] = target.split(':');
+  if (exportedName) return exportedName;
+  return packageName.split('/').pop();
+}
+
+function buildModelFromCompiledState(repoRoot, compiledState, targetPackageName) {
+  const selectedSkill = (compiledState.skills || []).find((skill) => skill.packageName === targetPackageName);
+  if (!selectedSkill) return null;
+
+  const changedSources = new Set();
+  const sourceNodes = (compiledState.sourceFiles || []).map((sourceFile) => {
+    const currentHash = hashFile(join(repoRoot, sourceFile.path));
+    const changed = currentHash !== sourceFile.hash;
+    if (changed) changedSources.add(sourceFile.path);
+
+    return {
+      id: `source:${sourceFile.path}`,
+      type: 'source',
+      path: sourceFile.path,
+      status: changed ? 'changed' : 'current',
+      explanation: explainCompiledSourceStatus(changed ? 'changed' : 'current'),
+      depth: 0,
+      usedBy: [selectedSkill.packageName],
+    };
   });
 
-  const buildState = readBuildState(repoRoot);
-  const staleSkills = new Set();
-  const changedSources = new Set(); // track individual changed source paths
+  const dependencyNodes = (selectedSkill.skillImports || []).map((skillImport) => ({
+    id: skillImport.target,
+    type: 'dependency',
+    packageName: skillImport.target,
+    name: inferDependencyName(skillImport.target),
+    description: null,
+    version: null,
+    status: 'unknown',
+    explanation: 'No compiled dependency lifecycle state available yet',
+    depth: 1,
+  }));
 
-  for (const [packageName, record] of Object.entries(buildState.skills || buildState)) {
-    if (typeof record !== 'object' || !record.sources) continue;
-    try {
-      const changes = compareRecordedSources(repoRoot, record);
-      if (changes.length > 0) {
-        staleSkills.add(packageName);
-        for (const change of changes) changedSources.add(change.path);
-      }
-    } catch {
-      // skip
+  const selectedStatus = changedSources.size > 0 ? 'stale' : 'current';
+  const selectedNode = {
+    id: selectedSkill.packageName,
+    type: 'skill',
+    packageName: selectedSkill.packageName,
+    name: selectedSkill.name,
+    description: selectedSkill.description || null,
+    version: selectedSkill.packageVersion || null,
+    status: selectedStatus,
+    explanation: selectedStatus === 'stale'
+      ? `Stale because one or more compiled sources changed: ${[...changedSources].join(', ')}`
+      : 'Current against compiled state',
+    depth: 0,
+  };
+
+  const edges = [];
+  for (const edge of compiledState.edges || []) {
+    if (edge.kind === 'source_usage') {
+      edges.push({
+        source: `source:${edge.target}`,
+        target: selectedSkill.packageName,
+        kind: 'provenance',
+      });
+    }
+    if (edge.kind === 'skill_usage') {
+      edges.push({
+        source: selectedSkill.packageName,
+        target: edge.target,
+        kind: 'requires',
+      });
     }
   }
 
-  const statusMap = buildSkillStatusMap(skillGraph, staleSkills);
-
-  function resolveSkillSources(packageName) {
-    const graphNode = skillGraph.get(packageName);
-    if (!graphNode) return [];
-
-    const skillFilePath = join(repoRoot, graphNode.skillFile);
-    try {
-      const metadata = parseSkillFrontmatterFile(skillFilePath);
-      return metadata.sources || [];
-    } catch {
-      return [];
-    }
-  }
-
-  function resolveSkillRequires(packageName) {
-    const graphNode = skillGraph.get(packageName);
-    if (!graphNode) return [];
-
-    const skillFilePath = join(repoRoot, graphNode.skillFile);
-    try {
-      const metadata = parseSkillFrontmatterFile(skillFilePath);
-      return metadata.requires || [];
-    } catch {
-      return [];
-    }
-  }
-
-  return buildTransitiveSkillWorkbenchModel({
-    repoRoot,
-    targetPackageName,
-    skillGraph,
-    statusMap,
-    changedSources,
-    resolveSkillSources,
-    resolveSkillRequires,
-  });
+  return {
+    selected: selectedNode,
+    nodes: [...sourceNodes, selectedNode, ...dependencyNodes],
+    edges,
+  };
 }
 
 export async function startSkillDevWorkbench({
@@ -155,8 +183,8 @@ export async function startSkillDevWorkbench({
   open = true,
   disableBrowser = false,
 }) {
-  const packageMetadata = readPackageMetadata(skillDir);
-  const defaultSkill = packageMetadata.packageName;
+  const resolved = resolveSingleSkillTarget(repoRoot, skillDir, { includeInstalled: false });
+  const defaultSkill = resolved.package.packageName;
 
   const server = await startSkillDevWorkbenchServer({
     buildModel: (skillPackageName) => buildModelForSkill(repoRoot, skillPackageName),

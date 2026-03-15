@@ -1,129 +1,50 @@
 ---
 title: "Staleness Detection"
-description: "How agentpack tracks whether skills are built from current sources, and what to do when they drift."
+description: "How agentpack tracks whether compiled skills still match their bound sources."
 ---
 
-A skill is only as good as the knowledge it was built from. If the source documents change but the skill is not re-authored, the agent works from outdated instructions. Staleness detection is how agentpack prevents that.
+Staleness detection compares the current content hash of each bound source file against the hash recorded in `.agentpack/compiled.json`.
 
-## The Core Idea
+## The model
 
-When you validate a skill, agentpack records a hash of every source file listed in `metadata.sources`. These hashes are stored in `.agentpack/build-state.json` alongside the skill's package name and the timestamp of the validation.
+- source file changed: the source node is `changed`
+- skill bound to that source: the skill is `stale`
+- skills importing that stale skill: they become `affected`
 
-Later, when you run `agentpack skills stale`, agentpack re-hashes those same source files and compares. If any hash differs from what was recorded, the skill is stale -- it was built from knowledge that has since changed.
-
-```
-At validation time:            Later:
-  process-guide.md → abc123     process-guide.md → abc123  ✓ same
-  best-practices.md → def456   best-practices.md → xyz789  ✗ changed!
-                                                  → skill is STALE
-```
-
-This is the same principle behind any build system's incremental rebuild: if the inputs changed, the outputs may need to be regenerated.
-
-## Three Levels of Staleness
-
-Staleness is not binary. agentpack distinguishes three states that describe where the change is and how it affects the graph.
-
-### Changed
-
-A specific source file has been modified on disk since the last validation. This is the most granular signal -- it tells you exactly which input moved.
-
-**Example**: You updated `messaging-guide.md` to reflect a new brand voice. The file's hash no longer matches what was recorded in build-state.json.
-
-In the [dashboard](/dashboard), changed sources appear as **red diamonds with a pulse animation**.
-
-### Stale
-
-A skill has at least one changed source. The skill itself may still contain the old knowledge -- it has not been re-authored from the updated sources yet.
-
-**Example**: The `value-copywriting` skill references `messaging-guide.md` as a source. That file changed, so `value-copywriting` is now stale.
-
-In the dashboard, stale skills appear as **amber circles with a glowing pulse**.
-
-### Affected
-
-A skill's own sources have not changed, but one of its dependencies is stale or affected. The skill may be indirectly impacted by upstream changes.
-
-**Example**: `website-copy` requires `value-copywriting`. When `value-copywriting` becomes stale, `website-copy` becomes affected -- its own sources are fine, but something it depends on has drifted.
-
-In the dashboard, affected skills appear as **hollow circles with a purple ring**.
-
-{/* Screenshot: dashboard showing a stale skill with changed sources highlighted in red */}
-
-## Checking for Staleness
-
-Run `agentpack skills stale` to see which skills have drifted:
+## Check for staleness
 
 ```bash
-# List all stale skills
 agentpack skills stale
-
-# Detailed view with per-source hash comparisons
-agentpack skills stale --detail
-
-# JSON output for CI pipelines
-agentpack skills stale --json
+agentpack skills stale @scope/package
 ```
 
-The list mode shows each stale skill with the count of changed sources. The detail mode shows the specific files that changed, with both the recorded and current hashes.
+If compiled state does not exist yet, build or validate first:
 
-## Fixing a Stale Skill
+```bash
+agentpack skills build <target>
+```
 
-Staleness is a signal, not an automatic fix. agentpack tells you what changed but does not rewrite the skill for you. The workflow is:
+## Fixing a stale skill
 
-<Steps>
-  <Step title="Identify the drift">
-    Run `agentpack skills stale --detail` to see exactly which sources changed for each stale skill.
-  </Step>
-  <Step title="Re-author the skill">
-    Review the updated source documents. Then re-author the SKILL.md to reflect the current knowledge -- either manually or by asking an agent to rewrite it from the updated sources.
-  </Step>
-  <Step title="Validate">
-    Run `agentpack skills validate path/to/skill`. This checks the updated skill's structure and records fresh source hashes in build-state.json. The skill returns to **current** status.
-  </Step>
-  <Step title="Commit the build state">
-    Commit `.agentpack/build-state.json` so that staleness detection works consistently across machines, CI, and teammates.
-  </Step>
-</Steps>
+1. Update the source-backed `SKILL.md`
+2. Re-run:
 
-## How It Appears in the Dashboard
+```bash
+agentpack skills validate <target>
+```
 
-The [dev dashboard](/dashboard) makes staleness visible in real time. While the dashboard is running:
+or
 
-1. All nodes start green if everything is current
-2. Edit a source file in your editor
-3. The source node turns red (changed) immediately
-4. The skill that references it turns amber (stale)
-5. Any skills that depend on the stale skill show a purple ring (affected)
-6. Click any node to open the inspector and see the details
-7. Click **Validate** in the control strip to re-validate and clear the staleness
+```bash
+agentpack skills build <target>
+```
 
-This live feedback loop means you can see staleness as it happens, not after the fact.
+3. Re-materialize if needed:
 
-## Build State Persistence
+```bash
+agentpack skills materialize
+```
 
-The file `.agentpack/build-state.json` is the record of what was true at the last validation. It contains:
+## Shared state
 
-- The package name and version of each validated skill
-- The relative path and content hash of each source file
-- The timestamp of the validation
-
-<Warning>
-If you do not commit `.agentpack/build-state.json`, staleness detection only works on the machine where validation last ran. For staleness to work in CI, across teammates' machines, or after a fresh clone, commit this file.
-</Warning>
-
-## Why This Matters
-
-Agent skills encode organizational knowledge -- processes, methodologies, standards. That knowledge changes over time. A skill written three months ago from a process document that has been revised twice since then will give the agent instructions that no longer match reality.
-
-Staleness detection closes this gap. It creates a verifiable link between the source knowledge and the compiled skill, and it tells you the moment that link breaks. You will never ship a skill built from outdated knowledge again.
-
-<Tip>
-Integrate `agentpack skills stale --json` into your CI pipeline to block merges when skills have drifted from their sources. This ensures that published skills always reflect current knowledge.
-</Tip>
-
-## Related Pages
-
-- [How agentpack Works](/how-it-works) -- the lifecycle model that staleness detection supports
-- [The Skill Graph](/skill-graph) -- how staleness propagates through dependency chains
-- [The Dev Dashboard](/dashboard) -- visual staleness feedback during development
+Commit `.agentpack/compiled.json` when you want staleness and semantic graph state reviewed or shared in CI.

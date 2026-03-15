@@ -13,6 +13,21 @@
 - Always use Context7 CLI (`ctx7`) when working with library/API documentation, code generation, setup, or configuration steps — without waiting to be asked.
 - Fall back to DeepWiki or the `find-docs` skill if Context7 is unavailable.
 
+## Harness-First Workflow
+
+- Before implementation, make sure the work is grounded in the harness design at `docs/superpowers/specs/2026-03-15-agentpack-harness-design.md`.
+- The expected verification order is:
+  1. TLA models for stateful changes
+  2. parser/compiler golden tests
+  3. repo-lab integration tests
+  4. Verdaccio-backed registry tests
+  5. Playwright localhost dashboard/e2e tests
+  6. `agonda` and `superpowers` smoke suites
+- Do not rely on manual testing when a harness layer should cover the scenario.
+- If a feature is not yet harnessable, identify the missing harness work explicitly and add it before implementation.
+- For UI and dashboard changes, expose deterministic hooks for Playwright rather than depending on visual heuristics alone.
+- Standardize TLC setup through scripts or a documented bootstrap path; do not assume a local `tla2tools.jar` is already present.
+
 ## TLA+ Verification
 
 ### What it is
@@ -46,12 +61,9 @@ Do NOT bother with TLA+ for:
 
 ### How to run
 ```bash
-cd tla
-java -XX:+UseParallelGC -cp tla2tools.jar tlc2.TLC -workers auto MC_SkillStatus.tla -config MC_SkillStatus.cfg
-java -XX:+UseParallelGC -cp tla2tools.jar tlc2.TLC -workers auto MC_DevSession.tla -config MC_DevSession.cfg
-java -XX:+UseParallelGC -cp tla2tools.jar tlc2.TLC -workers auto MC_InstallFlow.tla -config MC_InstallFlow.cfg
+npm run test:models
 ```
-All three run in under 1 second. If TLC reports an invariant violation, it gives the exact state trace that broke it — use that to fix the model or the design.
+This bootstraps `tla2tools.jar` into `.cache/tla/` automatically and runs all three models. If TLC reports an invariant violation, it gives the exact state trace that broke it — use that to fix the model or the design.
 
 ### How to learn TLA+ syntax
 Use Context7 to pull docs from the source — do not rely on training data:

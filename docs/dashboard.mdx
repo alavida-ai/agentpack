@@ -41,7 +41,7 @@ The canvas renders your skill as a directed graph with three kinds of nodes:
 
 | Node type | Shape | What it represents |
 |---|---|---|
-| Source | Diamond (blue) | A knowledge document listed in `metadata.sources` |
+| Source | Diamond (blue) | A knowledge document bound in the skill's `agentpack` block |
 | Skill | Circle | The skill being developed, or a skill it depends on |
 | Dependency | Circle | A transitive dependency resolved through the graph |
 
@@ -50,7 +50,7 @@ Edges connect nodes in two ways:
 | Edge type | Style | Meaning |
 |---|---|---|
 | Provenance | Dashed blue line | "This source was used to build this skill" |
-| Requires | Solid green line | "This skill depends on that skill" |
+| Skill usage | Solid green line | "This skill explicitly uses that imported skill" |
 
 Provenance edges flow from source diamonds into the skill that references them. Requires edges flow between skill circles, showing the dependency chain.
 
@@ -79,7 +79,7 @@ Click any node to open the inspector panel on the right side. It shows detailed 
 - **Status**: current lifecycle status with explanation
 - **Description**: the skill's description from SKILL.md frontmatter
 - **Version**: the package version from package.json
-- **Used by** (sources only): which skills reference this source in their `metadata.sources`
+- **Used by** (sources only): which skills reference this source through explicit source bindings
 
 The inspector gives you the detail behind the visual summary. If a skill is stale, the inspector tells you which sources changed and when.
 

@@ -1,6 +1,6 @@
-import { watch } from 'node:fs';
+import { readFileSync, watch } from 'node:fs';
 import { join } from 'node:path';
-import { parseSkillFrontmatterFile } from '../../domain/skills/skill-model.js';
+import { compileSkillDocument } from '../../domain/compiler/skill-compiler.js';
 
 export function watchSkillWorkbench(repoRoot, skillDir, onRefresh) {
   const staticWatchers = [];
@@ -25,14 +25,16 @@ export function watchSkillWorkbench(repoRoot, skillDir, onRefresh) {
   };
 
   const syncSourceWatchers = () => {
-    let metadata;
+    let compiled;
     try {
-      metadata = parseSkillFrontmatterFile(skillFile);
+      compiled = compileSkillDocument(readFileSync(skillFile, 'utf-8'));
     } catch {
       return;
     }
 
-    const nextSources = new Set(metadata.sources.map((source) => join(repoRoot, source)));
+    const nextSources = new Set(
+      Object.values(compiled.sourceBindings).map((source) => join(repoRoot, source.sourcePath))
+    );
 
     for (const [pathValue, watcher] of sourceWatchers.entries()) {
       if (nextSources.has(pathValue)) continue;

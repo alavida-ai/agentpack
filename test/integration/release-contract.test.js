@@ -44,6 +44,9 @@ describe('release contract', () => {
     assert.equal(rootPackageJson.private, true);
     assert.deepEqual(rootPackageJson.workspaces, ['packages/*']);
     assert.equal(rootPackageJson.scripts.changeset, 'changeset');
+    assert.equal(rootPackageJson.scripts['test:sandboxes'], 'node scripts/test-sandboxes.mjs');
+    assert.equal(rootPackageJson.scripts['validate:live'], undefined);
+    assert.equal(rootPackageJson.scripts['smoke:monorepo'], undefined);
     assert.ok(rootPackageJson.devDependencies['@changesets/cli']);
     assert.equal(packageJson.name, '@alavida/agentpack');
     assert.equal(packageJson.publishConfig?.registry, 'https://registry.npmjs.org/');
@@ -53,7 +56,7 @@ describe('release contract', () => {
     assert.equal(changesetConfig.baseBranch, 'main');
   });
 
-  it('documents the merged skills dev and plugin diagnostics behavior without worktree paths', () => {
+  it('documents the compiler/bundler skill workflow without plugin surface or worktree paths', () => {
     const readme = readFileSync(join(repoRoot, 'README.md'), 'utf-8');
     const shippedSkill = readFileSync(join(repoRoot, 'packages', 'agentpack', 'skills', 'agentpack-cli', 'SKILL.md'), 'utf-8');
     const sandboxSpec = readFileSync(
@@ -66,15 +69,18 @@ describe('release contract', () => {
     );
 
     assert.match(readme, /--no-dashboard/);
-    assert.match(readme, /plugin inspect/i);
+    assert.match(readme, /compiled\.json/i);
+    assert.match(readme, /materialization-state\.json/i);
+    assert.match(readme, /test:sandboxes/i);
+    assert.doesNotMatch(readme, /agentpack plugin /i);
     assert.doesNotMatch(readme, /\.worktrees\//);
     assert.doesNotMatch(readme, /\/Users\/[^)\s]+/);
 
-    assert.match(shippedSkill, /plugin inspect/i);
-    assert.match(shippedSkill, /plugin validate/i);
-    assert.match(shippedSkill, /structured diagnostic/i);
+    assert.match(shippedSkill, /compiled artifact/i);
+    assert.match(shippedSkill, /skills build/i);
     assert.match(shippedSkill, /--no-dashboard/);
     assert.match(shippedSkill, /workbench/i);
+    assert.doesNotMatch(shippedSkill, /\bplugin\b/i);
 
     assert.match(sandboxSpec, /domains\/[A-Za-z0-9/_-]*workbenches\//);
     assert.match(sandboxPlan, /domains\/[A-Za-z0-9/_-]*workbenches\//);

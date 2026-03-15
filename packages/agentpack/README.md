@@ -3,7 +3,7 @@
 You already know the feeling:
 
 - the skill worked in one repo, but now it is copied into three places
-- a plugin depends on a skill, but nobody knows where that dependency truth lives
+- a runtime has a skill on disk, but nobody knows which compiled artifact produced it
 - the source knowledge changed, but the shipped skill never got updated
 - the runtime still has a skill on disk, but nobody can tell whether it is current, stale, local, bundled, or installed transitively
 - the agent "knows" something, but you no longer trust where that knowledge came from
@@ -14,14 +14,14 @@ The core failure mode is lifecycle collapse. Most teams flatten four different a
 
 - source knowledge
 - compiled skill artifact
-- runtime plugin
+- runtime materialization
 - installed environment state
 
 Once those boundaries blur, everything gets worse:
 
 - authors do not know what to update
 - consumers do not know what to install
-- plugins become hidden dependency containers
+- runtimes drift from the last known compiled state
 - agents end up running stale knowledge with no visible trust chain
 
 `agentpack` gives those artifacts their own lifecycle again:
@@ -30,11 +30,21 @@ Once those boundaries blur, everything gets worse:
 - `SKILL.md` becomes the agent-facing artifact
 - `package.json` becomes the distribution contract
 - npm handles package resolution and versioning
-- `agentpack` handles validation, staleness, local linking, install flow, and plugin bundling
+- `agentpack` handles compilation, validation, staleness, local linking, install flow, and runtime materialization
 
 This is for teams who want agent behavior to be packaged, inspectable, and updateable like software instead of copy-pasted prompt debris.
 
 Docs: https://docs.alavida.ai
+
+## Development
+
+For stateful behavior changes, run the formal model checks first:
+
+```bash
+npm run test:models
+```
+
+This bootstraps `tla2tools.jar` into `.cache/tla/` and runs the current models in `tla/`.
 
 ## Install
 
@@ -54,7 +64,7 @@ Most agent workflows still look like this:
 
 - write source knowledge in one place
 - hand-copy some of it into a skill
-- hand-copy that skill into a plugin or repo
+- hand-copy that skill into another repo or runtime
 - lose track of what depends on what
 - discover drift only when the agent produces the wrong output
 
@@ -65,7 +75,7 @@ Most agent workflows still look like this:
 3. Validate it before release.
 4. Link it locally for testing.
 5. Publish it as a package.
-6. Install or bundle it wherever it needs to run.
+6. Install and materialize it wherever it needs to run.
 
 ## What It Does
 
@@ -73,14 +83,14 @@ Most agent workflows still look like this:
 
 1. Author a packaged skill from source docs or knowledge files.
 2. Validate that skill before release.
-3. Link it locally into `.claude/skills/` and `.agents/skills/` for testing.
-4. Bundle packaged skills into self-contained plugin artifacts.
+3. Compile it into `.agentpack/compiled.json`.
+4. Materialize it into `.claude/skills/` and `.agents/skills/` for testing or consumption.
 
 ## Quick Start
 
 ### Author and test a packaged skill
 
-Run these commands from the repo that owns the source files referenced by `metadata.sources`:
+Run these commands from the repo that owns the source files bound in the skill's `agentpack` block:
 
 ```bash
 agentpack skills inspect domains/operations/skills/agonda-prioritisation
@@ -101,21 +111,14 @@ agentpack skills install @scope/skill-package
 agentpack skills env
 ```
 
-### Build a plugin artifact
+### Build and materialize a compiled skill
 
 ```bash
-agentpack plugin inspect path/to/plugin
-agentpack plugin validate path/to/plugin
-agentpack plugin build path/to/plugin
+agentpack skills build path/to/skill
+agentpack skills materialize
 ```
 
-`plugin inspect` and `plugin validate` now emit actionable structured diagnostics when a plugin target is missing required files such as `package.json` or `.claude-plugin/plugin.json`.
-
-For watch mode during development:
-
-```bash
-agentpack plugin dev path/to/plugin
-```
+`skills build` produces `.agentpack/compiled.json`. `skills materialize` records adapter output ownership in `.agentpack/materialization-state.json`.
 
 ## The Model
 
@@ -125,9 +128,9 @@ The most important distinction in `agentpack` is lifecycle stage.
 
 A packaged skill is a reusable capability artifact.
 
-- `metadata.sources` track provenance
-- `requires` define authored skill dependencies
-- `package.json.dependencies` are the compiled mirror of `requires`
+- `source ... = "repo/path"` bindings track provenance
+- `import ... from skill "@scope/package"` defines skill dependencies
+- `package.json.dependencies` are the package-level mirror for cross-package skill imports
 - it is self-contained at runtime, not a pointer back to source files
 
 Typical local flow:
@@ -145,32 +148,19 @@ Typical consumer flow:
 - `skills install`
 - `skills env`
 
-### Plugins
-
-A plugin is a deployable runtime shell, not just another skill package.
-
-Plugin-local skills can declare `requires` on packaged skills. `agentpack` can then build a self-contained plugin artifact that vendors those packaged dependencies.
-
-Typical plugin flow:
-
-- `plugin inspect`
-- `plugin validate`
-- `plugin build`
-- `plugin dev`
-
 ## What Agentpack Refuses To Blur
 
 These are deliberate boundaries:
 
 - Knowledge is the source of truth.
 - Skills are derived artifacts.
-- Plugins are runtime shells.
+- Runtime adapters materialize compiled skills.
 - Installed state is repo-local runtime state.
 
 If you blur those together, you get the exact problems this tool exists to stop:
 
 - skills that silently depend on files they do not ship
-- plugins that hide reusable capability dependencies
+- runtimes that cannot explain why a skill is present
 - repos that cannot explain why a skill is present
 - updates that change behavior without an explicit review step
 
@@ -210,23 +200,18 @@ Implemented today:
 - `agentpack skills env`
 - `agentpack skills uninstall`
 - `agentpack skills outdated`
-- `agentpack skills dependencies`
 - `agentpack skills registry`
 - `agentpack skills status`
 - `agentpack skills missing`
-- `agentpack plugin inspect`
-- `agentpack plugin validate`
-- `agentpack plugin build`
-- `agentpack plugin dev`
 
 ## Docs
 
 Hosted docs: https://docs.alavida.ai
 
-For a repo-local demo and manual testing target, initialize submodules and use [`sandbox/acme-demo/`](./sandbox/acme-demo).
+Run the live downstream smoke harness against the isolated `agonda` and `superpowers` sandboxes with:
 
 ```bash
-git submodule update --init --recursive
+npm run test:sandboxes
 ```
 
 Docs source: [`docs/`](./docs)
@@ -245,6 +230,12 @@ Run the full test suite:
 
 ```bash
 npm test
+```
+
+Run the live sandbox harness:
+
+```bash
+npm run test:sandboxes
 ```
 
 Validate the shipped agent skill:
@@ -269,8 +260,6 @@ Useful local commands:
 
 ```bash
 npx changeset
-npm run version-packages
-npm run release
 ```
 
 Manual git tags are no longer the normal release path.
@@ -293,14 +282,15 @@ It is still optional. You do not need Intent to install or run the CLI itself.
 
 In authoring repos:
 
-- commit `.agentpack/build-state.json`
-- commit `.agentpack/catalog.json`
+- commit `.agentpack/compiled.json` when you want compiled semantic state reviewed or shared
+- compiled state is the only semantic source of truth
 - commit `skills/sync-state.json` when maintaining shipped Intent skills
 
 In consumer/runtime repos:
 
 - do not commit `.agentpack/install.json`
 - do not commit `.agentpack/dev-session.json`
+- do not commit `.agentpack/materialization-state.json`
 
 ## License
 

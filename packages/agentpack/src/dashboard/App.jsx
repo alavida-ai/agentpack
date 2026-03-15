@@ -127,13 +127,16 @@ export function App() {
   return (
     <>
       {/* Header */}
-      <header style={{
+      <header
+        data-testid="workbench-header"
+        style={{
         padding: '20px 40px 0',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         flexShrink: 0,
-      }}>
+      }}
+      >
         <div>
           <div style={{
             fontFamily: 'var(--font-mono)',
@@ -182,9 +185,11 @@ export function App() {
       <Breadcrumbs trail={trail} onNavigate={handleBreadcrumbNavigate} />
 
       {/* Main area */}
-      <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+      <div data-testid="workbench-main" style={{ flex: 1, position: 'relative', minHeight: 0 }}>
         {loading && !model && (
-          <div style={{
+          <div
+            data-testid="workbench-loading"
+            style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -192,20 +197,24 @@ export function App() {
             fontFamily: 'var(--font-mono)',
             fontSize: 12,
             color: 'var(--text-dim)',
-          }}>
+          }}
+          >
             Loading...
           </div>
         )}
 
         {error && (
-          <div style={{
+          <div
+            data-testid="workbench-error"
+            style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             height: '100%',
             gap: 16,
-          }}>
+          }}
+          >
             <div style={{
               fontFamily: 'var(--font-body)',
               fontSize: 18,
@@ -247,7 +256,9 @@ export function App() {
         )}
 
         {model && model.nodes.length === 1 && model.nodes[0].type === 'skill' && (
-          <div style={{
+          <div
+            data-testid="workbench-empty"
+            style={{
             position: 'absolute',
             bottom: 80,
             left: '50%',
@@ -256,7 +267,8 @@ export function App() {
             fontSize: 14,
             fontStyle: 'italic',
             color: 'var(--text-faint)',
-          }}>
+          }}
+          >
             No dependencies or sources found.
           </div>
         )}

@@ -12,6 +12,10 @@
     {
       "content": "When repo-level and package-level files disagree, prefer the current package-level implementation under packages/agentpack and verify against the test suite. Some top-level docs may lag behind the implementation, so avoid over-indexing on root README/package.json without checking packages/agentpack and test/integration."
     }
+    ,
+    {
+      "content": "The repository now includes a full autonomous evaluation harness under scripts/agent-eval/ and scripts/run-agent-evals.mjs that powers E2B/Claude Code and browser checks, captures learning-log.ndjson/report.md/report.json bundles, and stores artifacts under eval-results/. Reference this harness when explaining automated evaluation, UX testing, or the new agent-dispatch tooling."
+    }
   ],
   "pages": [
     {
@@ -297,6 +301,17 @@
       "page_notes": [
         {
           "content": "This repo's integration tests are a key source of truth for current behavior. Highlight test/integration as the behavioral contract, especially for multi-skill packages, install and env behavior, materialization, and auth fallback."
+        }
+      ]
+    }
+    ,
+    {
+      "title": "Autonomous Eval Harness",
+      "purpose": "Document the scripts/agent-eval/* harness plus scripts/run-agent-evals.mjs that drive E2B/Claude Code autonomous agents, Playwright browser checks, synthetic scenarios, and eval-results/ bundles with report.md/report.json/learning-log.ndjson.",
+      "parent": "Testing Infrastructure",
+      "page_notes": [
+        {
+          "content": "Highlight scenario definitions in scripts/agent-eval/scenarios.js, synthetic repo fixtures, the E2B Claude auth flow, browser lane details, learning-log capture, secret redaction, and result bundle translation."
         }
       ]
     }

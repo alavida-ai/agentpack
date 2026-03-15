@@ -5,21 +5,31 @@ import { readFileSync } from 'node:fs';
 import { addPackagedSkill, createTempRepo } from './fixtures.js';
 import { syncSkillDependencies } from '../../packages/agentpack/src/lib/skills.js';
 
+function buildCompilerSkill({ name, description, declarations = '' }) {
+  return `---
+name: ${name}
+description: ${description}
+---
+
+\`\`\`agentpack
+${declarations}
+\`\`\`
+
+# Skill
+`;
+}
+
 describe('agentpack skill dependency sync', () => {
   it('adds missing managed requires with a "*" range', () => {
     const repo = createTempRepo('dep-sync-add');
 
     try {
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires:
-  - @alavida/methodology-gary-provost
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({
+          name: 'value-copywriting',
+          description: 'Copy.',
+          declarations: 'import methodology from skill "@alavida/methodology-gary-provost"',
+        }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',
@@ -45,15 +55,11 @@ requires:
 
     try {
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires:
-  - @alavida/new-dep
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({
+          name: 'value-copywriting',
+          description: 'Copy.',
+          declarations: 'import newDep from skill "@alavida/new-dep"',
+        }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',
@@ -85,15 +91,11 @@ requires:
 
     try {
       addPackagedSkill(repo.root, 'skills/copywriting', {
-        skillMd: `---
-name: value-copywriting
-description: Copy.
-requires:
-  - @alavida/methodology-gary-provost
----
-
-# Copy
-`,
+        skillMd: buildCompilerSkill({
+          name: 'value-copywriting',
+          description: 'Copy.',
+          declarations: 'import methodology from skill "@alavida/methodology-gary-provost"',
+        }),
         packageJson: {
           name: '@alavida/value-copywriting',
           version: '1.0.0',
@@ -128,15 +130,11 @@ requires:
 
     try {
       addPackagedSkill(repo.root, 'skills/proof-points', {
-        skillMd: `---
-name: value-proof-points
-description: Proof.
-requires:
-  - @alavida-ai/value-proof-points
----
-
-# Proof
-`,
+        skillMd: buildCompilerSkill({
+          name: 'value-proof-points',
+          description: 'Proof.',
+          declarations: 'import proofPoints from skill "@alavida-ai/value-proof-points"',
+        }),
         packageJson: {
           name: '@alavida-ai/value-proof-points-wrapper',
           version: '1.0.0',

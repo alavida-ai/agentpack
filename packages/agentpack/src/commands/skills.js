@@ -1,9 +1,10 @@
 import { Command } from 'commander';
+import { buildCompiledStateUseCase } from '../application/skills/build-compiled-state.js';
 import { inspectSkillUseCase } from '../application/skills/inspect-skill.js';
 import { inspectStaleSkillUseCase, listStaleSkillsUseCase } from '../application/skills/list-stale-skills.js';
+import { materializeCompiledStateUseCase } from '../application/skills/materialize-compiled-state.js';
 import { validateSkillsUseCase } from '../application/skills/validate-skills.js';
 import {
-  inspectSkillDependencies,
   inspectMissingSkillDependencies,
   inspectSkillsStatus,
   inspectRegistryConfig,
@@ -225,47 +226,6 @@ export function skillsCommand() {
     });
 
   cmd
-    .command('dependencies')
-    .description('Show direct and reverse skill dependencies for one authored or installed skill')
-    .argument('<target>', 'Packaged skill directory, SKILL.md path, or package name')
-    .action((target, opts, command) => {
-      const globalOpts = command.optsWithGlobals();
-      const result = inspectSkillDependencies(target);
-
-      if (globalOpts.json) {
-        output.json(result);
-        return;
-      }
-
-      output.write(`Skill: ${result.packageName}`);
-      output.write(`Graph: ${result.graph}`);
-      if (result.packageVersion) output.write(`Version: ${result.packageVersion}`);
-      if (result.status) output.write(`Status: ${result.status}`);
-      if (result.graph === 'installed') output.write(`Direct: ${result.direct}`);
-      output.write(`Path: ${result.skillFile}`);
-
-      output.write('');
-      output.write('Direct Dependencies:');
-      if (result.dependencies.length === 0) {
-        output.write('- none');
-      } else {
-        for (const dependency of result.dependencies) {
-          output.write(`- ${dependency.packageName}${dependency.status ? ` (${dependency.status})` : ''}`);
-        }
-      }
-
-      output.write('');
-      output.write('Reverse Dependencies:');
-      if (result.reverseDependencies.length === 0) {
-        output.write('- none');
-      } else {
-        for (const dependency of result.reverseDependencies) {
-          output.write(`- ${dependency.packageName}${dependency.status ? ` (${dependency.status})` : ''}`);
-        }
-      }
-    });
-
-  cmd
     .command('missing')
     .description('Show local or installed skills with unmet required skill dependencies')
     .argument('[target]', 'Optional installed package name or skill path')
@@ -288,6 +248,47 @@ export function skillsCommand() {
           output.write(`  - ${missing.packageName}`);
           output.write(`    recommended: ${missing.recommendedCommand}`);
         }
+      }
+    });
+
+  cmd
+    .command('build')
+    .description('Compile one packaged skill into .agentpack/compiled.json')
+    .argument('<target>', 'Packaged skill directory or SKILL.md path')
+    .action((target, opts, command) => {
+      const globalOpts = command.optsWithGlobals();
+      const result = buildCompiledStateUseCase(target);
+
+      if (globalOpts.json) {
+        output.json(result);
+        return;
+      }
+
+      output.write(`Root Skill: ${result.rootSkill}`);
+      output.write(`Compiled Path: ${result.compiledPath}`);
+      output.write(`Skills: ${result.skillCount}`);
+      output.write(`Sources: ${result.sourceCount}`);
+      output.write(`Occurrences: ${result.occurrenceCount}`);
+      output.write(`Edges: ${result.edgeCount}`);
+    });
+
+  cmd
+    .command('materialize')
+    .description('Materialize runtime outputs from .agentpack/compiled.json')
+    .action((opts, command) => {
+      const globalOpts = command.optsWithGlobals();
+      const result = materializeCompiledStateUseCase();
+
+      if (globalOpts.json) {
+        output.json(result);
+        return;
+      }
+
+      output.write(`Root Skill: ${result.rootSkill}`);
+      output.write(`Materialization Path: ${result.materializationPath}`);
+      output.write(`Adapters: ${result.adapterCount}`);
+      for (const [adapterName, outputs] of Object.entries(result.outputs)) {
+        output.write(`${adapterName}: ${outputs.length}`);
       }
     });
 
@@ -352,7 +353,7 @@ export function skillsCommand() {
 
   cmd
     .command('stale')
-    .description('Show stale packaged skills from recorded build-state')
+    .description('Show stale packaged skills from recorded semantic state')
     .argument('[target]', 'Optional package name or skill path')
     .action((target, opts, command) => {
       const globalOpts = command.optsWithGlobals();

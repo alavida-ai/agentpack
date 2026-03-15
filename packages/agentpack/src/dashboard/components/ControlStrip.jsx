@@ -12,15 +12,19 @@ const BUTTON_STYLE = {
 
 export function ControlStrip({ onAction, busyAction, labelsVisible, onToggleLabels, knowledgeVisible, onToggleKnowledge, lightMode, onToggleTheme }) {
   return (
-    <div style={{
+    <div
+      data-testid="control-strip"
+      style={{
       position: 'fixed',
       bottom: 28,
       left: 40,
       display: 'flex',
       gap: 8,
       zIndex: 10,
-    }}>
+      }}
+    >
       <button
+        data-testid="control-reset-zoom"
         type="button"
         style={BUTTON_STYLE}
         onClick={() => onAction('reset-zoom')}
@@ -36,6 +40,7 @@ export function ControlStrip({ onAction, busyAction, labelsVisible, onToggleLabe
         Reset
       </button>
       <button
+        data-testid="control-validate"
         type="button"
         style={BUTTON_STYLE}
         disabled={Boolean(busyAction)}
@@ -52,6 +57,7 @@ export function ControlStrip({ onAction, busyAction, labelsVisible, onToggleLabe
         {busyAction === 'validate-skill' ? 'Validating...' : 'Validate'}
       </button>
       <button
+        data-testid="control-refresh"
         type="button"
         style={BUTTON_STYLE}
         disabled={Boolean(busyAction)}
@@ -68,6 +74,7 @@ export function ControlStrip({ onAction, busyAction, labelsVisible, onToggleLabe
         {busyAction === 'refresh' ? 'Refreshing...' : 'Refresh'}
       </button>
       <button
+        data-testid="control-toggle-labels"
         type="button"
         style={{
           ...BUTTON_STYLE,
@@ -95,6 +102,7 @@ export function ControlStrip({ onAction, busyAction, labelsVisible, onToggleLabe
         {labelsVisible ? 'Hide labels' : 'Show labels'}
       </button>
       <button
+        data-testid="control-toggle-knowledge"
         type="button"
         style={{
           ...BUTTON_STYLE,
@@ -122,6 +130,7 @@ export function ControlStrip({ onAction, busyAction, labelsVisible, onToggleLabe
         Knowledge
       </button>
       <button
+        data-testid="control-toggle-theme"
         type="button"
         style={{
           ...BUTTON_STYLE,

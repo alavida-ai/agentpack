@@ -12,7 +12,7 @@ Source docs (truth)  →  SKILL.md (compiled artifact)  →  npm package (distri
 ```
 
 1. **Keep truth in docs.** Your team writes and maintains knowledge in markdown files. These are the source of truth -- the files people actually update.
-2. **Point `metadata.sources` at them.** Each SKILL.md declares which knowledge docs it was built from.
+2. **Bind them in the `agentpack` block.** Each SKILL.md declares which knowledge docs it was built from with explicit `source` bindings.
 3. **Package as a skill.** The skill becomes a versioned npm package that any team can install.
 
 When a source doc changes, agentpack knows. It compares the current file hash against the hash recorded at the last validation and marks the skill as **stale**. You always know which skills need updating and why.
@@ -21,7 +21,7 @@ When a source doc changes, agentpack knows. It compares the current file hash ag
 
 Without source tracking, knowledge drifts silently. Someone updates the brand guidelines, but the copywriting skill still teaches agents the old tone. Nobody notices until a customer-facing draft sounds wrong.
 
-With `metadata.sources`, the drift is visible:
+With explicit source bindings, the drift is visible:
 
 ```
 domains/brand/knowledge/tone-of-voice.md  (changed last Tuesday)
@@ -52,24 +52,19 @@ Your content team maintains a tone-of-voice guide. This is the source doc -- it 
 
 ### Step 2: Create the skill
 
-A skill author reads the knowledge doc and writes a SKILL.md that distills it into agent instructions. The `metadata.sources` field records where the knowledge came from.
+A skill author reads the knowledge doc and writes a SKILL.md that distills it into agent instructions. The `agentpack` block records where the knowledge came from.
 
 ```markdown domains/brand/skills/copywriting/SKILL.md
 ---
 name: brand-copywriting
 description: Write brand-consistent copy using company tone and voice guidelines.
-metadata:
-  sources:
-    - domains/brand/knowledge/tone-of-voice.md
-requires: []
 ---
 
-When writing any customer-facing copy, follow these rules:
+```agentpack
+source tone = "domains/brand/knowledge/tone-of-voice.md"
+```
 
-1. Use active voice throughout.
-2. Address the reader as "you."
-3. Never use superlatives like "best-in-class" or "world-class."
-4. Keep sentences varied in length for rhythm.
+Apply [tone guidance](source:tone){context="primary source of tone constraints for customer-facing copy"}.
 ```
 
 ### Step 3: Validate and publish
@@ -113,16 +108,16 @@ The skill author now knows to update the copywriting skill to reflect the new em
 | Change detection | None -- silent drift | Automatic hash comparison on every `stale` check |
 | Update workflow | "Did someone update that prompt?" | `agentpack skills stale` shows exactly what changed |
 | Downstream impact | Unknown | Dependency graph shows every affected skill |
-| Audit trail | None | `build-state.json` records which source hashes each version was built from |
+| Audit trail | None | `compiled.json` records the semantic graph and bound source hashes for the current build |
 
 ## Tips
 
 <Tip>
-  Commit `.agentpack/build-state.json` so that staleness detection works in CI and across teammates. Without the committed hashes, there is nothing to compare against.
+  Commit `.agentpack/compiled.json` when you want compiled semantic state reviewed or shared across teammates or CI.
 </Tip>
 
 <Note>
-  `metadata.sources` paths are relative to the repository root, not the skill directory. This means a single knowledge doc can be a source for multiple skills across different directories.
+  `source` binding paths are relative to the repository root, not the skill directory. This means a single knowledge doc can be a source for multiple skills across different directories.
 </Note>
 
 <Tip>

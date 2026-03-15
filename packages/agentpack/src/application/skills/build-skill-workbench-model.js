@@ -1,7 +1,7 @@
 function explainNodeStatus(status) {
   if (status === 'affected') return 'Affected by upstream authored state changes';
-  if (status === 'changed') return 'Changed since the recorded semantic state was captured';
-  if (status === 'stale') return 'Stale against the recorded semantic state';
+  if (status === 'changed') return 'Changed since recorded build-state';
+  if (status === 'stale') return 'Stale against recorded build-state';
   return 'No current lifecycle issue detected';
 }
 
@@ -22,7 +22,7 @@ export function buildSkillWorkbenchModel({
     status: selectedStatus,
     explanation: selectedStatus === 'stale'
       ? `Stale because one or more recorded sources changed: ${selectedSkill.sources.join(', ')}`
-      : 'Current against the recorded semantic state',
+      : 'Current against recorded build-state',
   };
 
   const sourceNodes = selectedSkill.sources.map((source) => ({
@@ -171,7 +171,7 @@ export function buildTransitiveSkillWorkbenchModel({
       path: sourceData.path,
       status: isChanged ? 'changed' : 'current',
       explanation: isChanged
-        ? 'Changed since the recorded semantic state was captured'
+        ? 'Changed since recorded build-state'
         : 'No current lifecycle issue detected',
       depth: 0,
       usedBy: sourceData.usedBy,

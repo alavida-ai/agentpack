@@ -131,7 +131,7 @@ export function addWorkspaces(root, workspaces) {
 export function addPackagedSkill(root, relPath, { skillMd, packageJson }) {
   const skillDir = join(root, relPath);
   mkdirSync(skillDir, { recursive: true });
-  writeFileSync(join(skillDir, 'SKILL.md'), skillMd);
+  writeFileSync(join(skillDir, 'SKILL.md'), ensureAgentpackBlock(skillMd));
   writeFileSync(join(skillDir, 'package.json'), JSON.stringify(packageJson, null, 2) + '\n');
 }
 
@@ -143,8 +143,16 @@ export function addMultiSkillPackage(root, relPath, { packageJson, skills }) {
   for (const skill of skills) {
     const skillDir = join(packageDir, skill.path);
     mkdirSync(skillDir, { recursive: true });
-    writeFileSync(join(skillDir, 'SKILL.md'), skill.skillMd);
+    writeFileSync(join(skillDir, 'SKILL.md'), ensureAgentpackBlock(skill.skillMd));
   }
+}
+
+function ensureAgentpackBlock(skillMd) {
+  if (skillMd.includes('```agentpack')) {
+    return skillMd;
+  }
+
+  return `${skillMd.trim()}\n\n\`\`\`agentpack\n\`\`\`\n`;
 }
 
 export function createInstalledMultiSkillFixture(name = 'multi-skill') {

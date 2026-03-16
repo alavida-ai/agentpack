@@ -3,10 +3,10 @@ name: identifying-skill-opportunities
 description: Use when deciding what raw knowledge should become a packaged skill, a reusable capability boundary, or a requires edge in an agentpack skillgraph.
 type: core
 library: agentpack
-library_version: "0.1.3"
+library_version: "0.1.10"
 sources:
-  - "alavida-ai/agentpack:docs/architecture.mdx"
-  - "alavida-ai/agentpack:docs/overview.mdx"
+  - "alavida-ai/agentpack:docs/how-it-works.mdx"
+  - "alavida-ai/agentpack:docs/introduction.mdx"
   - "alavida-ai/agentpack:skills/agentpack-cli/SKILL.md"
 ---
 

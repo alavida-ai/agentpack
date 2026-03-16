@@ -3,10 +3,10 @@ name: authoring-skillgraphs-from-knowledge
 description: Use when authoring packaged skills from source knowledge with valid SKILL.md metadata, package.json release fields, provenance sources, and requires edges in agentpack.
 type: core
 library: agentpack
-library_version: "0.1.4"
+library_version: "0.1.10"
 sources:
-  - "alavida-ai/agentpack:docs/commands.mdx"
-  - "alavida-ai/agentpack:docs/architecture.mdx"
+  - "alavida-ai/agentpack:docs/cli-skills.mdx"
+  - "alavida-ai/agentpack:docs/how-it-works.mdx"
   - "alavida-ai/agentpack:skills/agentpack-cli/SKILL.md"
 ---
 
@@ -125,7 +125,7 @@ Correct:
 
 A package that excludes its exported skill files is structurally invalid even if the authored source exists locally.
 
-Source: docs/commands.mdx
+Source: docs/cli-skills.mdx
 
 ### HIGH Using missing or invalid package metadata
 
@@ -162,7 +162,7 @@ Correct:
 
 Release-readiness checks enforce package identity and distribution metadata during `skills validate`.
 
-Source: docs/commands.mdx
+Source: docs/cli-skills.mdx
 
 ## References
 

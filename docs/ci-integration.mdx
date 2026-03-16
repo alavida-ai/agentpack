@@ -23,7 +23,7 @@ Run `agentpack skills validate` on every pull request to catch broken skills ear
   run: agentpack skills validate
 ```
 
-When run without a target, it validates every authored skill in the repository. Exit code `0` means all skills pass. Exit code `1` means at least one skill has issues.
+When run without a target, it validates every authored skill in the repository. Exit code `0` means all skills pass. Exit code `2` means at least one skill has validation issues.
 
 ## Stale detection in CI
 
@@ -37,7 +37,7 @@ Run `agentpack skills stale` to catch cases where source knowledge docs changed 
 This is especially powerful on PRs that modify knowledge docs. If a PR updates `domains/brand/knowledge/tone-of-voice.md`, the stale check will flag every skill that lists it as a source.
 
 <Note>
-  Stale detection requires `.agentpack/build-state.json` to be committed to the repo. Without it, there are no recorded hashes to compare against.
+  Stale detection requires `.agentpack/compiled.json` to be committed to the repo. Without it, there are no recorded hashes to compare against.
 </Note>
 
 ## Missing dependency check
@@ -79,7 +79,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
 
       - name: Validate all skills
         run: agentpack skills validate
@@ -106,12 +106,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
 
       - name: Publish changed skills
         run: npm publish -w domains/brand/skills/copywriting
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
 ```
 
 ## JSON output for machine parsing
@@ -136,10 +136,20 @@ All agentpack commands use consistent exit codes:
 | Code | Meaning |
 |---|---|
 | `0` | Success — all checks pass |
-| `1` | Operational failure — issues found (stale skills, validation errors, missing deps) |
-| `2` | Usage error — bad arguments or invalid command |
+| `1` | General error |
+| `2` | Usage or validation error |
+| `3` | Network error |
+| `4` | Not found |
 
-Use exit codes directly in CI `if` conditions or shell scripts.
+Use exit codes directly in CI `if` conditions or shell scripts. Codes 3 and 4 are useful for distinguishing registry connectivity issues from missing packages.
+
+<Note>
+  `NODE_AUTH_TOKEN` is the environment variable that npm reads for registry authentication. In CI, set it to a GitHub personal access token (PAT) with `read:packages` and `write:packages` scopes — store this as a repository secret named `GITHUB_PACKAGES_TOKEN`. Do not use the built-in `GITHUB_TOKEN` for cross-repo package access, as it only has permission within the current repository.
+</Note>
+
+<Note>
+  For private registries, make sure authentication is configured before running CI checks. See [Authentication](/authentication) for CI setup.
+</Note>
 
 ## Recommended PR checks
 

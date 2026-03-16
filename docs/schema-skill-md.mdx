@@ -3,73 +3,147 @@ title: "SKILL.md Reference"
 description: "Complete reference for the SKILL.md file format — the authored skill artifact in agentpack."
 ---
 
-`SKILL.md` is the skill artifact. It declares what the skill does, where its knowledge came from, what other skills it depends on, and what instructions agents should follow.
-
-Every packaged skill directory contains exactly one `SKILL.md`.
+`SKILL.md` is the authored skill artifact. Every packaged skill directory contains exactly one `SKILL.md` with three parts: **frontmatter**, an **agentpack declarations block**, and a **body** with inline references.
 
 ## Frontmatter
 
-The YAML frontmatter between `---` delimiters declares the skill's identity, provenance, and dependencies.
+The frontmatter between `---` delimiters declares the skill's identity. The compiler accepts exactly two fields:
 
-### Required fields
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Skill identifier. Used for discovery directory names and display. |
+| `description` | string | Yes | What the skill does. Should match `package.json` description. |
 
-| Field | Type | Description |
-|---|---|---|
-| `name` | string | Skill identifier. Used for discovery directory names and display. |
-| `description` | string | What the skill does. Should match `package.json` description. |
-
-### Optional fields
-
-| Field | Type | Description |
-|---|---|---|
-| `metadata.sources` | string[] | Repo-relative paths to knowledge files this skill was built from. |
-| `metadata.status` | string | Lifecycle status: `"published"`, `"draft"`, or `"deprecated"`. |
-| `metadata.replacement` | string | npm package name of the replacement skill (when status is `"deprecated"`). |
-| `metadata.message` | string | Human-readable status note (e.g., migration guidance). |
-| `requires` | object[] | Skill dependencies. Each entry has `name` and `package`. |
-
-### Requires entries
-
-Each item in the `requires` array declares a dependency on another skill package:
-
-| Subfield | Type | Description |
-|---|---|---|
-| `name` | string | Human-readable name for the dependency. |
-| `package` | string | npm package name (e.g., `"@acme/research"`). |
-
-agentpack syncs `requires` entries into `package.json` dependencies automatically. You never edit `package.json` dependencies by hand for skills.
-
-## Body
-
-Everything after the closing `---` is the skill body. This is the markdown that agents read and follow at runtime. Write it as direct instructions.
-
-The body can contain any valid markdown: headings, lists, code blocks, tables. Agents interpret it as capability instructions.
-
-## Complete example
-
-```markdown SKILL.md
+```markdown
 ---
 name: brand-copywriting
 description: Write brand-consistent copy using company tone and voice guidelines.
-metadata:
-  sources:
-    - domains/brand/knowledge/tone-of-voice.md
-    - domains/brand/knowledge/selling-points.md
-  status: published
-  message: Production-ready for all customer-facing copy.
-requires:
-  - name: editorial-principles
-    package: "@acme/editorial-principles"
 ---
+```
+
+<Warning>
+  The compiler rejects legacy frontmatter fields. If your SKILL.md contains `requires`, `metadata.sources`, or any other fields beyond `name` and `description`, the compiler will throw an error. Move source bindings and skill dependencies into the agentpack declarations block instead.
+</Warning>
+
+## Agentpack declarations block
+
+Every SKILL.md must contain exactly one fenced code block with the language tag `agentpack`. This block declares source bindings and skill imports — the edges of the skill graph.
+
+````markdown
+```agentpack
+source tone = "domains/brand/knowledge/tone-of-voice.md"
+import research from skill "@acme/research"
+```
+````
+
+The block may be empty, but it must exist.
+
+### Source bindings
+
+Bind a local alias to a repo-relative file path. The compiler records the file's content hash for staleness detection.
+
+```
+source <alias> = "<repo-relative-path>"
+```
+
+| Part | Rules |
+|---|---|
+| `alias` | Starts with a letter or underscore, then word characters (`[A-Za-z_]\w*`). |
+| `path` | Repo-relative path in double quotes. |
+
+```
+source tone = "domains/brand/knowledge/tone-of-voice.md"
+source selling_points = "domains/brand/knowledge/selling-points.md"
+```
+
+### Skill imports
+
+Import skills from other packages. Three forms are supported:
+
+**Default import** — imports the package's default skill under a local alias:
+
+```
+import research from skill "@acme/research"
+```
+
+**Named imports** — imports specific exported skills by name:
+
+```
+import { editorial, voice_guide } from skill "@acme/editorial-suite"
+```
+
+**Named imports with alias** — renames an imported skill locally:
+
+```
+import { editorial as ed } from skill "@acme/editorial-suite"
+```
+
+**Combined default + named** — both in one statement:
+
+```
+import research, { editorial } from skill "@acme/research"
+```
+
+| Part | Rules |
+|---|---|
+| Local alias | `[A-Za-z_]\w*` — letters, digits, underscores. |
+| Imported name | `[A-Za-z_][\w-]*` — letters, digits, underscores, hyphens. |
+| Package specifier | Any string in double quotes (typically a scoped npm package name). |
+
+<Note>
+  All aliases (source bindings and skill imports) share one namespace. The compiler rejects duplicate aliases within a single SKILL.md.
+</Note>
+
+## Body references
+
+After the agentpack block, the rest of the SKILL.md is the **body** — the markdown that agents read and follow at runtime. Inside the body, you reference declared sources and skills using inline links with a required `{context="..."}` attribute.
+
+### Syntax
+
+```markdown
+[display text](skill:<alias>){context="why this skill is referenced here"}
+[display text](source:<alias>){context="how this source is used here"}
+```
+
+The `context` attribute is **required** on every reference. The compiler uses it to build the skill graph edges with semantic context — it becomes part of the compiled graph so that humans and tools can understand **why** a dependency exists, not just that it does. At runtime, the context string is available in `compiled.json` as part of each edge's metadata.
+
+### Examples
+
+```markdown
+Apply [tone guidance](source:tone){context="primary source of brand voice constraints"}.
+
+Use [research](skill:research){context="required verification workflow before factual claims"}.
+```
+
+### Reference rules
+
+| Rule | Detail |
+|---|---|
+| Alias must be declared | The alias must match a `source` or `import` in the agentpack block. |
+| Kind must match | A `source:` reference must point to a source binding, not a skill import (and vice versa). |
+| Context is required | Every reference must include `{context="..."}`. The compiler throws `missing_reference_context` without it. |
+
+## Complete example
+
+````markdown SKILL.md
+---
+name: brand-copywriting
+description: Write brand-consistent copy using company tone and voice guidelines.
+---
+
+```agentpack
+source tone = "domains/brand/knowledge/tone-of-voice.md"
+source selling_points = "domains/brand/knowledge/selling-points.md"
+import editorial from skill "@acme/editorial-principles"
+```
 
 ## Instructions
 
 When writing copy for the brand, follow these guidelines:
 
-1. Read the tone-of-voice principles before drafting.
-2. Use active voice. Address the reader as "you."
-3. Never use marketing superlatives.
-4. Keep sentences varied in length for rhythm.
+1. Read the [tone guidance](source:tone){context="primary source of tone constraints for customer-facing copy"} before drafting.
+2. Reference [selling points](source:selling_points){context="approved product claims and proof points"} for factual claims.
+3. Follow [editorial standards](skill:editorial){context="house style rules for grammar, punctuation, and formatting"}.
 
 ## When to use this skill
 
@@ -81,30 +155,33 @@ When writing copy for the brand, follow these guidelines:
 
 - Internal engineering documentation
 - Legal or compliance content
-```
+````
 
 ## Minimal example
 
-```markdown SKILL.md
+````markdown SKILL.md
 ---
 name: hello-world
 description: A minimal skill for testing agentpack.
 ---
 
-Respond with a friendly greeting when the user says hello.
+```agentpack
 ```
 
-No `metadata`, no `requires`, no sources. This is the smallest valid SKILL.md.
+Respond with a friendly greeting when the user says hello.
+````
+
+No sources, no imports, no body references. The empty agentpack block is the smallest valid declarations section.
 
 ## What SKILL.md owns
 
-SKILL.md is the source of truth for:
-
-- **Skill identity** — `name` and `description`
-- **Source provenance** — which knowledge files the skill was built from
-- **Dependencies** — which other skills this one requires
-- **Lifecycle status** — whether the skill is published, draft, or deprecated
-- **Agent instructions** — the body content agents follow
+| Concern | How |
+|---|---|
+| Skill identity | `name` and `description` in frontmatter |
+| Source provenance | `source` bindings in the agentpack block |
+| Skill dependencies | `import` statements in the agentpack block |
+| Graph edges | Body references with `{context="..."}` |
+| Agent instructions | Everything in the body |
 
 ## What SKILL.md does NOT own
 
@@ -113,12 +190,29 @@ SKILL.md is the source of truth for:
 | Package version | `package.json` (`version` field) |
 | Publish configuration | `package.json` (`publishConfig` field) |
 | Install state | `.agentpack/install.json` (runtime, per-repo) |
-| Build hashes | `.agentpack/build-state.json` (generated by validate) |
+| Compiled hashes | `.agentpack/compiled.json` (generated by build) |
 
-<Note>
-  `metadata.sources` paths are resolved relative to the repository root, not the skill directory. Run `agentpack skills validate` from the repo that contains those source files.
-</Note>
+## Compiler diagnostics
 
-<Warning>
-  If you change `requires` in SKILL.md, run `agentpack skills validate` or `agentpack skills dev` to sync the change into `package.json` dependencies. The sync is automatic inside those commands — but it does not happen on its own.
-</Warning>
+These are the errors the compiler throws for invalid SKILL.md files:
+
+| Code | Cause |
+|---|---|
+| `missing_frontmatter` | File does not start with `---` |
+| `unclosed_frontmatter` | No closing `---` after frontmatter |
+| `missing_name` | Frontmatter has no `name` field |
+| `missing_description` | Frontmatter has no `description` field |
+| `legacy_requires_not_supported` | Frontmatter contains a `requires` field |
+| `legacy_sources_not_supported` | Frontmatter contains `metadata.sources` |
+| `missing_agentpack_block` | No `` ```agentpack `` fenced code block in the body |
+| `multiple_agentpack_blocks` | More than one agentpack block found |
+| `duplicate_alias` | Two declarations use the same local alias |
+| `malformed_skill_import` | Import statement does not match expected syntax |
+| `invalid_agentpack_declaration` | Line in agentpack block is not a valid `import` or `source` |
+| `undeclared_alias` | Body reference uses an alias not declared in the agentpack block |
+| `reference_kind_mismatch` | `source:` reference points to a skill import (or vice versa) |
+| `missing_reference_context` | Body reference is missing `{context="..."}` |
+
+<Tip>
+  Run `agentpack skills validate` to check your SKILL.md against all of these rules before publishing.
+</Tip>

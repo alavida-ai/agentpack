@@ -1,0 +1,149 @@
+---
+title: "Authentication"
+description: "Set up GitHub Packages authentication for installing and publishing private skill packages."
+---
+
+agentpack distributes skills as npm packages through GitHub Packages. To install or publish private skill packages, you need to authenticate with the registry.
+
+## Quick setup
+
+<Steps>
+
+<Step title="Run auth login">
+
+```bash
+agentpack auth login
+```
+
+This prompts for a GitHub personal access token, configures your machine's `.npmrc` for the `@alavida-ai` scope, and verifies the credential against the registry.
+
+</Step>
+
+<Step title="Verify it worked">
+
+```bash
+agentpack auth status --verify
+```
+
+```
+Provider: github
+Configured: true
+Storage: user-npmrc
+Verification: ok
+```
+
+If verification shows `ok`, you're ready to install private skill packages.
+
+</Step>
+
+</Steps>
+
+## What auth login configures
+
+| Item | Default | Override flag |
+|---|---|---|
+| Scope | `@alavida-ai` | `--scope <scope>` |
+| Registry | `https://npm.pkg.github.com` | `--registry <url>` |
+| Verification package | Auto-detected | `--verify-package <packageName>` |
+
+The token is stored in your user-level `.npmrc` at `~/.npmrc`. agentpack never writes tokens to repo-level `.npmrc` files.
+
+## Token requirements
+
+Your GitHub personal access token needs these scopes:
+
+| Scope | Purpose |
+|---|---|
+| `read:packages` | Install private skill packages |
+| `write:packages` | Publish skill packages (authors only) |
+
+Create a token at **GitHub > Settings > Developer settings > Personal access tokens**.
+
+## Manual .npmrc alternative
+
+<Accordion title="Configure .npmrc by hand instead of using auth login">
+
+If you prefer to manage `.npmrc` yourself, add these lines to your user-level `~/.npmrc`:
+
+```ini
+@alavida-ai:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=ghp_your_token_here
+```
+
+Or use an environment variable reference in a repo-level `.npmrc`:
+
+```ini
+@alavida-ai:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
+```
+
+Then set the variable in your shell:
+
+```bash
+export GITHUB_PACKAGES_TOKEN=ghp_your_token_here
+```
+
+</Accordion>
+
+## CI authentication
+
+In CI, do not use `agentpack auth login`. Instead, write the `.npmrc` from a secret:
+
+```yaml .github/workflows/skills.yml
+- name: Configure registry auth
+  run: |
+    echo "@alavida-ai:registry=https://npm.pkg.github.com" >> ~/.npmrc
+    echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_PACKAGES_TOKEN }}" >> ~/.npmrc
+
+- name: Install skills
+  run: agentpack skills install @alavida-ai/brand-copywriting
+```
+
+Or use the `setup-node` action with `registry-url`:
+
+```yaml
+- uses: actions/setup-node@v4
+  with:
+    node-version: 20
+    registry-url: https://npm.pkg.github.com
+    scope: '@alavida-ai'
+  env:
+    NODE_AUTH_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
+```
+
+## Checking registry configuration
+
+Use `agentpack skills registry` to inspect the repo-local registry wiring:
+
+```bash
+agentpack skills registry
+```
+
+```
+Scope: @alavida-ai
+Configured: true
+Registry: https://npm.pkg.github.com
+Always Auth: true
+Path: .npmrc
+Auth: environment variable reference
+Auth Key: GITHUB_PACKAGES_TOKEN
+```
+
+## Removing credentials
+
+```bash
+agentpack auth logout
+```
+
+This removes the stored token and registry configuration from your `.npmrc`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Publishing skills" icon="upload" href="/publishing">
+    Publish your first skill package to the registry.
+  </Card>
+  <Card title="CLI auth reference" icon="terminal" href="/cli-auth">
+    Full reference for all auth subcommands.
+  </Card>
+</CardGroup>

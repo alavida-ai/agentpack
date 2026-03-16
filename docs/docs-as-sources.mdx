@@ -41,7 +41,7 @@ Every downstream skill that depends on stale knowledge gets flagged. You can see
 
 Your content team maintains a tone-of-voice guide. This is the source doc -- it lives in your repo and gets updated through normal pull requests.
 
-```markdown domains/brand/knowledge/tone-of-voice.md
+```markdown
 # Tone of Voice
 
 - Warm but direct. No hedging.
@@ -54,7 +54,7 @@ Your content team maintains a tone-of-voice guide. This is the source doc -- it 
 
 A skill author reads the knowledge doc and writes a SKILL.md that distills it into agent instructions. The `agentpack` block records where the knowledge came from.
 
-```markdown domains/brand/skills/copywriting/SKILL.md
+````markdown
 ---
 name: brand-copywriting
 description: Write brand-consistent copy using company tone and voice guidelines.
@@ -65,7 +65,7 @@ source tone = "domains/brand/knowledge/tone-of-voice.md"
 ```
 
 Apply [tone guidance](source:tone){context="primary source of tone constraints for customer-facing copy"}.
-```
+````
 
 ### Step 3: Validate and publish
 
@@ -97,8 +97,6 @@ Stale Skills: 1
 ```
 
 The skill author now knows to update the copywriting skill to reflect the new emoji policy, re-validate, and publish a new version.
-
-{/* Screenshot: dashboard showing source provenance links from knowledge docs to a skill, with one source highlighted as changed */}
 
 ## Contrast with the old way
 

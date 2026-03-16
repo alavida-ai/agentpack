@@ -9,9 +9,9 @@ You'll walk through the full publish-to-install cycle: publishing a skill packag
 
 ## Prerequisites
 
-- Completed [Skill Dependencies](/skill-dependencies)
+- Completed [The Skill Graph](/skill-graph)
 - A GitHub Packages-enabled repository
-- A GitHub token with `read:packages` and `write:packages` scopes
+- Authenticated with `agentpack auth login` (see [Authentication](/authentication))
 
 ## Publishing a skill package
 
@@ -26,7 +26,7 @@ agentpack skills validate domains/brand/skills/copywriting
 ```
 
 ```
-Package: @alavida/copywriting
+Package: @acme/brand-copywriting
 Status: valid
 ```
 
@@ -55,53 +55,23 @@ For CI publishing, use a workflow that writes `.npmrc` from `GITHUB_PACKAGES_TOK
 
 ## Configuring a consumer repo
 
-A consumer repo is any repo that uses published skills but does not author them. It needs to know where to find `@alavida` packages.
-
-<Steps>
-
-<Step title="Create the .npmrc file">
-
-In the root of the consumer repo, create or update `.npmrc` to route the `@alavida` scope through GitHub Packages:
-
-```ini .npmrc
-@alavida:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
-always-auth=true
-```
-
-<Warning>
-Do not hardcode the token in `.npmrc`. Use an environment variable (`GITHUB_PACKAGES_TOKEN`) and set it in your shell profile or CI secrets.
-</Warning>
-
-</Step>
-
-<Step title="Set the environment variable">
-
-For local development:
+A consumer repo is any repo that uses published skills but does not author them. The fastest way to configure it:
 
 ```bash
-export GITHUB_PACKAGES_TOKEN=ghp_your_token_here
+agentpack auth login
+agentpack auth status --verify
 ```
 
-For CI:
+This configures the scope, registry, and token in one step. See [Authentication](/authentication) for details, manual `.npmrc` setup, and CI configuration.
 
-```yaml .github/workflows/install.yml
-env:
-  GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
-```
-
-</Step>
-
-<Step title="Verify registry configuration">
-
-Use `agentpack skills registry` to confirm the repo is wired correctly:
+Verify the repo-level wiring:
 
 ```bash
 agentpack skills registry
 ```
 
 ```
-Scope: @alavida
+Scope: @acme
 Configured: true
 Registry: https://npm.pkg.github.com
 Always Auth: true
@@ -110,10 +80,6 @@ Auth: environment variable reference
 Auth Key: GITHUB_PACKAGES_TOKEN
 ```
 
-</Step>
-
-</Steps>
-
 ## Installing skills in a consumer repo
 
 <Steps>
@@ -121,7 +87,7 @@ Auth Key: GITHUB_PACKAGES_TOKEN
 <Step title="Install a skill package">
 
 ```bash
-agentpack skills install @alavida/copywriting
+agentpack skills install @acme/brand-copywriting
 ```
 
 agentpack calls npm to resolve the full dependency graph, then materializes every exported skill in the resolved package closure into `.claude/skills/` and `.agents/skills/`.
@@ -165,7 +131,7 @@ agentpack skills outdated
 <Step title="Update a package">
 
 ```bash
-agentpack skills install @alavida/copywriting
+agentpack skills install @acme/brand-copywriting
 ```
 
 Reinstall to pick up the latest version. agentpack re-resolves the package graph and re-materializes exported skills.
@@ -175,7 +141,7 @@ Reinstall to pick up the latest version. agentpack re-resolves the package graph
 <Step title="Uninstall a package">
 
 ```bash
-agentpack skills uninstall @alavida/copywriting
+agentpack skills uninstall @acme/brand-copywriting
 ```
 
 agentpack removes the package from the direct install set, rebuilds runtime state, and cleans up materialized links that are no longer needed.
@@ -198,3 +164,60 @@ agentpack removes the package from the direct install set, rebuilds runtime stat
 | Remove | `agentpack skills uninstall <package>` | Consumer |
 
 agentpack handles the agent-specific parts: skill resolution, materialization, runtime state, and provenance. npm handles versioning, package resolution, and registry distribution.
+
+## Publisher package.json
+
+Your skill package's `package.json` must declare the exported skills and point at GitHub Packages:
+
+```json package.json
+{
+  "name": "@acme/brand-copywriting",
+  "version": "1.2.0",
+  "description": "Brand copywriting package.",
+  "files": ["skills/"],
+  "agentpack": {
+    "skills": {
+      "brand-copywriting": {
+        "path": "skills/brand-copywriting/SKILL.md"
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/acme-corp/knowledge-base.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}
+```
+
+See [package.json Reference](/schema-package-json) for all fields.
+
+## CI publishing
+
+For automated publishing in GitHub Actions:
+
+```yaml .github/workflows/publish.yml
+- name: Publish skill package
+  env:
+    NODE_AUTH_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
+  run: |
+    npm publish -w domains/brand/skills/copywriting
+```
+
+For automated install in CI:
+
+```yaml .github/workflows/install-skills.yml
+- name: Install skills
+  env:
+    NODE_AUTH_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
+  run: |
+    agentpack skills install @acme/brand-copywriting
+```
+
+<Note>
+  `NODE_AUTH_TOKEN` is the environment variable npm reads for registry auth. Set the `GITHUB_PACKAGES_TOKEN` secret to a GitHub PAT with `read:packages` and `write:packages` scopes. See [Authentication](/authentication) for details.
+</Note>
+
+See [Authentication](/authentication) and [CI Integration](/ci-integration) for complete workflow examples.

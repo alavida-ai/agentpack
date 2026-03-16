@@ -20,7 +20,7 @@ This is why a skill is not just a prompt file. It is a package-backed artifact w
 
 Without source tracking, a skill drifts silently away from the docs or knowledge it was supposed to encode.
 
-With `metadata.sources`:
+With explicit source bindings:
 
 - the skill points at the files it was derived from
 - validation checks that those files exist
@@ -37,7 +37,7 @@ Authoring cares about:
 - source truth
 - validation
 - dependency sync
-- local discovery via `skills dev`
+- local discovery via `author dev`
 
 Consumption cares about:
 

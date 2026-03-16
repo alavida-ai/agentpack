@@ -1,6 +1,6 @@
 ---
 name: identifying-skill-opportunities
-description: Use when deciding what raw knowledge should become a packaged skill, a reusable capability boundary, or a requires edge in an agentpack skillgraph.
+description: Use when deciding what raw knowledge should become a packaged skill, a reusable capability boundary, or an import edge in an agentpack skillgraph.
 type: core
 library: agentpack
 library_version: "0.1.10"
@@ -25,7 +25,7 @@ Reusable skills:
 
 Composed task skill:
 - domains/design/skills/agonda-brand-frontend
-  requires:
+  imports:
     - @scope/brand-guidelines
     - @scope/frontend-skill
 ```
@@ -36,13 +36,13 @@ Composed task skill:
 
 If a knowledge area should be reused compositionally in work, give it its own packaged skill.
 
-### Compose task-specific skills with `requires`
+### Compose task-specific skills with `import`
 
 Use a task skill when the work needs several reusable capabilities together.
 
 ### Keep capability boundaries explicit
 
-Use packaged skills and explicit `requires` edges to expose reusable capabilities. Runtime materialization belongs downstream from the compiled graph.
+Use packaged skills and explicit `import` edges to expose reusable capabilities. Runtime materialization belongs downstream from the compiled graph.
 
 ## Common Mistakes
 
@@ -57,7 +57,7 @@ One SKILL.md contains branding, frontend heuristics, research notes, and deliver
 Correct:
 
 ```md
-Create packaged skills for reusable capabilities, then compose them with requires.
+Create packaged skills for reusable capabilities, then compose them with imports.
 ```
 
 Flattening multiple capabilities into one skill destroys explicit dependency edges and makes maintenance coarse.
@@ -77,10 +77,10 @@ Correct:
 ```text
 domains/brand/skills/copywriting/SKILL.md
 domains/research/skills/interview-research/SKILL.md
-domains/brand/skills/website-ops/SKILL.md # requires packaged skills
+domains/brand/skills/website-ops/SKILL.md # imports packaged skills
 ```
 
-The compiled skill graph is the architectural source of truth. Reusable capability boundaries should remain explicit in packaged skills and `requires` edges.
+The compiled skill graph is the architectural source of truth. Reusable capability boundaries should remain explicit in packaged skills and `import` edges.
 
 Source: docs/architecture.mdx
 
@@ -88,28 +88,27 @@ Source: docs/architecture.mdx
 
 Wrong:
 
-```yaml
+```markdown
 ---
 name: value-copywriting
 description: Copy.
-requires: []
 ---
 ```
 
 Correct:
 
-```yaml
+```markdown
 ---
 name: value-copywriting
 description: Copy.
-metadata:
-  sources:
-    - domains/value/knowledge/tone-of-voice.md
-requires: []
 ---
+
+```agentpack
+source tone = "domains/value/knowledge/tone-of-voice.md"
+```
 ```
 
-Without `metadata.sources`, the skillgraph cannot explain stale state against source truth.
+Without `source` bindings, the skillgraph cannot explain stale state against source truth.
 
 Source: docs/architecture.mdx
 

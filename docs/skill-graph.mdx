@@ -50,7 +50,7 @@ import { editorial as ed } from skill "@acme/editorial-suite"
 import research, { editorial } from skill "@acme/research"
 ```
 
-Skill imports create `skill_usage` edges in the graph. The package specifier maps to an npm dependency — agentpack validates that the corresponding package exists in `package.json` dependencies.
+Skill imports create `skill_usage` edges in the graph. The package specifier maps to an npm dependency — `agentpack publish validate` checks that the corresponding package exists in `package.json` dependencies.
 
 ## Body references
 
@@ -118,13 +118,13 @@ The compiled graph contains:
 
 ```bash
 # See source bindings, imports, and metadata for one skill
-agentpack skills inspect <target>
+agentpack author inspect <target>
 
 # Compile and write the full graph to .agentpack/compiled.json
-agentpack skills build <target>
+agentpack author build <target>
 
 # Compile + open the visual dashboard
-agentpack skills dev <target>
+agentpack author dev <target>
 ```
 
 The dashboard renders the aggregated graph as an interactive DAG with D3. Nodes are colored by status (current, stale, affected). Click any node to see its sources, imports, and contexts.

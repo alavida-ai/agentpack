@@ -39,10 +39,10 @@ describe('agentpack skills materialize', () => {
     const repo = createCompilerModeRepo('skills-materialize-runtime');
 
     try {
-      const buildResult = runCLIJson(['skills', 'build', 'skills/prd-agent'], { cwd: repo.root });
+      const buildResult = runCLIJson(['author', 'build', 'skills/prd-agent'], { cwd: repo.root });
       assert.equal(buildResult.exitCode, 0, buildResult.stderr || buildResult.stdout);
 
-      const result = runCLIJson(['skills', 'materialize'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'materialize'], { cwd: repo.root });
       assert.equal(result.exitCode, 0, result.stderr || result.stdout);
       assert.equal(result.json.rootSkill, 'skill:prd-agent');
       assert.equal(result.json.adapterCount, 2);
@@ -67,11 +67,12 @@ describe('agentpack skills materialize', () => {
     const repo = createCompilerModeRepo('skills-materialize-missing-compiled');
 
     try {
-      const result = runCLIJson(['skills', 'materialize'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'materialize'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 4);
       assert.equal(result.json.error, 'compiled_state_not_found');
       assert.match(result.json.message, /compiled state not found/i);
+      assert.equal(result.json.suggestion, 'Run `agentpack author build <target>` first.');
     } finally {
       repo.cleanup();
     }

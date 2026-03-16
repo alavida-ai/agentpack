@@ -17,9 +17,9 @@ sources:
 ```bash
 npm install -g @alavida/agentpack
 cd knowledge-base
-agentpack skills inspect domains/value/skills/copywriting
-agentpack skills validate domains/value/skills/copywriting
-agentpack skills dev domains/value/skills/copywriting
+agentpack author inspect domains/value/skills/copywriting
+agentpack publish validate domains/value/skills/copywriting
+agentpack author dev domains/value/skills/copywriting
 ```
 
 ## Core Patterns
@@ -28,26 +28,27 @@ agentpack skills dev domains/value/skills/copywriting
 
 ```bash
 cd knowledge-base
-agentpack skills validate domains/value/skills/copywriting
-agentpack skills stale
+agentpack publish validate domains/value/skills/copywriting
+agentpack author stale
 ```
 
-Run source-backed commands from the repo that owns the files in `metadata.sources`.
+Run source-backed commands from the repo that owns the files declared by your `source` bindings.
 
 ### Use the authored workflow first
 
 ```bash
-agentpack skills inspect domains/value/skills/copywriting
-agentpack skills validate domains/value/skills/copywriting
-agentpack skills dev domains/value/skills/copywriting
+agentpack author inspect domains/value/skills/copywriting
+agentpack publish validate domains/value/skills/copywriting
+agentpack author dev domains/value/skills/copywriting
 ```
 
 ### Switch to consumer install only after publishing
 
 ```bash
 cd consumer-repo
-agentpack skills install @alavida/value-copywriting
-agentpack skills env
+npm install @alavida/value-copywriting
+agentpack skills list
+agentpack skills enable @alavida/value-copywriting
 ```
 
 ## Common Mistakes
@@ -58,36 +59,36 @@ Wrong:
 
 ```bash
 cd tooling/agentpack
-agentpack skills validate ../knowledge-base/domains/value/skills/copywriting
+agentpack publish validate ../knowledge-base/domains/value/skills/copywriting
 ```
 
 Correct:
 
 ```bash
 cd knowledge-base
-agentpack skills validate domains/value/skills/copywriting
+agentpack publish validate domains/value/skills/copywriting
 ```
 
-`metadata.sources` resolve relative to the current repo root, so validating from the wrong repo breaks provenance checks.
+`source` bindings resolve relative to the current repo root, so validating from the wrong repo breaks provenance checks.
 
 Source: docs/introduction.mdx
 
-### HIGH Starting with install instead of authoring validation
+### HIGH Starting with npm install instead of authoring validation
 
 Wrong:
 
 ```bash
-agentpack skills install @alavida/value-copywriting
+npm install @alavida/value-copywriting
 ```
 
 Correct:
 
 ```bash
-agentpack skills inspect domains/value/skills/copywriting
-agentpack skills validate domains/value/skills/copywriting
+agentpack author inspect domains/value/skills/copywriting
+agentpack publish validate domains/value/skills/copywriting
 ```
 
-`install` is the consumer lifecycle; authored skills need inspect and validate first.
+`npm install` is the consumer lifecycle; authored skills need inspect and validate first.
 
 Source: skills/agentpack-cli/SKILL.md
 
@@ -96,17 +97,17 @@ Source: skills/agentpack-cli/SKILL.md
 Wrong:
 
 ```bash
-agentpack skills dev domains/value/skills/copywriting
+agentpack author dev domains/value/skills/copywriting
 ```
 
 Correct:
 
 ```bash
 edit domains/value/skills/copywriting/SKILL.md
-agentpack skills dev domains/value/skills/copywriting
+agentpack author dev domains/value/skills/copywriting
 ```
 
-The localhost workbench is for visibility during `skills dev`, not the source of truth for authored behavior.
+The localhost workbench is for visibility during `author dev`, not the source of truth for authored behavior.
 
 Source: docs/cli-skills.mdx
 

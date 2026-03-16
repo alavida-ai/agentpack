@@ -9,10 +9,10 @@ agentpack manages several state files under the `.agentpack/` directory. Some ar
 
 | File | Produced by | Commit? | Purpose |
 |---|---|---|---|
-| `compiled.json` | `skills build`, `skills validate` | **Yes** | Semantic source of truth: compiled skills, source hashes, graph edges |
-| `install.json` | `skills install`, `skills uninstall` | No | Tracks direct and transitive package installs |
-| `materialization-state.json` | `skills materialize`, `skills install`, `skills dev` | No | Tracks emitted runtime files and adapter ownership |
-| `dev-session.json` | `skills dev` | No | Active dev session PID and linked skill paths |
+| `compiled.json` | `author build`, `publish validate` | **Yes** | Semantic source of truth: compiled skills, source hashes, graph edges |
+| `install.json` | `skills enable`, `skills disable` | No | Enabled-target state: which packages/exports are enabled for which runtimes |
+| `materialization-state.json` | `skills enable`, `skills disable`, `author dev` | No | Runtime output ownership: which adapter owns which materialized files |
+| `dev-session.json` | `author dev` | No | Active dev session PID and linked skill paths |
 
 ---
 
@@ -20,7 +20,7 @@ agentpack manages several state files under the `.agentpack/` directory. Some ar
 
 The semantic source of truth for the skill graph. Contains compiled skills, source content hashes, body reference occurrences, and aggregated graph edges.
 
-**Produced by:** `agentpack skills build <target>`, `agentpack skills validate <target>`
+**Produced by:** `agentpack author build <target>`, `agentpack publish validate <target>`
 
 **Structure:**
 
@@ -52,89 +52,115 @@ The semantic source of truth for the skill graph. Contains compiled skills, sour
 }
 ```
 
-**Commit this file.** It provides the baseline hashes for [staleness detection](/staleness) and the graph data for the dashboard. Without it, `skills stale` has nothing to compare against.
+**Commit this file.** It provides the baseline hashes for [staleness detection](/staleness) and the graph data for the dashboard. Without it, `author stale` has nothing to compare against.
 
 ---
 
 ## `.agentpack/install.json`
 
-Consumer-side install state. Tracks which skill packages are installed, whether they are direct or transitive, and their resolved versions.
+Enabled-target state. Tracks which skill packages or exports are enabled for which agent runtimes.
 
-**Produced by:** `agentpack skills install`, `agentpack skills uninstall`
+**Produced by:** `agentpack skills enable`, `agentpack skills disable`
 
 **Structure:**
 
 ```json
 {
-  "installs": {
-    "@acme/brand-copywriting": {
-      "direct": true,
-      "package_version": "1.2.0",
-      "skills": [
-        { "name": "brand-copywriting", "skillFile": "SKILL.md" }
-      ]
-    },
-    "@acme/editorial-principles": {
-      "direct": false,
-      "package_version": "2.0.1",
-      "skills": [
-        { "name": "editorial-principles", "skillFile": "SKILL.md" }
-      ]
-    }
+  "version": 2,
+  "enabled_targets": {
+    "@acme/brand-copywriting": ["agents", "claude"],
+    "@acme/editorial-principles:style-guide": ["claude"]
   }
 }
 ```
 
-**Do not commit.** This is runtime state specific to the consumer repo. Each repo has its own install set.
+Each key is an installed package name or export id. The value is the list of runtimes it is enabled for. When `skills enable` or `skills disable` runs, agentpack reconciles the desired materializations from this state against the installed workspace graph.
+
+**Do not commit.** This is runtime state specific to the consumer repo. Each repo has its own enabled set.
 
 ---
 
 ## `.agentpack/materialization-state.json`
 
-Tracks which runtime files agentpack emitted and which adapter owns each one. Used for cleanup when skills are uninstalled or when the materialization target changes.
+Tracks which runtime files agentpack emitted and which adapter owns each one. Used for cleanup when skills are disabled or when the materialization target changes.
 
-**Produced by:** `agentpack skills materialize`, `agentpack skills install`, `agentpack skills dev`
+**Produced by:** `agentpack skills enable`, `agentpack skills disable`, `agentpack author dev`
 
 **Structure:**
 
 ```json
 {
-  "rootSkill": "brand-copywriting",
-  "outputs": {
+  "version": 1,
+  "generated_at": "2026-03-16T10:00:00.000Z",
+  "adapters": {
     "claude": [
-      { "target": ".claude/skills/brand-copywriting", "mode": "symlink" }
+      {
+        "packageName": "@acme/brand-copywriting",
+        "skillName": "brand-copywriting",
+        "runtimeName": "brand-copywriting",
+        "sourceSkillPath": "node_modules/@acme/brand-copywriting",
+        "sourceSkillFile": "node_modules/@acme/brand-copywriting/SKILL.md",
+        "target": ".claude/skills/brand-copywriting",
+        "mode": "symlink"
+      }
     ],
     "agents": [
-      { "target": ".agents/skills/brand-copywriting", "mode": "symlink" }
+      {
+        "packageName": "@acme/brand-copywriting",
+        "skillName": "brand-copywriting",
+        "runtimeName": "brand-copywriting",
+        "sourceSkillPath": "node_modules/@acme/brand-copywriting",
+        "sourceSkillFile": "node_modules/@acme/brand-copywriting/SKILL.md",
+        "target": ".agents/skills/brand-copywriting",
+        "mode": "symlink"
+      }
     ]
   }
 }
 ```
 
-**Do not commit.** Runtime adapter state that is repo-specific and regenerated by `skills materialize`.
+**Do not commit.** Runtime adapter state that is repo-specific and regenerated by `skills enable` and `skills disable`.
 
 ---
 
 ## `.agentpack/dev-session.json`
 
-Tracks the active `skills dev` session: the process PID, the root skill, and all linked skill paths. Used for crash recovery and cleanup.
+Tracks the active `author dev` session: the process PID, the root skill, and all linked skill paths. Used for crash recovery and cleanup.
 
-**Produced by:** `agentpack skills dev`
+**Produced by:** `agentpack author dev`
 
 **Structure:**
 
 ```json
 {
+  "version": 1,
+  "session_id": "dev-2026-03-16T10-00-00-000Z",
+  "status": "active",
   "pid": 12345,
-  "rootSkill": "brand-copywriting",
+  "repo_root": "/path/to/repo",
+  "target": "path/to/skill",
+  "root_skill": {
+    "name": "brand-copywriting",
+    "package_name": "@acme/brand-copywriting",
+    "path": "path/to/skill"
+  },
+  "linked_skills": [
+    {
+      "name": "brand-copywriting",
+      "package_name": "@acme/brand-copywriting",
+      "path": "path/to/skill"
+    }
+  ],
   "links": [
     ".claude/skills/brand-copywriting",
     ".agents/skills/brand-copywriting"
-  ]
+  ],
+  "started_at": "2026-03-16T10:00:00.000Z",
+  "updated_at": "2026-03-16T10:00:00.000Z"
 }
 ```
 
-**Do not commit.** Ephemeral session state. If a dev session crashes, run `agentpack skills dev cleanup` to remove stale links.
+**Do not commit.** Ephemeral session state. If a dev session crashes, run `agentpack author dev cleanup` to remove stale links.
 
 ---
 

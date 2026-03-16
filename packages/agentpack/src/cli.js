@@ -2,7 +2,8 @@ import { Command } from 'commander';
 import { createRequire } from 'node:module';
 import { formatError, AgentpackError, EXIT_CODES } from './utils/errors.js';
 import { output } from './utils/output.js';
-import { authCommand } from './commands/auth.js';
+import { authorCommand } from './commands/author.js';
+import { publishCommand } from './commands/publish.js';
 import { skillsCommand } from './commands/skills.js';
 
 const require = createRequire(import.meta.url);
@@ -20,8 +21,9 @@ export function createProgram() {
     .option('-v, --verbose', 'Show detailed output')
     .option('--workbench <path>', 'Override workbench context (name or path)');
 
+  program.addCommand(authorCommand());
+  program.addCommand(publishCommand());
   program.addCommand(skillsCommand());
-  program.addCommand(authCommand());
 
   program.addHelpText('after', `
 Exit Codes:

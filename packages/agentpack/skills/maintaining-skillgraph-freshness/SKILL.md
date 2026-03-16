@@ -16,8 +16,8 @@ sources:
 
 ```bash
 cd knowledge-base
-agentpack skills validate domains/value/skills/copywriting
-agentpack skills stale
+agentpack publish validate domains/value/skills/copywriting
+agentpack author stale
 git add .agentpack/compiled.json
 ```
 
@@ -26,15 +26,15 @@ git add .agentpack/compiled.json
 ### Use stale before and after source changes
 
 ```bash
-agentpack skills stale
+agentpack author stale
 edit domains/value/knowledge/tone-of-voice.md
-agentpack skills stale
+agentpack author stale
 ```
 
 ### Revalidate to refresh the baseline
 
 ```bash
-agentpack skills validate domains/value/skills/copywriting
+agentpack publish validate domains/value/skills/copywriting
 ```
 
 ### Commit authored metadata
@@ -52,15 +52,15 @@ Wrong:
 
 ```bash
 edit domains/value/knowledge/tone-of-voice.md
-agentpack skills stale
+agentpack author stale
 ```
 
 Correct:
 
 ```bash
 edit domains/value/knowledge/tone-of-voice.md
-agentpack skills stale
-agentpack skills validate domains/value/skills/copywriting
+agentpack author stale
+agentpack publish validate domains/value/skills/copywriting
 ```
 
 The stale baseline only updates on successful validation.

@@ -62,7 +62,7 @@ describe('agentpack skills dev workbench', () => {
     let session;
 
     try {
-      session = startCLI(['skills', 'dev', 'skills/copywriting'], {
+      session = startCLI(['author', 'dev', 'skills/copywriting'], {
         cwd: repo.root,
         env: {
           AGENTPACK_DISABLE_BROWSER: '1',
@@ -83,7 +83,7 @@ describe('agentpack skills dev workbench', () => {
     let session;
 
     try {
-      session = startCLI(['skills', 'dev', '--no-dashboard', 'skills/copywriting'], {
+      session = startCLI(['author', 'dev', '--no-dashboard', 'skills/copywriting'], {
         cwd: repo.root,
         env: {
           AGENTPACK_DISABLE_BROWSER: '1',
@@ -122,7 +122,7 @@ Ground this in [tone of voice](source:toneOfVoice){context="primary writing guid
     let session;
 
     try {
-      session = startCLI(['skills', 'dev', 'skills/copywriting'], {
+      session = startCLI(['author', 'dev', 'skills/copywriting'], {
         cwd: repo.root,
         env: {
           AGENTPACK_DISABLE_BROWSER: '1',
@@ -172,7 +172,7 @@ Ground this in [tone of voice](source:toneOfVoice){context="primary writing guid
     let session;
 
     try {
-      session = startCLI(['skills', 'dev', 'skills/copywriting'], {
+      session = startCLI(['author', 'dev', 'skills/copywriting'], {
         cwd: repo.root,
         env: {
           AGENTPACK_DISABLE_BROWSER: '1',
@@ -223,7 +223,7 @@ Ground this in [tone of voice](source:toneOfVoice){context="primary writing guid
     let session;
 
     try {
-      session = startCLI(['skills', 'dev', 'skills/copywriting'], {
+      session = startCLI(['author', 'dev', 'skills/copywriting'], {
         cwd: repo.root,
         env: {
           AGENTPACK_DISABLE_BROWSER: '1',
@@ -300,7 +300,7 @@ Ground this in [selling points](source:sellingPoints){context="primary source ma
     let session;
 
     try {
-      session = startCLI(['skills', 'dev', 'skills/copywriting'], {
+      session = startCLI(['author', 'dev', 'skills/copywriting'], {
         cwd: repo.root,
         env: {
           AGENTPACK_DISABLE_BROWSER: '1',
@@ -345,7 +345,7 @@ Ground this in [our PRD principles](source:principles){context="primary source m
     let session;
 
     try {
-      session = startCLI(['skills', 'dev', 'skills/copywriting'], {
+      session = startCLI(['author', 'dev', 'skills/copywriting'], {
         cwd: repo.root,
         env: {
           AGENTPACK_DISABLE_BROWSER: '1',

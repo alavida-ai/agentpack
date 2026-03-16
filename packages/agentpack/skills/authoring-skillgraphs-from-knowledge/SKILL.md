@@ -1,6 +1,6 @@
 ---
 name: authoring-skillgraphs-from-knowledge
-description: Use when authoring packaged skills from source knowledge with valid SKILL.md metadata, package.json release fields, provenance sources, and requires edges in agentpack.
+description: Use when authoring packaged skills from source knowledge with valid SKILL.md structure, package.json release fields, provenance source bindings, and skill imports in agentpack.
 type: core
 library: agentpack
 library_version: "0.1.10"
@@ -14,29 +14,25 @@ sources:
 
 ## Setup
 
-```yaml
+```markdown
 ---
 name: value-copywriting
 description: Messaging and copywriting guidance.
-metadata:
-  sources:
-    - domains/value/knowledge/selling-points.md
-requires:
-  - "@alavida/methodology:gary-provost"
 ---
+
+```agentpack
+source sellingPoints = "domains/value/knowledge/selling-points.md"
+import provost from skill "@alavida/methodology:gary-provost"
+```
 ```
 
 ```json
 {
   "name": "@alavida/value-copywriting",
   "version": "1.0.0",
-  "files": ["skills"],
+  "files": ["SKILL.md", "skills"],
   "agentpack": {
-    "skills": {
-      "value-copywriting": {
-        "path": "skills/value-copywriting/SKILL.md"
-      }
-    }
+    "root": "skills"
   },
   "repository": {
     "type": "git",
@@ -53,29 +49,29 @@ requires:
 
 ## Core Patterns
 
-### Author `requires` in `SKILL.md`
+### Author `source` and `import` declarations in `SKILL.md`
 
-```yaml
-requires:
-  - "@alavida/methodology:gary-provost"
+```agentpack
+source sellingPoints = "domains/value/knowledge/selling-points.md"
+import provost from skill "@alavida/methodology:gary-provost"
 ```
 
 ### Validate to sync and record provenance
 
 ```bash
-agentpack skills validate domains/value/skills/value-copywriting
+agentpack publish validate domains/value/skills/value-copywriting
 ```
 
 ### Inspect by path or package name
 
 ```bash
-agentpack skills inspect domains/value/skills/value-copywriting
-agentpack skills inspect @alavida/value-copywriting:value-copywriting
+agentpack author inspect domains/value/skills/value-copywriting
+agentpack author inspect @alavida/value-copywriting:value-copywriting
 ```
 
 ## Common Mistakes
 
-### CRITICAL Editing package dependencies instead of requires
+### CRITICAL Editing package dependencies instead of imports
 
 Wrong:
 
@@ -89,12 +85,11 @@ Wrong:
 
 Correct:
 
-```yaml
-requires:
-  - "@alavida/methodology:gary-provost"
+```agentpack
+import provost from skill "@alavida/methodology:gary-provost"
 ```
 
-`requires` is the authored dependency truth; `package.json.dependencies` is the managed cross-package mirror.
+`import` is the authored dependency truth; `package.json.dependencies` is the managed cross-package mirror.
 
 Source: skills/agentpack-cli/SKILL.md
 
@@ -112,13 +107,9 @@ Correct:
 
 ```json
 {
-  "files": ["skills"],
+  "files": ["SKILL.md", "skills"],
   "agentpack": {
-    "skills": {
-      "value-copywriting": {
-        "path": "skills/value-copywriting/SKILL.md"
-      }
-    }
+    "root": "skills"
   }
 }
 ```
@@ -143,12 +134,9 @@ Correct:
 {
   "name": "@alavida/value-copywriting",
   "version": "1.0.0",
+  "files": ["SKILL.md", "skills"],
   "agentpack": {
-    "skills": {
-      "value-copywriting": {
-        "path": "skills/value-copywriting/SKILL.md"
-      }
-    }
+    "root": "skills"
   },
   "repository": {
     "type": "git",
@@ -160,7 +148,7 @@ Correct:
 }
 ```
 
-Release-readiness checks enforce package identity and distribution metadata during `skills validate`.
+Release-readiness checks enforce package identity and distribution metadata during `publish validate`.
 
 Source: docs/cli-skills.mdx
 

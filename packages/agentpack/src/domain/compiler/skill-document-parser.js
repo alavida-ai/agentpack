@@ -68,6 +68,7 @@ function extractFrontmatter(content) {
   const frontmatterLineCount = frontmatterText.split('\n').length + 2;
 
   return {
+    frontmatterText,
     metadata: parseFrontmatter(frontmatterText),
     body,
     bodyStartLine: frontmatterLineCount,
@@ -101,14 +102,17 @@ function findAgentpackBlock(tree) {
   return blocks[0];
 }
 
-function assertNoLegacyFields(content) {
-  if (/\brequires:\s*(?:\n\s*-\s+.+|\[[^\]]*\]|.+)/m.test(content)) {
+function assertNoLegacyFields(frontmatterText) {
+  if (/\brequires:\s*(?:\n\s*-\s+.+|\[[^\]]*\]|.+)/m.test(frontmatterText)) {
     throw diagnostic('Legacy requires frontmatter is not supported in compiler-mode skills', {
       code: 'legacy_requires_not_supported',
     });
   }
 
-  if (/\bmetadata:\s*(?:\n(?:\s+.+\n?)*)?\s+sources:/m.test(content) || /\bsources:\s*(?:\n\s*-\s+.+|\[[^\]]*\])/m.test(content)) {
+  if (
+    /\bmetadata:\s*(?:\n(?:\s+.+\n?)*)?\s+sources:/m.test(frontmatterText) ||
+    /\bsources:\s*(?:\n\s*-\s+.+|\[[^\]]*\])/m.test(frontmatterText)
+  ) {
     throw diagnostic('Legacy metadata.sources frontmatter is not supported in compiler-mode skills', {
       code: 'legacy_sources_not_supported',
     });
@@ -116,9 +120,8 @@ function assertNoLegacyFields(content) {
 }
 
 export function parseSkillDocument(content) {
-  assertNoLegacyFields(content);
-
-  const { metadata, body, bodyStartLine } = extractFrontmatter(content);
+  const { frontmatterText, metadata, body, bodyStartLine } = extractFrontmatter(content);
+  assertNoLegacyFields(frontmatterText);
   const tree = unified().use(remarkParse).parse(body);
   const agentpackBlock = findAgentpackBlock(tree);
   const declarations = parseAgentpackBlock(agentpackBlock.value, {

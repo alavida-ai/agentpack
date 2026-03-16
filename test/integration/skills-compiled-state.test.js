@@ -33,11 +33,11 @@ Ground this in [our PRD principles](source:principles){context="primary source m
     });
 
     try {
-      let result = runCLIJson(['skills', 'build', 'skills/prd-agent'], { cwd: repo.root });
+      let result = runCLIJson(['author', 'build', 'skills/prd-agent'], { cwd: repo.root });
       assert.equal(result.exitCode, 0, result.stderr || result.stdout);
       const first = readCompiledState(repo.root);
 
-      result = runCLIJson(['skills', 'build', 'skills/prd-agent'], { cwd: repo.root });
+      result = runCLIJson(['author', 'build', 'skills/prd-agent'], { cwd: repo.root });
       assert.equal(result.exitCode, 0, result.stderr || result.stdout);
       const second = readCompiledState(repo.root);
 
@@ -83,7 +83,7 @@ Ground this in [our PRD principles](source:principles){context="primary source m
     });
 
     try {
-      const result = runCLIJson(['skills', 'build', 'skills/prd-agent'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'build', 'skills/prd-agent'], { cwd: repo.root });
       assert.equal(result.exitCode, 0, result.stderr || result.stdout);
 
       const compiled = readCompiledState(repo.root);

@@ -6,13 +6,13 @@ library: agentpack
 library_version: "0.1.10"
 sources:
   - "alavida-ai/agentpack:docs/publishing.mdx"
-  - "alavida-ai/agentpack:docs/sharing-skills.mdx"
+  - "alavida-ai/agentpack:docs/authentication.mdx"
   - "alavida-ai/agentpack:docs/schema-package-json.mdx"
 ---
 
 ```agentpack
 source publishingGuide = "docs/publishing.mdx"
-source sharingGuide = "docs/sharing-skills.mdx"
+source authenticationGuide = "docs/authentication.mdx"
 source packageJsonSchema = "docs/schema-package-json.mdx"
 ```
 
@@ -29,7 +29,7 @@ Publishing is the boundary between authoring and distribution. Everything before
 Before publishing, the user must have:
 
 - A valid skill package with `SKILL.md` and `package.json`
-- A working `agentpack skills validate` pass
+- A working `agentpack publish validate` pass
 - An npm account (for public packages) or a GitHub token with `write:packages` scope (for GitHub Packages)
 - Node.js 20+ and npm
 
@@ -49,15 +49,15 @@ The registry choice determines `publishConfig.registry` in `package.json` and th
 Always run validation before publishing. This is not optional.
 
 ```bash
-agentpack skills validate path/to/skill-package
+agentpack publish validate path/to/skill-package
 ```
 
 Validation checks:
 
 - `name` and `version` are present in `package.json`
-- `agentpack.skills` exists and each exported path resolves to a real `SKILL.md`
+- Each discovered export `SKILL.md` parses correctly
 - `files` includes the exported skill paths
-- Every cross-package `requires` entry from exported skills appears in `dependencies`
+- Every cross-package skill import is mirrored in `dependencies`
 - `@scope/*` packages include a `repository` field
 - `@scope/*` packages set `publishConfig.registry` appropriately
 
@@ -73,15 +73,12 @@ A publishable `package.json` requires these fields:
   "version": "1.2.0",
   "description": "Brand copywriting package.",
   "files": [
+    "SKILL.md",
     "skills/",
     "!skills/_artifacts"
   ],
   "agentpack": {
-    "skills": {
-      "brand-copywriting": {
-        "path": "skills/brand-copywriting/SKILL.md"
-      }
-    }
+    "root": "skills"
   },
   "repository": {
     "type": "git",
@@ -100,11 +97,11 @@ Field-by-field:
 | `name` | Yes | Scoped package name (e.g., `@acme/brand-copywriting`). |
 | `version` | Yes | Semver version. Bump with `npm version patch/minor/major`. |
 | `description` | Recommended | Package-level summary for registry listing. |
-| `files` | Yes | Controls what gets published. Must include the skill directories. Must exclude `_artifacts`. |
-| `agentpack.skills` | Yes | Exported skill map. Keys must match each `SKILL.md` frontmatter `name`. |
+| `files` | Yes | Controls what gets published. Must include the root `SKILL.md` and skill directories. Must exclude `_artifacts`. |
+| `agentpack.root` | If named exports | Directory for named export discovery. Omit for single-skill packages that only use the root `SKILL.md`. |
 | `repository` | Yes | Source repo URL. Required for scoped packages. |
 | `publishConfig` | Yes | Registry URL. Determines where `npm publish` sends the tarball. |
-| `dependencies` | Managed | Cross-package skill requirements. agentpack derives these from `requires` in exported skills. Do not edit manually. |
+| `dependencies` | Managed | Cross-package package requirements derived from exported skill imports. Do not edit manually. |
 
 ### 3. The files array
 
@@ -142,7 +139,7 @@ npm login
 Then publish:
 
 ```bash
-agentpack skills validate path/to/skill-package
+agentpack publish validate path/to/skill-package
 npm publish -w path/to/skill-package
 ```
 
@@ -172,7 +169,7 @@ export GITHUB_PACKAGES_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
 Then publish:
 
 ```bash
-agentpack skills validate path/to/skill-package
+agentpack publish validate path/to/skill-package
 npm publish -w path/to/skill-package
 ```
 
@@ -199,37 +196,33 @@ npm version patch -w path/to/skill-package
 
 Or `minor` / `major` depending on the change. If the repo uses Changesets, follow that flow instead of manual `npm version`.
 
-### 7. The Intent registry relationship
+### 7. Optional TanStack Intent metadata
 
-Skill packages that want to be discoverable by TanStack Intent should include the `tanstack-intent` keyword in `package.json`:
+agentpack publishes normal npm packages. The contract agentpack owns is:
 
-```json
-"keywords": ["tanstack-intent"]
-```
+- compiled skill exports
+- package discovery via root `SKILL.md` and optional `agentpack.root`
+- npm publish/install behavior
 
-And add the `intent` metadata block:
+If the user also wants their package to participate in TanStack Intent's package ecosystem, treat that as upstream metadata, not an agentpack feature contract. agentpack does not currently validate or consume TanStack Intent-specific `package.json` fields.
 
-```json
-"intent": {
-  "version": 1,
-  "repo": "acme-corp/knowledge-base",
-  "docs": "https://github.com/acme-corp/knowledge-base/tree/main/docs"
-}
-```
+If the user asks for TanStack Intent discoverability specifically:
 
-This makes the package visible to Intent's discovery mechanism. It is optional -- packages work without it -- but it enables downstream agents to automatically find and map skills into their workflows.
+- tell them to follow the current upstream TanStack Intent packaging docs
+- keep that metadata separate from agentpack's required package shape
+- do not imply that `agentpack publish validate` checks or guarantees TanStack Intent indexing
 
 ### 8. The dependency sync model
 
-agentpack syncs `dependencies` in `package.json` from `requires` in exported skills, similar to how `go mod tidy` syncs `go.mod`:
+agentpack syncs `dependencies` in `package.json` from cross-package skill imports in exported skills, similar to how `go mod tidy` syncs `go.mod`:
 
-1. Read `requires` from each exported `SKILL.md`
+1. Read cross-package skill imports from each exported `SKILL.md`
 2. Compare against `dependencies` in `package.json`
 3. Add cross-package requirements that are missing
 4. Remove entries no longer referenced
 5. Write `package.json`
 
-This sync runs automatically during `agentpack skills validate` and `agentpack skills dev`. Never manually edit managed cross-package dependencies -- they will be overwritten.
+This sync runs automatically during `agentpack author dev`. `agentpack publish validate` checks alignment but does not write. Never manually edit managed cross-package dependencies -- they will be overwritten on the next `author dev` run.
 
 ## Common Mistakes
 
@@ -243,7 +236,7 @@ This sync runs automatically during `agentpack skills validate` and `agentpack s
 "files": ["skills/", "README.md"]
 ```
 
-Without the skill directories in `files`, npm publishes an empty package. Consumers install it but get no skills. `agentpack skills validate` catches this when the `files` field exists.
+Without the skill directories in `files`, npm publishes an empty package. Consumers install it but get no skills. `agentpack publish validate` catches this when the `files` field exists.
 
 ### Publishing _artifacts
 
@@ -277,7 +270,7 @@ The `_artifacts` directory contains development metadata (skill tree YAML, domai
 }
 ```
 
-Scoped packages require a `repository` field. `agentpack skills validate` enforces this for `@scope/*` packages. Without it, consumers cannot trace the package back to its source.
+Scoped packages require a `repository` field. `agentpack publish validate` enforces this for `@scope/*` packages. Without it, consumers cannot trace the package back to its source.
 
 ### Wrong registry configuration
 
@@ -299,7 +292,7 @@ Scoped packages require a `repository` field. `agentpack skills validate` enforc
 }
 ```
 
-Scoped packages intended for org-internal use must point at GitHub Packages (or another private registry). Publishing a private package to the public npm registry exposes it publicly. `agentpack skills validate` checks that `@scope/*` packages set `publishConfig.registry` to `https://npm.pkg.github.com`.
+Scoped packages intended for org-internal use must point at GitHub Packages (or another private registry). Publishing a private package to the public npm registry exposes it publicly. `agentpack publish validate` checks that `@scope/*` packages set `publishConfig.registry` to `https://npm.pkg.github.com`.
 
 ### Manually editing managed dependencies
 
@@ -310,7 +303,7 @@ Scoped packages intended for org-internal use must point at GitHub Packages (or 
 }
 ```
 
-If the dependency comes from a skill's `requires` array, agentpack manages it. Manual edits get overwritten on the next `validate` or `dev` run. Only add dependencies manually if they are not skill-to-skill references.
+If the dependency comes from a skill import, agentpack manages it. Manual edits get overwritten on the next `author dev` run. Only add dependencies manually if they are not skill-to-skill references.
 
 ### Hardcoding tokens in .npmrc
 
@@ -326,21 +319,21 @@ Never hardcode authentication tokens. Use environment variables and set them in 
 
 ### Skipping validation before publish
 
-Publishing without validation risks shipping a broken package: missing skill paths, mismatched export keys, missing dependencies. Always run `agentpack skills validate` before `npm publish`. There is no undo for a published version.
+Publishing without validation risks shipping a broken package: missing skill paths, missing dependencies. Always run `agentpack publish validate` before `npm publish`. There is no undo for a published version.
 
 ## Publishing Checklist
 
 Before running `npm publish`, confirm:
 
-1. `agentpack skills validate` passes
+1. `agentpack publish validate` passes
 2. `package.json` has `name`, `version`, `description`
-3. `files` includes skill directories and excludes `_artifacts`
-4. `agentpack.skills` keys match `SKILL.md` frontmatter names
+3. `files` includes root `SKILL.md`, skill directories, and excludes `_artifacts`
+4. Each discovered export `SKILL.md` has valid frontmatter
 5. `repository` field points to the source repo
 6. `publishConfig.registry` matches the intended registry
 7. Version has been bumped since the last publish
 8. `.npmrc` uses environment variable references, not hardcoded tokens
-9. Cross-package dependencies are managed (not manually edited)
+9. Cross-package dependencies derived from skill imports are managed (not manually edited)
 
 ## What Gets Published vs What Stays Local
 
@@ -359,6 +352,6 @@ Before running `npm publish`, confirm:
 
 Ground publishing decisions in [the publishing guide](source:publishingGuide){context="source of truth for the validate-publish-install cycle and consumer registry setup"}.
 
-Use [the sharing guide](source:sharingGuide){context="source of truth for GitHub Packages publisher and consumer setup, CI token configuration"}.
+Use [the authentication guide](source:authenticationGuide){context="source of truth for npm registry wiring, token setup, and CI auth configuration"}.
 
 Use [the package.json schema](source:packageJsonSchema){context="source of truth for required fields, validation checks, and the dependency sync model"}.

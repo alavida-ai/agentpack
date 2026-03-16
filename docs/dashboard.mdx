@@ -1,11 +1,11 @@
 ---
 title: "The Dev Dashboard"
-description: "A visual tour of the live dashboard that launches during agentpack skills dev, showing your skill graph, source provenance, and lifecycle status."
+description: "A visual tour of the live dashboard that launches during agentpack author dev, showing your skill graph, source provenance, and lifecycle status."
 ---
 
 {/* Screenshot: full dashboard showing a skill with sources and dependencies, some stale */}
 
-When you run `agentpack skills dev`, a live dashboard opens in your browser showing your skill's dependency graph, source provenance, and lifecycle status. It updates in real time as you edit files, giving you immediate visual feedback on what has changed and what needs attention.
+When you run `agentpack author dev`, a live dashboard opens in your browser showing your skill's dependency graph, source provenance, and lifecycle status. It updates in real time as you edit files, giving you immediate visual feedback on what has changed and what needs attention.
 
 The dashboard launches automatically at `http://127.0.0.1:<port>` (the port is auto-assigned). It is the primary way to understand the shape and health of a skill during authoring.
 
@@ -92,7 +92,7 @@ The control strip sits at the bottom-left of the dashboard and provides quick ac
 | Button | Action |
 |---|---|
 | **Reset zoom** | Returns the graph to its default zoom level and position |
-| **Validate** | Runs `agentpack skills validate` on the current skill and updates status |
+| **Validate** | Runs `agentpack publish validate` on the current skill and updates status |
 | **Refresh** | Reloads the graph data from disk |
 | **Toggle labels** | Shows or hides node labels on the graph |
 | **Toggle knowledge sources** | Shows or hides source diamond nodes (useful for complex graphs) |
@@ -114,7 +114,7 @@ Click any breadcrumb to jump back up the chain. This lets you explore transitive
 
 The dashboard watches your skill directory and its declared source files for changes. The typical workflow looks like this:
 
-1. Run `agentpack skills dev path/to/skill`
+1. Run `agentpack author dev path/to/skill`
 2. Dashboard opens showing your skill graph with all nodes green (current)
 3. Open a source document in your editor and make a change
 4. The dashboard updates: the source node turns red, the skill node turns amber
@@ -132,7 +132,7 @@ The dashboard defaults to dark mode with warm brown tones and uses the Crimson P
 Pass `--no-dashboard` to skip the browser dashboard entirely. This is useful in CI pipelines or headless environments where you only need the CLI linking behavior:
 
 ```bash
-agentpack skills dev --no-dashboard path/to/skill
+agentpack author dev --no-dashboard path/to/skill
 ```
 </Tip>
 

@@ -1,17 +1,17 @@
 ---
 title: "Publishing & Consuming Skills"
-description: "Publish package-backed skills to GitHub Packages and install them in consumer repos"
+description: "Publish package-backed skills to GitHub Packages and install them in consumer repos with npm."
 ---
 
 ## What you'll learn
 
-You'll walk through the full publish-to-install cycle: publishing a skill package, configuring a consumer repo to pull from the registry, and using agentpack to install, inspect, update, and remove exported skills.
+You'll walk through the full publish-to-enable cycle: validating and publishing a skill package, installing it with npm in a consumer repo, and enabling it for agent discovery with agentpack.
 
 ## Prerequisites
 
 - Completed [The Skill Graph](/skill-graph)
 - A GitHub Packages-enabled repository
-- Authenticated with `agentpack auth login` (see [Authentication](/authentication))
+- npm configured for your private registry (see [Authentication](/authentication))
 
 ## Publishing a skill package
 
@@ -22,15 +22,19 @@ You'll walk through the full publish-to-install cycle: publishing a skill packag
 Always validate before you publish. This ensures the package contract and exported skills are structurally sound.
 
 ```bash
-agentpack skills validate domains/brand/skills/copywriting
+agentpack publish validate domains/brand/skills/copywriting
 ```
 
 ```
-Package: @acme/brand-copywriting
+Skill: @acme/brand-copywriting
 Status: valid
 ```
 
-Validation checks that exported skills are declared under `package.json.agentpack.skills`, exported paths resolve, compiler-mode skill imports align with package dependencies, and package metadata is complete.
+Validation checks that discovered skill exports compile, source paths resolve, skill imports align with package dependencies, and package metadata is complete.
+
+<Note>
+  `agentpack publish validate` checks the agentpack package contract only. If you also want optional TanStack Intent ecosystem metadata, follow the current upstream TanStack Intent docs separately; agentpack does not validate or consume those fields.
+</Note>
 
 </Step>
 
@@ -55,52 +59,46 @@ For CI publishing, use a workflow that writes `.npmrc` from `GITHUB_PACKAGES_TOK
 
 ## Configuring a consumer repo
 
-A consumer repo is any repo that uses published skills but does not author them. The fastest way to configure it:
+A consumer repo is any repo that uses published skills but does not author them. Configure npm to access your private registry:
 
-```bash
-agentpack auth login
-agentpack auth status --verify
+```ini .npmrc
+@acme:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
 ```
 
-This configures the scope, registry, and token in one step. See [Authentication](/authentication) for details, manual `.npmrc` setup, and CI configuration.
+See [Authentication](/authentication) for details, manual `.npmrc` setup, and CI configuration.
 
-Verify the repo-level wiring:
-
-```bash
-agentpack skills registry
-```
-
-```
-Scope: @acme
-Configured: true
-Registry: https://npm.pkg.github.com
-Always Auth: true
-Path: .npmrc
-Auth: environment variable reference
-Auth Key: GITHUB_PACKAGES_TOKEN
-```
-
-## Installing skills in a consumer repo
+## Installing and enabling skills in a consumer repo
 
 <Steps>
 
-<Step title="Install a skill package">
+<Step title="Install the package with npm">
 
 ```bash
-agentpack skills install @acme/brand-copywriting
+npm install @acme/brand-copywriting
 ```
 
-agentpack calls npm to resolve the full dependency graph, then materializes every exported skill in the resolved package closure into `.claude/skills/` and `.agents/skills/`.
+npm resolves the full dependency graph and places the package in `node_modules`.
+
+</Step>
+
+<Step title="Enable the skill for agent discovery">
+
+```bash
+agentpack skills enable @acme/brand-copywriting
+```
+
+agentpack reads the installed package's skill exports from `node_modules` and materializes them into `.claude/skills/` and `.agents/skills/` where agents can discover them. The enabled-target state is recorded in `.agentpack/install.json`.
 
 </Step>
 
 <Step title="Verify the installation">
 
 ```bash
-agentpack skills env
+agentpack skills list
 ```
 
-Use this to inspect what package versions are installed and which exported skills were materialized into the runtime directories.
+Shows installed packages, their exports, and which runtimes they are enabled for.
 
 </Step>
 
@@ -110,7 +108,7 @@ Use this to inspect what package versions are installed and which exported skill
 agentpack skills status
 ```
 
-Use this to check outdated packages, missing dependencies, deprecated packages, and registry configuration in one pass.
+Reports installed vs enabled counts, selection issues, runtime drift, and orphaned materializations.
 
 </Step>
 
@@ -123,28 +121,32 @@ Use this to check outdated packages, missing dependencies, deprecated packages, 
 <Step title="Check for updates">
 
 ```bash
-agentpack skills outdated
+npm outdated
 ```
+
+Use npm to check for newer versions of installed skill packages.
 
 </Step>
 
 <Step title="Update a package">
 
 ```bash
-agentpack skills install @acme/brand-copywriting
+npm install @acme/brand-copywriting@latest
+agentpack skills enable @acme/brand-copywriting
 ```
 
-Reinstall to pick up the latest version. agentpack re-resolves the package graph and re-materializes exported skills.
+Update the package with npm, then re-enable to refresh the materialized skills.
 
 </Step>
 
-<Step title="Uninstall a package">
+<Step title="Remove a package">
 
 ```bash
-agentpack skills uninstall @acme/brand-copywriting
+agentpack skills disable @acme/brand-copywriting
+npm uninstall @acme/brand-copywriting
 ```
 
-agentpack removes the package from the direct install set, rebuilds runtime state, and cleans up materialized links that are no longer needed.
+Disable the skill first to clean up materialized links, then remove the package with npm.
 
 </Step>
 
@@ -154,34 +156,29 @@ agentpack removes the package from the direct install set, rebuilds runtime stat
 
 | Step | Command | Who |
 |---|---|---|
-| Validate | `agentpack skills validate <path>` | Skill author |
+| Validate | `agentpack publish validate <path>` | Skill author |
 | Publish | `npm publish` | Skill author |
 | Configure registry | Create `.npmrc` | Consumer team (once) |
-| Install | `agentpack skills install <package>` | Consumer |
+| Install | `npm install <package>` | Consumer |
+| Enable | `agentpack skills enable <package>` | Consumer |
 | Check health | `agentpack skills status` | Consumer |
-| Check updates | `agentpack skills outdated` | Consumer |
-| Update | `agentpack skills install <package>` | Consumer |
-| Remove | `agentpack skills uninstall <package>` | Consumer |
+| Check updates | `npm outdated` | Consumer |
+| Update | `npm install <package>@latest` | Consumer |
+| Disable | `agentpack skills disable <package>` | Consumer |
+| Remove | `npm uninstall <package>` | Consumer |
 
-agentpack handles the agent-specific parts: skill resolution, materialization, runtime state, and provenance. npm handles versioning, package resolution, and registry distribution.
+npm handles versioning, package resolution, registry authentication, install, and uninstall. agentpack handles the agent-specific parts: skill discovery, runtime enable/disable, materialization, and health inspection.
 
 ## Publisher package.json
 
-Your skill package's `package.json` must declare the exported skills and point at GitHub Packages:
+Your skill package's `package.json` needs a root `SKILL.md` as the primary export:
 
 ```json package.json
 {
   "name": "@acme/brand-copywriting",
   "version": "1.2.0",
   "description": "Brand copywriting package.",
-  "files": ["skills/"],
-  "agentpack": {
-    "skills": {
-      "brand-copywriting": {
-        "path": "skills/brand-copywriting/SKILL.md"
-      }
-    }
-  },
+  "files": ["SKILL.md"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/acme-corp/knowledge-base.git"
@@ -192,7 +189,7 @@ Your skill package's `package.json` must declare the exported skills and point a
 }
 ```
 
-See [package.json Reference](/schema-package-json) for all fields.
+See [package.json Reference](/schema-package-json) for all fields including multi-skill packages with `agentpack.root`.
 
 ## CI publishing
 
@@ -206,14 +203,15 @@ For automated publishing in GitHub Actions:
     npm publish -w domains/brand/skills/copywriting
 ```
 
-For automated install in CI:
+For automated install and enable in CI:
 
-```yaml .github/workflows/install-skills.yml
-- name: Install skills
+```yaml .github/workflows/enable-skills.yml
+- name: Install and enable skills
   env:
     NODE_AUTH_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
   run: |
-    agentpack skills install @acme/brand-copywriting
+    npm install @acme/brand-copywriting
+    agentpack skills enable @acme/brand-copywriting
 ```
 
 <Note>

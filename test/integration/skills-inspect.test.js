@@ -47,7 +47,7 @@ describe('agentpack skills inspect', () => {
     const repo = createSkillFixture();
 
     try {
-      const result = runCLI(['skills', 'inspect', 'domains/value/skills/copywriting'], { cwd: repo.root });
+      const result = runCLI(['author', 'inspect', 'domains/value/skills/copywriting'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.match(result.stdout, /Skill: value-copywriting/);
@@ -67,7 +67,7 @@ describe('agentpack skills inspect', () => {
     const repo = createSkillFixture();
 
     try {
-      const result = runCLI(['skills', 'inspect', '@alavida/value-copywriting'], { cwd: repo.root });
+      const result = runCLI(['author', 'inspect', '@alavida/value-copywriting'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.match(result.stdout, /Package: @alavida\/value-copywriting/);
@@ -94,10 +94,10 @@ sources:
 `
       );
 
-      const result = runCLI(['skills', 'inspect', '@alavida/value-copywriting'], { cwd: repo.root });
+      const result = runCLI(['author', 'inspect', '@alavida/value-copywriting'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 2);
-      assert.match(result.stderr, /legacy skill\.md authoring is not supported/i);
+      assert.match(result.stderr, /legacy skill\.md authoring is not supported|convert this skill to compiler-mode authoring/i);
     } finally {
       repo.cleanup();
     }
@@ -107,7 +107,7 @@ sources:
     const repo = createSkillFixture();
 
     try {
-      const result = runCLI(['skills', 'inspect', '@alavida/unknown-skill'], { cwd: repo.root });
+      const result = runCLI(['author', 'inspect', '@alavida/unknown-skill'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 4);
       assert.match(result.stderr, /Error: skill not found/i);
@@ -134,10 +134,7 @@ sources:
               registry: 'https://npm.pkg.github.com',
             },
             agentpack: {
-              skills: {
-                kickoff: { path: 'skills/kickoff/SKILL.md' },
-                recap: { path: 'skills/recap/SKILL.md' },
-              },
+              root: 'skills',
             },
           },
           files: {
@@ -173,7 +170,7 @@ Use [the recap checklist](source:checklist){context="source material for recap p
     });
 
     try {
-      const result = runCLIJson(['skills', 'inspect', '@alavida-ai/planning-kit'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'inspect', '@alavida-ai/planning-kit'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.equal(result.json.packageName, '@alavida-ai/planning-kit');
@@ -205,10 +202,7 @@ Use [the recap checklist](source:checklist){context="source material for recap p
               registry: 'https://npm.pkg.github.com',
             },
             agentpack: {
-              skills: {
-                kickoff: { path: 'skills/kickoff/SKILL.md' },
-                recap: { path: 'skills/recap/SKILL.md' },
-              },
+              root: 'skills',
             },
           },
           files: {
@@ -244,7 +238,7 @@ Use [the recap checklist](source:checklist){context="source material for recap p
     });
 
     try {
-      const result = runCLI(['skills', 'inspect', 'workbenches/planning-kit/skills/kickoff'], { cwd: repo.root });
+      const result = runCLI(['author', 'inspect', 'workbenches/planning-kit/skills/kickoff'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.match(result.stdout, /Skill: kickoff/);
@@ -288,7 +282,7 @@ Ground this in [our PRD principles](source:principles){context="primary source m
     });
 
     try {
-      const result = runCLIJson(['skills', 'inspect', 'skills/prd-agent'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'inspect', 'skills/prd-agent'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr || result.stdout);
       assert.equal(result.json.kind, 'export');

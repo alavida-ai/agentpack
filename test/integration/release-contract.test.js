@@ -77,7 +77,7 @@ describe('release contract', () => {
     assert.doesNotMatch(readme, /\/Users\/[^)\s]+/);
 
     assert.match(shippedSkill, /compiled artifact/i);
-    assert.match(shippedSkill, /skills build/i);
+    assert.match(shippedSkill, /author build/i);
     assert.match(shippedSkill, /--no-dashboard/);
     assert.match(shippedSkill, /workbench/i);
     assert.doesNotMatch(shippedSkill, /\bplugin\b/i);
@@ -86,6 +86,30 @@ describe('release contract', () => {
     assert.match(sandboxPlan, /domains\/[A-Za-z0-9/_-]*workbenches\//);
     assert.doesNotMatch(sandboxSpec, /workbench\.json/);
     assert.doesNotMatch(sandboxPlan, /workbench\.json/);
+  });
+
+  it('keeps bundled authoring skills on the compiler-first contract', () => {
+    const compilerModeAuthoring = readFileSync(
+      join(repoRoot, 'packages', 'agentpack', 'skills', 'compiler-mode-authoring', 'SKILL.md'),
+      'utf-8'
+    );
+    const multiSkillPackages = readFileSync(
+      join(repoRoot, 'packages', 'agentpack', 'skills', 'multi-skill-packages', 'SKILL.md'),
+      'utf-8'
+    );
+    const authoringFromKnowledge = readFileSync(
+      join(repoRoot, 'packages', 'agentpack', 'skills', 'authoring-skillgraphs-from-knowledge', 'SKILL.md'),
+      'utf-8'
+    );
+    const developingAndTesting = readFileSync(
+      join(repoRoot, 'packages', 'agentpack', 'skills', 'developing-and-testing-skills', 'SKILL.md'),
+      'utf-8'
+    );
+
+    for (const skill of [compilerModeAuthoring, multiSkillPackages, authoringFromKnowledge, developingAndTesting]) {
+      assert.doesNotMatch(skill, /metadata\.sources/);
+      assert.doesNotMatch(skill, /^requires:\s*$/m);
+    }
   });
 
   it('hard-deletes plugin handling from the shipped product surface', () => {

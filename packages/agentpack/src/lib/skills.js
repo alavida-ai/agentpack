@@ -27,7 +27,11 @@ import {
   readPackageMetadata,
 } from '../domain/skills/skill-model.js';
 import { listAuthoredSkillPackages } from '../domain/skills/skill-catalog.js';
-import { resolveSingleSkillTarget, resolveSkillTarget } from '../domain/skills/skill-target-resolution.js';
+import {
+  ensureResolvedExportIsValid,
+  resolveSingleSkillTarget,
+  resolveSkillTarget,
+} from '../domain/skills/skill-target-resolution.js';
 import { inspectMaterializedSkills } from '../infrastructure/runtime/inspect-materialized-skills.js';
 import { compileSkillDocument } from '../domain/compiler/skill-compiler.js';
 import { hashFile } from '../domain/compiler/source-hash.js';
@@ -124,7 +128,9 @@ function resolveDevLinkedSkills(repoRoot, rootSkillDir) {
 }
 
 function resolveLocalPackagedSkillDir(repoRoot, target) {
-  const resolved = resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false });
+  const resolved = ensureResolvedExportIsValid(
+    resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false })
+  );
   return {
     skillDir: resolved.export.skillDirPath,
     skillFile: resolved.export.skillFilePath,
@@ -203,7 +209,9 @@ function maybeBuildCompiledState(target, { cwd = process.cwd() } = {}) {
   const repoRoot = findRepoRoot(cwd);
   let resolved;
   try {
-    resolved = resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false });
+    resolved = ensureResolvedExportIsValid(
+      resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false })
+    );
   } catch {
     return null;
   }
@@ -290,12 +298,12 @@ function reconcileDevSession(repoRoot) {
   if (!session) return null;
 
   if (session.status === 'active' && isProcessAlive(session.pid)) {
-    throw new AgentpackError('A skills dev session is already active in this repo', {
+    throw new AgentpackError('An author dev session is already active in this repo', {
       code: 'skills_dev_session_active',
       exitCode: EXIT_CODES.GENERAL,
       nextSteps: [
-        ...buildDevSessionNextSteps('agentpack skills dev cleanup'),
-        ...buildDevSessionNextSteps('agentpack skills dev cleanup --force'),
+        ...buildDevSessionNextSteps('agentpack author dev cleanup'),
+        ...buildDevSessionNextSteps('agentpack author dev cleanup --force'),
       ],
       details: {
         rootSkill: session.root_skill?.name || null,
@@ -390,7 +398,7 @@ export function devSkill(target, {
       synced,
     };
   } catch (error) {
-    if (error instanceof AgentpackError && error.exitCode === EXIT_CODES.GENERAL) {
+    if (error instanceof AgentpackError) {
       throw error;
     }
 
@@ -413,7 +421,7 @@ export function startSkillDev(target, {
   try {
     ({ skillDir } = resolveLocalPackagedSkillDir(outerRepoRoot, target));
   } catch (error) {
-    if (error instanceof AgentpackError && error.exitCode === EXIT_CODES.GENERAL) {
+    if (error instanceof AgentpackError) {
       throw error;
     }
 
@@ -578,10 +586,10 @@ export function unlinkSkill(name, { cwd = process.cwd(), recursive = false } = {
         nextSteps: session?.root_skill?.name
           ? [{
             action: 'run_command',
-            command: `agentpack skills unlink ${session.root_skill.name} --recursive`,
+            command: `agentpack author unlink ${session.root_skill.name} --recursive`,
             reason: 'Recursive unlink in v1 only works for the recorded dev-session root skill',
           }]
-          : buildDevSessionNextSteps('agentpack skills dev cleanup --force'),
+          : buildDevSessionNextSteps('agentpack author dev cleanup --force'),
         details: {
           rootSkill: session?.root_skill?.name || null,
         },
@@ -630,12 +638,12 @@ export function cleanupSkillDevSession({ cwd = process.cwd(), force = false } = 
   }
 
   if (!force && session.status === 'active' && isProcessAlive(session.pid)) {
-    throw new AgentpackError('A skills dev session is still active in this repo', {
+    throw new AgentpackError('An author dev session is still active in this repo', {
       code: 'skills_dev_session_active',
       exitCode: EXIT_CODES.GENERAL,
       nextSteps: [
-        ...buildDevSessionNextSteps('agentpack skills dev cleanup'),
-        ...buildDevSessionNextSteps('agentpack skills dev cleanup --force'),
+        ...buildDevSessionNextSteps('agentpack author dev cleanup'),
+        ...buildDevSessionNextSteps('agentpack author dev cleanup --force'),
       ],
       details: {
         rootSkill: session.root_skill?.name || null,
@@ -914,9 +922,16 @@ function isPublishedSkillFile(files, relativeSkillFile) {
   return files.some((entry) => entry === relativeSkillFile || relativeSkillFile.startsWith(`${entry}/`));
 }
 
+function packageNameForRequirement(requirement) {
+  if (typeof requirement !== 'string') return null;
+  const colonIndex = requirement.indexOf(':');
+  return colonIndex === -1 ? requirement : requirement.slice(0, colonIndex);
+}
+
 export function validatePackagedSkillExport(repoRoot, pkg, skillExport) {
   const packageMetadata = readPackageMetadata(pkg.packageDir);
   const issues = [];
+  const metadataStatus = skillExport.lifecycleStatus || null;
 
   if (!packageMetadata.packageName) {
     issues.push({
@@ -955,7 +970,7 @@ export function validatePackagedSkillExport(repoRoot, pkg, skillExport) {
     }
   }
 
-  if (skillExport.status && !['deprecated', 'retired'].includes(skillExport.status)) {
+  if (metadataStatus && !['deprecated', 'retired'].includes(metadataStatus)) {
     issues.push({
       code: 'invalid_skill_status',
       message: 'metadata.status must be "deprecated" or "retired"',
@@ -980,6 +995,9 @@ export function validatePackagedSkillExport(repoRoot, pkg, skillExport) {
   }
 
   for (const requirement of skillExport.requires || []) {
+    if (packageNameForRequirement(requirement) === packageMetadata.packageName) {
+      continue;
+    }
     if (!packageMetadata.dependencies[requirement]) {
       issues.push({
         code: 'missing_dependency_declaration',
@@ -997,7 +1015,7 @@ export function validatePackagedSkillExport(repoRoot, pkg, skillExport) {
     packageVersion: packageMetadata.packageVersion,
     skillFile: skillExport.skillFile,
     packagePath: pkg.packagePath,
-    status: skillExport.status || null,
+    status: metadataStatus,
     replacement: skillExport.replacement || null,
     nextSteps: buildValidateNextSteps(packageMetadata, issues.length === 0),
     issues,
@@ -1135,7 +1153,7 @@ export function listStaleSkills({ cwd = process.cwd() } = {}) {
   if (!compiledState) {
     throw new NotFoundError('compiled state not found', {
       code: 'compiled_state_not_found',
-      suggestion: 'Run `agentpack skills build <target>` first.',
+      suggestion: 'Run `agentpack author build <target>` first.',
     });
   }
 

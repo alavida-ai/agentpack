@@ -24,7 +24,7 @@ describe('agentpack skills unlink', () => {
 
     try {
       createLinkedSkill(repo.root, 'value-copywriting', 'copywriting');
-      const result = runCLI(['skills', 'unlink', 'value-copywriting'], { cwd: repo.root });
+      const result = runCLI(['author', 'unlink', 'value-copywriting'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.match(result.stdout, /value-copywriting/);
@@ -39,7 +39,7 @@ describe('agentpack skills unlink', () => {
     const repo = createTempRepo('skills-unlink-missing');
 
     try {
-      const result = runCLI(['skills', 'unlink', 'nonexistent-skill'], { cwd: repo.root });
+      const result = runCLI(['author', 'unlink', 'nonexistent-skill'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 1);
       assert.match(result.stderr, /not found|not linked/i);
@@ -55,7 +55,7 @@ describe('agentpack skills unlink', () => {
       createLinkedSkill(repo.root, 'value-copywriting', 'copywriting');
       createLinkedSkill(repo.root, 'value-research', 'research');
 
-      const result = runCLIJson(['skills', 'unlink', 'value-copywriting'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'unlink', 'value-copywriting'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.equal(result.json.name, 'value-copywriting');
@@ -104,7 +104,7 @@ describe('agentpack skills unlink', () => {
         updated_at: '2026-03-12T12:00:00.000Z',
       });
 
-      const result = runCLIJson(['skills', 'unlink', 'prd-development', '--recursive'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'unlink', 'prd-development', '--recursive'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.equal(result.json.unlinked, true);
@@ -156,12 +156,12 @@ describe('agentpack skills unlink', () => {
         updated_at: '2026-03-12T12:00:00.000Z',
       });
 
-      const result = runCLIJson(['skills', 'unlink', 'problem-statement', '--recursive'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'unlink', 'problem-statement', '--recursive'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 1);
       assert.equal(result.json.error, 'linked_skill_recursive_unlink_requires_root');
       assert.equal(result.json.details.rootSkill, 'prd-development');
-      assert.equal(result.json.nextSteps[0].command, 'agentpack skills unlink prd-development --recursive');
+      assert.equal(result.json.nextSteps[0].command, 'agentpack author unlink prd-development --recursive');
     } finally {
       repo.cleanup();
     }
@@ -173,11 +173,11 @@ describe('agentpack skills unlink', () => {
     try {
       createLinkedSkill(repo.root, 'problem-statement', 'problem-statement');
 
-      const result = runCLIJson(['skills', 'unlink', 'problem-statement', '--recursive'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'unlink', 'problem-statement', '--recursive'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 1);
       assert.equal(result.json.error, 'linked_skill_recursive_unlink_requires_root');
-      assert.equal(result.json.nextSteps[0].command, 'agentpack skills dev cleanup --force');
+      assert.equal(result.json.nextSteps[0].command, 'agentpack author dev cleanup --force');
     } finally {
       repo.cleanup();
     }

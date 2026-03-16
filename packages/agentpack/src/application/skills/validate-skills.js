@@ -1,20 +1,29 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { buildCompiledStateUseCase } from './build-compiled-state.js';
-import { listAuthoredSkillPackageDirs, listAuthoredSkillPackages } from '../../domain/skills/skill-catalog.js';
-import { resolveSingleSkillTarget } from '../../domain/skills/skill-target-resolution.js';
+import { listAuthoredSkillPackages } from '../../domain/skills/skill-catalog.js';
+import { resolveSkillTarget } from '../../domain/skills/skill-target-resolution.js';
 import { CompilerDiagnosticError } from '../../domain/compiler/compile-diagnostics.js';
 import { findRepoRoot } from '../../lib/context.js';
-import { findPackageDirByName, validatePackagedSkillExport } from '../../lib/skills.js';
+import { validatePackagedSkillExport } from '../../lib/skills.js';
 import { writeCompiledState } from '../../infrastructure/fs/compiled-state-repository.js';
 import { AgentpackError } from '../../utils/errors.js';
-import { normalizeDisplayPath, readPackageMetadata } from '../../domain/skills/skill-model.js';
+import { collectDiagnosticNextSteps } from '../../domain/skills/workspace-graph.js';
 
 function isCompilerModeDocument(content) {
   return content.includes('```agentpack');
 }
 
 function toValidationIssue(error) {
+  if (error && typeof error.code === 'string' && typeof error.message === 'string') {
+    return {
+      code: error.code,
+      message: error.message,
+      ...(error.path ? { path: error.path } : {}),
+      ...(error.location ? { location: error.location } : {}),
+      ...(error.details && Object.keys(error.details).length > 0 ? { details: error.details } : {}),
+    };
+  }
+
   if (error instanceof CompilerDiagnosticError) {
     return {
       code: error.code,
@@ -88,7 +97,7 @@ function compilerValidationFailure(resolved, error) {
   };
 }
 
-function compilerLegacyFailure(resolved) {
+function compilerGraphFailure(resolved) {
   return {
     valid: false,
     count: 1,
@@ -105,25 +114,14 @@ function compilerLegacyFailure(resolved) {
         packagePath: resolved.package.packagePath,
         status: null,
         replacement: null,
-        nextSteps: [],
-        issues: [
-          {
-            code: 'legacy_authoring_not_supported',
-            message: 'Legacy SKILL.md authoring is not supported. Use an `agentpack` declaration block and explicit body references.',
-            path: resolved.export.skillFile,
-          },
-        ],
+        nextSteps: collectDiagnosticNextSteps(resolved.export.diagnostics),
+        issues: resolved.export.diagnostics.map((diagnostic) => toValidationIssue(diagnostic)),
       },
     ],
   };
 }
 
-function compilerLegacyFailureFromPath(repoRoot, skillFilePath, packageDir = null) {
-  const resolvedPackageDir = packageDir || dirname(skillFilePath);
-  const packageMetadata = readPackageMetadata(resolvedPackageDir);
-  const packagePath = normalizeDisplayPath(repoRoot, resolvedPackageDir);
-  const skillFile = normalizeDisplayPath(repoRoot, skillFilePath);
-
+function compilerPackageFailure(resolved) {
   return {
     valid: false,
     count: 1,
@@ -132,65 +130,37 @@ function compilerLegacyFailureFromPath(repoRoot, skillFilePath, packageDir = nul
     skills: [
       {
         valid: false,
-        key: packageMetadata.packageName || skillFile,
+        key: resolved.package.packageName,
         name: null,
-        packageName: packageMetadata.packageName,
-        packageVersion: packageMetadata.packageVersion,
-        skillFile,
-        packagePath,
+        packageName: resolved.package.packageName,
+        packageVersion: resolved.package.packageVersion,
+        skillFile: null,
+        packagePath: resolved.package.packagePath,
         status: null,
         replacement: null,
-        nextSteps: [],
-        issues: [
-          {
-            code: 'legacy_authoring_not_supported',
-            message: 'Legacy SKILL.md authoring is not supported. Use an `agentpack` declaration block and explicit body references.',
-            path: skillFile,
-          },
-        ],
+        nextSteps: collectDiagnosticNextSteps(resolved.package.diagnostics),
+        issues: resolved.package.diagnostics.map((diagnostic) => toValidationIssue(diagnostic)),
       },
     ],
   };
 }
-
-function resolveLegacySkillFile(repoRoot, target) {
-  const absoluteTarget = isAbsolute(target) ? target : resolve(repoRoot, target);
-  if (existsSync(absoluteTarget)) {
-    if (absoluteTarget.endsWith('SKILL.md')) return absoluteTarget;
-    const skillFile = join(absoluteTarget, 'SKILL.md');
-    if (existsSync(skillFile)) return skillFile;
+function validateResolvedCompilerExport(repoRoot, resolved, options = {}) {
+  if (!resolved.export) {
+    return compilerPackageFailure(resolved);
+  }
+  if (resolved.export.status === 'invalid') {
+    return compilerGraphFailure(resolved);
   }
 
-  if (!target.startsWith('@')) return null;
-  const packageDir = findPackageDirByName(repoRoot, target);
-  if (!packageDir) return null;
-  const skillFile = join(packageDir, 'SKILL.md');
-  return existsSync(skillFile) ? skillFile : null;
-}
-
-function validateCompilerTarget(repoRoot, target, options = {}) {
-  let resolved;
-  try {
-    resolved = resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false });
-  } catch {
-    const legacySkillFile = resolveLegacySkillFile(repoRoot, target);
-    if (!legacySkillFile) throw new AgentpackError('skill not found', { code: 'skill_not_found' });
-    const content = readFileSync(legacySkillFile, 'utf-8');
-    if (!isCompilerModeDocument(content)) {
-      return compilerLegacyFailureFromPath(repoRoot, legacySkillFile, dirname(legacySkillFile));
-    }
-    throw new AgentpackError('skill not found', { code: 'skill_not_found' });
-  }
   const content = readFileSync(resolved.export.skillFilePath, 'utf-8');
-
   if (!isCompilerModeDocument(content)) {
-    return compilerLegacyFailure(resolved);
+    return compilerGraphFailure(resolved);
   }
 
   const packageValidation = validatePackagedSkillExport(repoRoot, resolved.package, resolved.export);
 
   try {
-    const buildResult = buildCompiledStateUseCase(target, { ...options, persist: false });
+    const buildResult = buildCompiledStateUseCase(resolved.export.skillFilePath, { ...options, persist: false });
     const issues = [...packageValidation.issues];
     if (issues.length > 0) {
       return {
@@ -233,41 +203,48 @@ function validateCompilerTarget(repoRoot, target, options = {}) {
   }
 }
 
+function resolveValidationTargets(repoRoot, target) {
+  if (target) {
+    const resolved = resolveSkillTarget(repoRoot, target, { includeInstalled: false });
+    if (resolved.kind === 'package' && resolved.exports.length === 0 && resolved.package.diagnostics?.length > 0) {
+      return [{ package: resolved.package, export: null }];
+    }
+    return resolved.kind === 'export'
+      ? [{ package: resolved.package, export: resolved.export }]
+      : resolved.exports.map((entry) => ({ package: resolved.package, export: entry }));
+  }
+
+  return listAuthoredSkillPackages(repoRoot)
+    .flatMap((pkg) => {
+      if (pkg.exports.length === 0 && pkg.diagnostics?.length > 0) {
+        return [{ package: pkg, export: null }];
+      }
+      return pkg.exports.map((entry) => ({ package: pkg, export: entry }));
+    });
+}
+
 export function validateSkillsUseCase(target, options = {}) {
   const cwd = options.cwd || process.cwd();
   const repoRoot = findRepoRoot(cwd);
+  const targets = resolveValidationTargets(repoRoot, target);
+  const skills = targets
+    .flatMap((resolved) => validateResolvedCompilerExport(
+      repoRoot,
+      resolved,
+      target ? options : { ...options, persist: false }
+    ).skills)
+    .sort((a, b) => (a.key || a.packageName || a.packagePath).localeCompare(b.key || b.packageName || b.packagePath));
 
-  if (!target) {
-    const authoredTargets = listAuthoredSkillPackages(repoRoot)
-      .flatMap((pkg) => pkg.exports.map((entry) => entry.skillPath));
-    const discoveredPackageDirs = new Set(listAuthoredSkillPackageDirs(repoRoot));
-    const coveredPackageDirs = new Set(
-      listAuthoredSkillPackages(repoRoot).map((pkg) => pkg.packageDir)
-    );
+  const validCount = skills.filter((skill) => skill.valid).length;
+  const invalidCount = skills.length - validCount;
+  const result = {
+    valid: invalidCount === 0,
+    count: skills.length,
+    validCount,
+    invalidCount,
+    skills,
+  };
 
-    for (const packageDir of discoveredPackageDirs) {
-      if (coveredPackageDirs.has(packageDir)) continue;
-      const rootSkillFile = join(packageDir, 'SKILL.md');
-      if (existsSync(rootSkillFile)) {
-        authoredTargets.push(normalizeDisplayPath(repoRoot, packageDir));
-      }
-    }
-
-    const skills = authoredTargets
-      .flatMap((authoredTarget) => validateCompilerTarget(repoRoot, authoredTarget, { ...options, persist: false }).skills)
-      .sort((a, b) => (a.key || a.packageName || a.packagePath).localeCompare(b.key || b.packageName || b.packagePath));
-
-    const validCount = skills.filter((skill) => skill.valid).length;
-    const invalidCount = skills.length - validCount;
-
-    return {
-      valid: invalidCount === 0,
-      count: skills.length,
-      validCount,
-      invalidCount,
-      skills,
-    };
-  }
-
-  return validateCompilerTarget(repoRoot, target, options);
+  if (target) return result;
+  return result;
 }

@@ -29,8 +29,8 @@ Once those boundaries blur, everything gets worse:
 - source docs and knowledge files stay authoritative
 - `SKILL.md` becomes the agent-facing artifact
 - `package.json` becomes the distribution contract
-- npm handles package resolution and versioning
-- `agentpack` handles compilation, validation, staleness, local linking, install flow, and runtime materialization
+- npm handles package resolution, versioning, install, uninstall, auth, and registry
+- `agentpack` handles authoring, compilation, validation, staleness, local linking, publish validation, and runtime enable/disable/materialization
 
 This is for teams who want agent behavior to be packaged, inspectable, and updateable like software instead of copy-pasted prompt debris.
 
@@ -77,16 +77,15 @@ Most agent workflows still look like this:
 3. Validate it before release.
 4. Link it locally for testing.
 5. Publish it as a package.
-6. Install and materialize it wherever it needs to run.
+6. Install with npm and enable for runtime discovery.
 
 ## What It Does
 
-`agentpack` covers four practical workflows:
+`agentpack` covers three practical workflows:
 
-1. Author a packaged skill from source docs or knowledge files.
-2. Validate that skill before release.
-3. Compile it into `.agentpack/compiled.json`.
-4. Materialize it into `.claude/skills/` and `.agents/skills/` for testing or consumption.
+1. **Author** a packaged skill from source docs or knowledge files — compile, inspect, detect staleness, and iterate locally with the dev dashboard.
+2. **Publish** — validate that a skill package is structurally sound before `npm publish`.
+3. **Runtime activation** — list installed skill packages from `node_modules`, enable or disable them for agent discovery, and inspect runtime health.
 
 ## Quick Start
 
@@ -95,38 +94,38 @@ Most agent workflows still look like this:
 Run these commands from the repo that owns the source files bound in the skill's `agentpack` block:
 
 ```bash
-agentpack skills inspect domains/operations/skills/agonda-prioritisation
-agentpack skills validate domains/operations/skills/agonda-prioritisation
-agentpack skills dev domains/operations/skills/agonda-prioritisation
+agentpack author inspect domains/operations/skills/agonda-prioritisation
+agentpack publish validate domains/operations/skills/agonda-prioritisation
+agentpack author dev domains/operations/skills/agonda-prioritisation
 ```
 
-Use `skills dev` when you want the skill linked into `.claude/skills/` and `.agents/skills/` for local runtime testing. It now also starts a localhost development workbench by default for one selected skill, showing immediate provenance sources, direct required skills, lifecycle state, and workbench actions such as validation and stale checks.
+Use `author dev` when you want the skill linked into `.claude/skills/` and `.agents/skills/` for local runtime testing. It also starts a localhost development workbench by default for one selected skill, showing immediate provenance sources, direct required skills, lifecycle state, and workbench actions such as validation and stale checks.
 
 Pass `--no-dashboard` if you want the original CLI-only linking workflow without the local dashboard.
 
 If your agent session was already running, start a fresh session after linking so the runtime can pick up the newly materialized skill.
 
-### Install a published skill in another repo
+### Install and enable a published skill in another repo
 
 ```bash
-agentpack skills install @scope/skill-package
-agentpack skills env
+npm install @scope/skill-package
+agentpack skills enable @scope/skill-package
 ```
 
 ### Build and materialize a compiled skill
 
 ```bash
-agentpack skills build path/to/skill
-agentpack skills materialize
+agentpack author build path/to/skill
+agentpack author materialize
 ```
 
-`skills build` produces `.agentpack/compiled.json`. `skills materialize` records adapter output ownership in `.agentpack/materialization-state.json`.
+`author build` produces `.agentpack/compiled.json`. `author materialize` records adapter output ownership in `.agentpack/materialization-state.json`.
 
 ## The Model
 
 The most important distinction in `agentpack` is lifecycle stage.
 
-### Packaged skills
+### Packaged skills (authoring)
 
 A packaged skill is a reusable capability artifact.
 
@@ -135,20 +134,21 @@ A packaged skill is a reusable capability artifact.
 - `package.json.dependencies` are the package-level mirror for cross-package skill imports
 - it is self-contained at runtime, not a pointer back to source files
 
-Typical local flow:
+Typical authoring flow:
 
-- `skills inspect`
-- `skills validate`
-- `skills dev`
+- `agentpack author inspect`
+- `agentpack publish validate`
+- `agentpack author dev`
 
-### Consumer installs
+### Consumer repos (runtime activation)
 
-Consumer repos do not author the skill. They install the published package and materialize it into agent-visible directories.
+Consumer repos do not author the skill. They install the published package with npm and enable it for agent discovery.
 
 Typical consumer flow:
 
-- `skills install`
-- `skills env`
+- `npm install @scope/skill-package`
+- `agentpack skills enable @scope/skill-package`
+- `agentpack skills list`
 
 ## What Agentpack Refuses To Blur
 
@@ -156,8 +156,10 @@ These are deliberate boundaries:
 
 - Knowledge is the source of truth.
 - Skills are derived artifacts.
-- Runtime adapters materialize compiled skills.
-- Installed state is repo-local runtime state.
+- npm owns package install, uninstall, auth, and registry.
+- agentpack owns authoring, publish validation, and runtime enable/disable.
+- Runtime adapters materialize enabled skills.
+- Enabled state is repo-local runtime state.
 
 If you blur those together, you get the exact problems this tool exists to stop:
 
@@ -183,28 +185,34 @@ For source-backed skills, run authoring commands from the repo that owns the sou
 
 If a skill points at `domains/.../knowledge/*.md`, run:
 
-- `agentpack skills validate`
-- `agentpack skills dev`
-- `agentpack skills stale`
+- `agentpack publish validate`
+- `agentpack author dev`
+- `agentpack author stale`
 
 from that knowledge-base repo root, not from the `agentpack` repo.
 
 ## Commands
 
-Implemented today:
+### Authoring (`agentpack author`)
 
-- `agentpack skills inspect`
-- `agentpack skills validate`
-- `agentpack skills dev`
-- `agentpack skills unlink`
-- `agentpack skills stale`
-- `agentpack skills install`
-- `agentpack skills env`
-- `agentpack skills uninstall`
-- `agentpack skills outdated`
-- `agentpack skills registry`
+- `agentpack author inspect <target>`
+- `agentpack author dev <target>`
+- `agentpack author dev cleanup`
+- `agentpack author unlink <name>`
+- `agentpack author build <target>`
+- `agentpack author materialize`
+- `agentpack author stale [target]`
+
+### Publish validation (`agentpack publish`)
+
+- `agentpack publish validate [target]`
+
+### Runtime activation (`agentpack skills`)
+
+- `agentpack skills list`
+- `agentpack skills enable <target>`
+- `agentpack skills disable <target>`
 - `agentpack skills status`
-- `agentpack skills missing`
 
 ## Docs
 

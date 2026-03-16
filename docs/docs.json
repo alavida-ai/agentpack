@@ -27,7 +27,7 @@
           },
           {
             "group": "CLI Reference",
-            "pages": ["cli-skills", "cli-auth"]
+            "pages": ["cli-skills"]
           },
           {
             "group": "File Reference",

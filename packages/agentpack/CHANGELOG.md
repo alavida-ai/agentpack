@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.9
+
+### Patch Changes
+
+- [#46](https://github.com/alavida-ai/agentpack/pull/46) [`5d1c3b6`](https://github.com/alavida-ai/agentpack/commit/5d1c3b6255a72dbddbcdc66a1b2c8167addd427a) Thanks [@alexandergirardet](https://github.com/alexandergirardet)! - Enable changelog generation with GitHub PR links and add CI check that enforces changeset files on PRs
+
 This file tracks important releases for the `@alavida-ai/agentpack` package.
 
 ## Unreleased

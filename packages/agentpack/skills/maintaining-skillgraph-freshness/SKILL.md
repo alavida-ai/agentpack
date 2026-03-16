@@ -1,12 +1,12 @@
 ---
 name: maintaining-skillgraph-freshness
-description: Use when validating authored skills, checking stale state, and keeping build-state and catalog metadata aligned with changing knowledge in an agentpack skillgraph.
+description: Use when validating authored skills, checking stale state, and keeping compiled metadata aligned with changing knowledge in an agentpack skillgraph.
 type: lifecycle
 library: agentpack
-library_version: "0.1.3"
+library_version: "0.1.10"
 sources:
-  - "alavida-ai/agentpack:docs/commands.mdx"
-  - "alavida-ai/agentpack:docs/current-state.mdx"
+  - "alavida-ai/agentpack:docs/cli-skills.mdx"
+  - "alavida-ai/agentpack:docs/staleness.mdx"
   - "alavida-ai/agentpack:README.md"
 ---
 
@@ -18,7 +18,7 @@ sources:
 cd knowledge-base
 agentpack skills validate domains/value/skills/copywriting
 agentpack skills stale
-git add .agentpack/build-state.json .agentpack/catalog.json
+git add .agentpack/compiled.json
 ```
 
 ## Core Patterns
@@ -40,7 +40,7 @@ agentpack skills validate domains/value/skills/copywriting
 ### Commit authored metadata
 
 ```bash
-git add .agentpack/build-state.json .agentpack/catalog.json
+git add .agentpack/compiled.json
 git commit -m "chore: refresh skill metadata"
 ```
 
@@ -65,9 +65,9 @@ agentpack skills validate domains/value/skills/copywriting
 
 The stale baseline only updates on successful validation.
 
-Source: docs/commands.mdx
+Source: docs/cli-skills.mdx
 
-### HIGH Not committing build-state and catalog in authoring repos
+### HIGH Not committing compiled state in authoring repos
 
 Wrong:
 
@@ -79,11 +79,11 @@ git commit -m "feat: update copywriting"
 Correct:
 
 ```bash
-git add domains/value/skills/copywriting .agentpack/build-state.json .agentpack/catalog.json
+git add domains/value/skills/copywriting .agentpack/compiled.json
 git commit -m "feat: update copywriting"
 ```
 
-Uncommitted authored metadata breaks stale visibility across clones, CI, and teammates.
+Uncommitted compiled metadata breaks stale visibility across clones, CI, and teammates.
 
 Source: README.md
 
@@ -98,13 +98,13 @@ Wrong:
 Correct:
 
 ```text
-.agentpack/build-state.json and .agentpack/catalog.json are the authored metadata files
+.agentpack/compiled.json is the authored metadata file
 ```
 
 Install-state describes runtime materialization, not authored source freshness.
 
-Source: docs/current-state.mdx
+Source: docs/staleness.mdx
 
 ## References
 
-- [Authored metadata](references/authored-metadata.md)
+- [Authored metadata](../authoring-skillgraphs-from-knowledge/references/authored-metadata.md)

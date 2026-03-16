@@ -1,13 +1,13 @@
 ---
 name: agentpack-cli
 description: Use the agentpack CLI correctly when treating knowledge as a package. Apply the authored skill lifecycle, compiler/materialization workflow, source-backed validation, install flow, and runtime state model without mixing those stages together.
-library_version: 0.1.4
+library_version: 0.1.10
 ---
 
 ```agentpack
 source readme = "README.md"
 source quickstart = "docs/quickstart.mdx"
-source dependenciesGuide = "docs/skill-dependencies.mdx"
+source dependenciesGuide = "docs/skill-graph.mdx"
 source schemaGuide = "docs/schema-skill-md.mdx"
 source lifecycleGuide = "docs/how-it-works.mdx"
 source docsAsSources = "docs/docs-as-sources.mdx"

@@ -44,3 +44,47 @@ jobs:
 
       - name: Check for changeset
         run: npx changeset status --since=origin/main
+
+  skills-stale:
+    # Skip on the automated "Version Packages" PR
+    if: github.head_ref != 'changeset-release/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check for stale skills
+        working-directory: packages/agentpack
+        run: |
+          OUTPUT=$(npx @tanstack/intent@latest stale --json 2>&1)
+          echo "$OUTPUT"
+
+          STALE=$(echo "$OUTPUT" | node -e "
+            const input = require('fs').readFileSync('/dev/stdin','utf8');
+            try {
+              const reports = JSON.parse(input);
+              const stale = reports.flatMap(r =>
+                r.skills.filter(s => s.needsReview).map(s => s.name + ': ' + s.reasons.join(', '))
+              );
+              if (stale.length > 0) {
+                console.log(stale.join('\n'));
+              }
+            } catch {}
+          ")
+
+          if [ -n "$STALE" ]; then
+            echo ""
+            echo "❌ The following skills are stale and must be updated:"
+            echo "$STALE"
+            echo ""
+            echo "Run 'npx @tanstack/intent stale' locally to see details, then update the affected SKILL.md files."
+            exit 1
+          fi

@@ -3,10 +3,10 @@ name: getting-started-skillgraphs
 description: Use when starting from an empty repo or empty skillgraph and needing the first correct authoring loop, lifecycle framing, repo-root routing, and inspect/validate/dev command flow in agentpack.
 type: lifecycle
 library: agentpack
-library_version: "0.1.4"
+library_version: "0.1.10"
 sources:
   - "alavida-ai/agentpack:docs/introduction.mdx"
-  - "alavida-ai/agentpack:docs/commands.mdx"
+  - "alavida-ai/agentpack:docs/cli-skills.mdx"
   - "alavida-ai/agentpack:README.md"
 ---
 
@@ -108,7 +108,7 @@ agentpack skills dev domains/value/skills/copywriting
 
 The localhost workbench is for visibility during `skills dev`, not the source of truth for authored behavior.
 
-Source: docs/commands.mdx
+Source: docs/cli-skills.mdx
 
 ## References
 

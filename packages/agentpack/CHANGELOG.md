@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.12
+
+### Patch Changes
+
+- [#58](https://github.com/alavida-ai/agentpack/pull/58) [`896df34`](https://github.com/alavida-ai/agentpack/commit/896df344cfd1c1cb36fbe06e4c4159df8614a85d) Thanks [@alexandergirardet](https://github.com/alexandergirardet)! - Adopt compiler-first authored skill package workflows, split runtime materialization from package management, and align the CLI/docs with `author`, `publish validate`, and runtime `skills enable|disable|status`.
+
 ## 0.1.11
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.13
+
+### Patch Changes
+
+- [#63](https://github.com/alavida-ai/agentpack/pull/63) [`60bb6c8`](https://github.com/alavida-ai/agentpack/commit/60bb6c8b1e4530740e42ea7c022c15f59a082656) Thanks [@alexandergirardet](https://github.com/alexandergirardet)! - Fix compiler-first multi-skill package naming and publish validation behavior.
+
 ## 0.1.12
 
 ### Patch Changes

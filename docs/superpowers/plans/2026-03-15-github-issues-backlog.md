@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Resolve the current open GitHub issue backlog in an order that removes the shared multi-skill packaging regressions first, then extends stale-tracking to plugin-local skills, then improves the workbench UX, and only then takes on the broader wrapping/brand-overlay feature.
+**Goal:** Resolve the current open GitHub issue backlog in an order that removes the shared multi-skill packaging regressions first, then improves the workbench UX, and only then takes on the broader wrapping/brand-overlay feature.
 
 **Architecture:** Treat issue `#26` as the umbrella for command target resolution and fold `#24` and `#37` into the same implementation stream. Reuse the existing package catalog and target-resolution domain code instead of maintaining separate repo scans in `lib/skills.js` and `start-skill-dev-workbench.js`. Keep the larger wrapping feature (`#29`) behind an explicit design/spec step because it adds new authoring concepts and CLI surface area.
 
@@ -198,105 +198,6 @@ Expected: green.
 ```bash
 git add packages/agentpack/src/lib/skills.js packages/agentpack/src/domain/skills/skill-catalog.js test/integration/skills-validate.test.js
 git commit -m "refactor: remove legacy packaged skill discovery"
-```
-
-## Chunk 2: Support Plugin-Local Validate/Stale Tracking (`#5`)
-
-### Task 4: Add failing coverage for plugin-local skills without `package.json`
-
-**Files:**
-- Modify: `test/integration/skills-validate.test.js`
-- Modify: `test/integration/skills-stale.test.js`
-- Modify: `test/integration/fixtures.js`
-
-- [ ] **Step 1: Add a fixture with one packaged skill and one plugin-local skill sharing a source**
-
-Represent the plugin-local case with only `SKILL.md` plus `metadata.sources`.
-
-- [ ] **Step 2: Add a failing validate case**
-
-Run:
-
-```bash
-node --test test/integration/skills-validate.test.js
-```
-
-Expected: current behavior rejects the plugin-local target as "not a packaged skill".
-
-- [ ] **Step 3: Add a failing stale case**
-
-Run:
-
-```bash
-node --test test/integration/skills-stale.test.js
-```
-
-Expected: stale output ignores the plugin-local skill before the fix.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add test/integration/skills-validate.test.js test/integration/skills-stale.test.js test/integration/fixtures.js
-git commit -m "test: cover plugin-local stale tracking"
-```
-
-### Task 5: Extend validation/build-state to include non-packaged authored skills
-
-**Files:**
-- Modify: `packages/agentpack/src/lib/skills.js`
-- Modify: `packages/agentpack/src/domain/skills/skill-model.js`
-- Modify: `packages/agentpack/src/domain/skills/skill-provenance.js`
-- Modify: `packages/agentpack/src/application/skills/build-skill-workbench-model.js`
-
-- [ ] **Step 1: Introduce a stable key format for plugin-local authored skills**
-
-Use a path-based key such as:
-
-```js
-const key = `path:${normalizeDisplayPath(repoRoot, skillDir)}`;
-```
-
-Do not overload `packageName` for entries that are not packages.
-
-- [ ] **Step 2: Update validate to accept authored `SKILL.md` targets without `package.json` when `metadata.sources` exists**
-
-Keep publish guidance package-specific; plugin-local results should skip npm release steps.
-
-- [ ] **Step 3: Write plugin-local entries into `.agentpack/build-state.json`**
-
-Persist:
-
-```json
-{
-  "skill_path": "domains/operations/workbenches/creator/execution-ops/skills/wam-facilitator",
-  "skill_file": "domains/operations/workbenches/creator/execution-ops/skills/wam-facilitator/SKILL.md",
-  "sources": {
-    "domains/operations/knowledge/plan.yaml": { "hash": "sha256:..." }
-  }
-}
-```
-
-- [ ] **Step 4: Teach stale listing and workbench model building to read both packaged and path-keyed entries**
-
-Make sure stale output prints a human-meaningful display name when no package exists.
-
-- [ ] **Step 5: Run focused tests**
-
-Run:
-
-```bash
-node --test test/integration/skills-validate.test.js
-node --test test/integration/skills-stale.test.js
-node --test test/integration/skills-dev-workbench.test.js
-```
-
-Expected: green, with no regressions for packaged skills.
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add packages/agentpack/src/lib/skills.js packages/agentpack/src/domain/skills/skill-model.js packages/agentpack/src/domain/skills/skill-provenance.js packages/agentpack/src/application/skills/build-skill-workbench-model.js test/integration/skills-validate.test.js test/integration/skills-stale.test.js
-git commit -m "feat: track plugin-local skills in validate and stale"
 ```
 
 ## Chunk 3: Improve Skill Graph Workbench Usability (`#10`)

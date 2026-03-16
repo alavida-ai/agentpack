@@ -11,7 +11,7 @@
 - No backward compatibility for legacy skill syntax
 - No dual-write to `build-state.json`
 - No filesystem discovery as semantic truth
-- No plugin support in the new model
+- No legacy bundle-oriented packaging surface in the new model
 
 **Tech Stack:** Node.js ESM, Commander, unified/remark-parse/unist AST tooling, React 19, D3, node:test, TLA+
 
@@ -85,17 +85,9 @@
 - Modify: `docs/skill-graph.mdx`
 - Modify: `docs/staleness.mdx`
 - Delete: `packages/agentpack/src/infrastructure/fs/build-state-repository.js`
-- Delete: `packages/agentpack/src/commands/plugin.js`
-- Delete: `packages/agentpack/src/application/plugins/build-plugin.js`
-- Delete: `packages/agentpack/src/application/plugins/inspect-plugin-bundle.js`
-- Delete: `packages/agentpack/src/application/plugins/validate-plugin-bundle.js`
-- Delete: `packages/agentpack/src/domain/plugins/load-plugin-definition.js`
-- Delete: `packages/agentpack/src/domain/plugins/plugin-diagnostic-error.js`
-- Delete: `packages/agentpack/src/domain/plugins/plugin-requirements.js`
-- Delete: `test/integration/plugin-build.test.js`
-- Delete: `test/integration/plugin-bundle.test.js`
-- Delete: `test/integration/plugin-dev.test.js`
-- Delete: `docs/building-plugins.mdx`
+- Delete: legacy bundle-oriented packaging command code
+- Delete: legacy bundle-oriented packaging tests
+- Delete: legacy bundle-oriented packaging docs
 
 ## Chunk 0: Formal Models And Hard-Cut Harness
 
@@ -657,26 +649,19 @@ git commit -m "feat: rebuild dev workflow on compiler core"
 
 **Files:**
 - Modify: `packages/agentpack/src/cli.js`
-- Delete: `packages/agentpack/src/commands/plugin.js`
-- Delete: `packages/agentpack/src/application/plugins/build-plugin.js`
-- Delete: `packages/agentpack/src/application/plugins/inspect-plugin-bundle.js`
-- Delete: `packages/agentpack/src/application/plugins/validate-plugin-bundle.js`
-- Delete: `packages/agentpack/src/domain/plugins/load-plugin-definition.js`
-- Delete: `packages/agentpack/src/domain/plugins/plugin-diagnostic-error.js`
-- Delete: `packages/agentpack/src/domain/plugins/plugin-requirements.js`
-- Delete: `test/integration/plugin-build.test.js`
-- Delete: `test/integration/plugin-bundle.test.js`
-- Delete: `test/integration/plugin-dev.test.js`
-- Delete: `docs/building-plugins.mdx`
+- Delete: legacy bundle-oriented packaging command code
+- Delete: legacy bundle-oriented packaging implementation code
+- Delete: legacy bundle-oriented packaging tests
+- Delete: legacy bundle-oriented packaging docs
 - Modify: `test/integration/release-contract.test.js`
 - Modify: `README.md`
 - Modify: `packages/agentpack/README.md`
 
-- [ ] **Step 1: Add or update release-surface tests to assert plugins are gone**
+- [ ] **Step 1: Add or update release-surface tests to assert legacy packaging is gone**
 
 Cover:
-- CLI help no longer shows `plugin`
-- docs no longer market plugin support
+- CLI help no longer shows legacy packaging commands
+- docs no longer market legacy packaging
 - release contract refers to compiler/build/materialize workflows instead
 
 Run:
@@ -685,15 +670,15 @@ Run:
 node --test test/integration/release-contract.test.js
 ```
 
-Expected: FAIL until the plugin surface is removed.
+Expected: FAIL until the legacy packaging surface is removed.
 
-- [ ] **Step 2: Remove plugin command registration and delete plugin implementation files**
+- [ ] **Step 2: Remove legacy packaging command registration and delete implementation files**
 
-Delete the plugin command and its supporting application/domain modules from the package.
+Delete the legacy packaging command and its supporting application/domain modules from the package.
 
-- [ ] **Step 3: Delete plugin integration tests and update docs**
+- [ ] **Step 3: Delete legacy packaging integration tests and update docs**
 
-Replace plugin positioning with the compiler/bundler/runtime-materializer product definition from the approved spec.
+Replace legacy packaging positioning with the compiler/bundler/runtime-materializer product definition from the approved spec.
 
 - [ ] **Step 4: Run focused tests**
 
@@ -709,8 +694,8 @@ Expected: PASS
 
 ```bash
 git add packages/agentpack/src/cli.js test/integration/release-contract.test.js README.md packages/agentpack/README.md
-git rm packages/agentpack/src/commands/plugin.js packages/agentpack/src/application/plugins/build-plugin.js packages/agentpack/src/application/plugins/inspect-plugin-bundle.js packages/agentpack/src/application/plugins/validate-plugin-bundle.js packages/agentpack/src/domain/plugins/load-plugin-definition.js packages/agentpack/src/domain/plugins/plugin-diagnostic-error.js packages/agentpack/src/domain/plugins/plugin-requirements.js test/integration/plugin-build.test.js test/integration/plugin-bundle.test.js test/integration/plugin-dev.test.js docs/building-plugins.mdx
-git commit -m "refactor: remove plugin support from agentpack"
+git rm <legacy packaging files>
+git commit -m "refactor: remove legacy packaging support from agentpack"
 ```
 
 ### Task 10: Remove leftover legacy discovery assumptions and finish docs

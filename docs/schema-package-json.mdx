@@ -1,6 +1,6 @@
 ---
 title: "package.json Reference"
-description: "agentpack-relevant fields in package.json for skill and plugin packages."
+description: "agentpack-relevant fields in package.json for skill packages."
 ---
 
 Every packaged skill module ships inside an npm package. The `package.json` provides the package identity, version, exported skills, and distribution metadata that npm needs to publish and install it.
@@ -80,33 +80,6 @@ agentpack syncs dependencies the way `go mod tidy` syncs `go.mod`:
 5. Write package.json
 
 This sync runs automatically inside `agentpack skills validate` and `agentpack skills dev`. You never run it separately.
-
-## Plugin packages
-
-Plugin packages use `devDependencies` instead of `dependencies` for vendoring standalone skill packages at build time.
-
-```json package.json
-{
-  "name": "@acme/plugin-website-dev",
-  "version": "1.0.0",
-  "description": "Website development plugin with brand copywriting skills.",
-  "devDependencies": {
-    "@acme/brand-copywriting": "^1.2.0",
-    "@acme/editorial-principles": "^1.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/acme-corp/knowledge-base.git"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  }
-}
-```
-
-<Note>
-  For plugins, standalone skill packages go in `devDependencies` because they are vendored into the build artifact at build time. They are not runtime npm dependencies — they are build-time inputs.
-</Note>
 
 ## Validation checks
 

@@ -272,18 +272,6 @@ Owns:
 
 This is environment-local state, not authored provenance.
 
-### `.claude-plugin/plugin.json`
-
-Owns:
-
-- plugin runtime contract
-
-### `.claude-plugin/bundled-skills.json`
-
-Owns:
-
-- generated plugin bundle provenance
-
 ## File Ownership Rules
 
 These rules are necessary to keep the system legible:
@@ -292,11 +280,10 @@ These rules are necessary to keep the system legible:
 - `package.json` owns distribution truth
 - `.agentpack/build-state.json` owns recorded provenance truth
 - `.agentpack/install.json` owns environment-local install/materialization truth
-- plugin metadata owns plugin packaging truth only
 
 The architecture must avoid:
 
-- plugin metadata becoming the source of skill dependency truth
+- runtime metadata becoming the source of skill dependency truth
 - install state acting like provenance state
 - command handlers writing state ad hoc
 - build-state logic being owned by one workflow in isolation
@@ -310,17 +297,12 @@ src/
   cli.js
   commands/
     skills.js
-    plugin.js
   application/
     skills/
       validate-skills.js
       inspect-skill.js
       list-stale-skills.js
       install-skills.js
-    plugins/
-      inspect-plugin-bundle.js
-      validate-plugin-bundle.js
-      build-plugin.js
   domain/
     skills/
       skill-model.js
@@ -382,8 +364,8 @@ This should be delivered in slices.
 ### Slice 2: model and graph extraction
 
 - extract skill model and skill graph modules from the current monolith
-- make plugin inspection and validation reuse those shared modules
-- reduce plugin code to packaging-specific responsibilities
+- make all semantic inspection and validation reuse those shared modules
+- reduce runtime adapters to materialization-specific responsibilities
 
 ### Slice 3: introduce application use cases
 
@@ -409,7 +391,7 @@ Use TDD at two levels:
 Success criteria:
 
 - the build-state bug is fixed through shared lifecycle ownership
-- plugin workflows consume shared skill-domain logic
+- semantic workflows consume shared skill-domain logic
 - the old monolithic ownership in `skills.js` is reduced substantially
 - a maintainer can reliably tell where new logic belongs
 

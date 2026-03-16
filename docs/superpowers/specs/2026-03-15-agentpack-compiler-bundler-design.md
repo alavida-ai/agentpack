@@ -21,8 +21,8 @@ Agentpack becomes responsible for:
 
 Agentpack is explicitly not responsible for:
 
-- plugin build/dev/validate workflows
-- Claude plugin artifacts
+- legacy bundle-oriented packaging workflows
+- runtime-specific artifact formats as semantic truth
 - ad hoc repo scanning as a source of dependency truth
 - inferring skill or source relationships from prose without explicit syntax
 

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -86,6 +86,20 @@ describe('release contract', () => {
     assert.match(sandboxPlan, /domains\/[A-Za-z0-9/_-]*workbenches\//);
     assert.doesNotMatch(sandboxSpec, /workbench\.json/);
     assert.doesNotMatch(sandboxPlan, /workbench\.json/);
+  });
+
+  it('hard-deletes plugin handling from the shipped product surface', () => {
+    assert.equal(existsSync(join(repoRoot, 'packages', 'agentpack', 'src', 'commands', 'plugin.js')), false);
+    assert.equal(existsSync(join(repoRoot, 'packages', 'agentpack', 'src', 'lib', 'plugins.js')), false);
+    assert.equal(existsSync(join(repoRoot, 'packages', 'agentpack', 'src', 'application', 'plugins')), false);
+    assert.equal(existsSync(join(repoRoot, 'packages', 'agentpack', 'src', 'domain', 'plugins')), false);
+    assert.equal(existsSync(join(repoRoot, 'docs', 'building-plugins.mdx')), false);
+    assert.equal(existsSync(join(repoRoot, 'test', 'integration', 'plugin-build.test.js')), false);
+    assert.equal(existsSync(join(repoRoot, 'test', 'integration', 'plugin-bundle.test.js')), false);
+    assert.equal(existsSync(join(repoRoot, 'test', 'integration', 'plugin-dev.test.js')), false);
+    assert.equal(existsSync(join(repoRoot, 'packages', 'agentpack', 'skills', 'repairing-broken-skill-or-plugin-state')), false);
+    assert.equal(existsSync(join(repoRoot, 'packages', 'agentpack', 'skills', 'shipping-production-plugins-and-packages')), false);
+    assert.equal(existsSync(join(repoRoot, 'packages', 'agentpack', 'skills', 'agentpack-cli', 'references', 'plugin-lifecycle.md')), false);
   });
 
   it('keeps thin root bin wrappers for local repo usage', () => {

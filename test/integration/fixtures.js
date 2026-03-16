@@ -297,7 +297,7 @@ Use [kickoff](skill:kickoff){context="primary package entrypoint delegates to th
       {
         path: 'skills/kickoff',
         skillMd: `---
-name: kickoff
+name: planning-kit:kickoff
 description: Plan the kickoff.
 ---
 
@@ -311,7 +311,7 @@ Use [the kickoff source](source:kickoffSource){context="source material for kick
       {
         path: 'skills/recap',
         skillMd: `---
-name: recap
+name: planning-kit:recap
 description: Plan the recap.
 ---
 

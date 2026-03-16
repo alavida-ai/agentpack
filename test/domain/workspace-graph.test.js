@@ -20,7 +20,7 @@ Use [kickoff](skill:kickoff){context="primary package entrypoint delegates to th
 
 function validNamedSkillDocument(name, sourcePath) {
   return `---
-name: ${name}
+name: planning-kit:${name}
 description: ${name} workflow.
 ---
 

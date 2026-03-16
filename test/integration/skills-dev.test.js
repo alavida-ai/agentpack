@@ -233,9 +233,9 @@ describe('agentpack skills dev', () => {
 
     try {
       const session = startCLI(['author', 'dev', 'workbenches/planning-kit/skills/kickoff'], { cwd: repo.root });
-      await session.waitForOutput(/Linked Skill: kickoff/);
+      await session.waitForOutput(/Linked Skill: planning-kit:kickoff/);
 
-      const claudePath = join(repo.root, '.claude', 'skills', 'kickoff');
+      const claudePath = join(repo.root, '.claude', 'skills', 'planning-kit:kickoff');
       assert.ok(existsSync(claudePath));
 
       await session.stop();
@@ -257,6 +257,67 @@ describe('agentpack skills dev', () => {
 
       await session.stop();
       await waitUntil(() => !existsSync(claudePath));
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('refuses to start dev for a module whose frontmatter name does not match the package:module convention', () => {
+    const repo = createTempRepo('skills-dev-invalid-module-name');
+
+    try {
+      mkdirSync(join(repo.root, 'domains', 'planning', 'knowledge'), { recursive: true });
+      mkdirSync(join(repo.root, 'workbenches', 'planning-kit'), { recursive: true });
+      writeFileSync(join(repo.root, 'domains', 'planning', 'knowledge', 'kickoff.md'), '# Kickoff\n');
+      writeFileSync(
+        join(repo.root, 'workbenches', 'planning-kit', 'package.json'),
+        JSON.stringify(
+          {
+            name: '@alavida-ai/planning-kit',
+            version: '0.1.0',
+            files: ['SKILL.md', 'skills'],
+            agentpack: {
+              root: 'skills',
+            },
+          },
+          null,
+          2
+        ) + '\n'
+      );
+      mkdirSync(join(repo.root, 'workbenches', 'planning-kit', 'skills', 'kickoff'), { recursive: true });
+      writeFileSync(
+        join(repo.root, 'workbenches', 'planning-kit', 'SKILL.md'),
+        `---
+name: planning-kit
+description: Primary planning package skill.
+---
+
+\`\`\`agentpack
+import kickoff from skill "@alavida-ai/planning-kit:kickoff"
+\`\`\`
+
+Use [kickoff](skill:kickoff){context="entrypoint"}.
+`
+      );
+      writeFileSync(
+        join(repo.root, 'workbenches', 'planning-kit', 'skills', 'kickoff', 'SKILL.md'),
+        `---
+name: kickoff
+description: Plan the kickoff.
+---
+
+\`\`\`agentpack
+source kickoffSource = "domains/planning/knowledge/kickoff.md"
+\`\`\`
+
+Use [the kickoff source](source:kickoffSource){context="source material"}.
+`
+      );
+
+      const result = runCLIJson(['author', 'dev', '--no-dashboard', 'workbenches/planning-kit/skills/kickoff'], { cwd: repo.root });
+      assert.equal(result.exitCode, 2);
+      assert.equal(result.json.error, 'export_invalid');
+      assert.match(result.json.suggestion, /planning-kit:kickoff/);
     } finally {
       repo.cleanup();
     }

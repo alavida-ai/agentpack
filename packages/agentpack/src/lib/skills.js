@@ -96,22 +96,25 @@ function resolveDevLinkedSkills(repoRoot, rootSkillDir) {
     if (seenDirs.has(skillDir)) continue;
     seenDirs.add(skillDir);
 
-    const skillFile = join(skillDir, 'SKILL.md');
-    const compiled = readCompilerSkillDocument(skillFile);
-    const packageMetadata = readPackageMetadata(skillDir);
-    const requirements = listCompilerSkillRequirements(compiled);
+    const resolved = ensureResolvedExportIsValid(
+      resolveSingleSkillTarget(repoRoot, skillDir, { includeInstalled: false })
+    );
+    const requirements = resolved.export.requires || [];
 
     linkedSkills.push({
-      name: compiled.metadata.name,
-      skillDir,
+      name: resolved.export.name,
+      skillDir: resolved.export.skillDirPath,
       requires: requirements,
-      packageName: packageMetadata.packageName,
+      packageName: resolved.package.packageName,
+      path: resolved.export.skillPath,
     });
 
     for (const requirement of requirements) {
       let dependency;
       try {
-        dependency = resolveSingleSkillTarget(repoRoot, requirement);
+        dependency = ensureResolvedExportIsValid(
+          resolveSingleSkillTarget(repoRoot, requirement, { includeInstalled: false })
+        );
       } catch {
         unresolved.add(requirement);
         continue;
@@ -317,13 +320,16 @@ function reconcileDevSession(repoRoot) {
 }
 
 export function syncSkillDependencies(skillDir) {
+  const { packageJsonPath, packageJson } = readPackageJson(skillDir);
+  const currentPackageName = packageJson.name || null;
   const required = [...new Set(
     readInstalledSkillExports(skillDir).flatMap((entry) => {
       const compiled = readCompilerSkillDocument(entry.skillFile);
-      return listCompilerPackageDependencies(compiled);
+      return listCompilerPackageDependencies(compiled)
+        .map((dependency) => packageNameForRequirement(dependency))
+        .filter((dependency) => dependency && dependency !== currentPackageName);
     })
   )].sort((a, b) => a.localeCompare(b));
-  const { packageJsonPath, packageJson } = readPackageJson(skillDir);
   const nextDependencies = { ...(packageJson.dependencies || {}) };
   const requiredSet = new Set(required);
   const added = [];
@@ -678,8 +684,7 @@ function buildValidateNextSteps(packageMetadata, valid) {
     steps.push({
       type: 'publish',
       command: 'npm publish',
-      registry: GITHUB_PACKAGES_REGISTRY,
-      reason: 'publish the versioned package to the private registry',
+      reason: 'publish the versioned package with npm',
     });
   }
 
@@ -735,7 +740,6 @@ function readEffectiveRegistryConfig(repoRoot, scope = null, env = process.env) 
     scope: resolvedScope,
     defaults: {
       registry: userConfig.registry,
-      verificationPackage: userConfig.verificationPackage,
     },
     userNpmrc,
     repoNpmrc: repoConfig.registry ? {
@@ -889,7 +893,7 @@ export function inspectSkill(target, { cwd = process.cwd() } = {}) {
       packageVersion: resolved.package.packageVersion,
       packagePath: resolved.package.packagePath,
       exports: resolved.exports.map((entry) => ({
-        name: entry.name,
+        name: entry.runtimeName || entry.name,
         declaredName: entry.declaredName,
         skillFile: entry.skillFile,
         skillPath: entry.skillPath,
@@ -902,7 +906,8 @@ export function inspectSkill(target, { cwd = process.cwd() } = {}) {
 
   return {
     kind: 'export',
-    name: entry.name,
+    name: entry.runtimeName || entry.name,
+    declaredName: entry.declaredName || null,
     description: entry.description,
     packageName: resolved.package.packageName,
     packageVersion: resolved.package.packageVersion,
@@ -919,7 +924,11 @@ export function inspectSkill(target, { cwd = process.cwd() } = {}) {
 
 function isPublishedSkillFile(files, relativeSkillFile) {
   if (!files) return true;
-  return files.some((entry) => entry === relativeSkillFile || relativeSkillFile.startsWith(`${entry}/`));
+  const normalizedSkillFile = normalizeFilesFieldEntry(relativeSkillFile);
+  return files.some((entry) => {
+    const normalizedEntry = normalizeFilesFieldEntry(entry);
+    return normalizedEntry === normalizedSkillFile || normalizedSkillFile.startsWith(`${normalizedEntry}/`);
+  });
 }
 
 function packageNameForRequirement(requirement) {
@@ -928,10 +937,62 @@ function packageNameForRequirement(requirement) {
   return colonIndex === -1 ? requirement : requirement.slice(0, colonIndex);
 }
 
-export function validatePackagedSkillExport(repoRoot, pkg, skillExport) {
+function normalizeFilesFieldEntry(entry) {
+  if (typeof entry !== 'string') return '';
+  return entry
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '')
+    .replace(/\/+$/, '');
+}
+
+function isInvalidDependencyName(dependency) {
+  return typeof dependency === 'string' && dependency.includes(':');
+}
+
+function buildSourceValidationDetails(repoRoot, skillExport) {
+  const compiledState = readCompiledState(repoRoot);
+  const previousHashes = new Map(
+    (compiledState?.sourceFiles || []).map((entry) => [entry.path, entry.hash])
+  );
+
+  return (skillExport.sources || []).map((sourcePath) => {
+    const absolutePath = join(repoRoot, sourcePath);
+    const exists = existsSync(absolutePath);
+    const currentHash = exists ? hashFile(absolutePath) : null;
+    const previousHash = previousHashes.get(sourcePath) || null;
+
+    return {
+      path: sourcePath,
+      absolutePath,
+      exists,
+      currentHash,
+      previousHash,
+      status: previousHash === null
+        ? 'new'
+        : previousHash === currentHash
+          ? 'unchanged'
+          : 'changed',
+    };
+  });
+}
+
+function buildDependencyValidationDetails(skillExport, packageMetadata) {
+  return (skillExport.requires || []).map((requirement) => {
+    const dependency = packageNameForRequirement(requirement);
+    return {
+      requirement,
+      dependency,
+      samePackage: dependency === packageMetadata.packageName,
+      declared: Boolean(dependency && packageMetadata.dependencies[dependency]),
+    };
+  });
+}
+
+export function validatePackagedSkillExport(repoRoot, pkg, skillExport, options = {}) {
   const packageMetadata = readPackageMetadata(pkg.packageDir);
   const issues = [];
   const metadataStatus = skillExport.lifecycleStatus || null;
+  const rootSkillFilePath = join(pkg.packageDir, 'SKILL.md');
 
   if (!packageMetadata.packageName) {
     issues.push({
@@ -954,18 +1015,23 @@ export function validatePackagedSkillExport(repoRoot, pkg, skillExport) {
     });
   }
 
+  if (
+    packageMetadata.skillRoot
+    && packageMetadata.files?.some((entry) => normalizeFilesFieldEntry(entry) === 'SKILL.md')
+    && !existsSync(rootSkillFilePath)
+  ) {
+    issues.push({
+      code: 'missing_root_skill_file',
+      message: 'package.json files includes SKILL.md but the root SKILL.md is missing',
+      path: normalizeDisplayPath(repoRoot, rootSkillFilePath),
+    });
+  }
+
   if (isManagedPackageName(packageMetadata.packageName)) {
     if (!packageMetadata.repository) {
       issues.push({
         code: 'missing_repository',
         message: 'package.json missing repository for private registry publishing',
-      });
-    }
-
-    if (packageMetadata.publishConfigRegistry !== GITHUB_PACKAGES_REGISTRY) {
-      issues.push({
-        code: 'invalid_publish_registry',
-        message: `package.json publishConfig.registry must target ${GITHUB_PACKAGES_REGISTRY}`,
       });
     }
   }
@@ -994,18 +1060,35 @@ export function validatePackagedSkillExport(repoRoot, pkg, skillExport) {
     }
   }
 
+  for (const dependency of Object.keys(packageMetadata.dependencies || {}).sort((a, b) => a.localeCompare(b))) {
+    if (!isInvalidDependencyName(dependency)) continue;
+    issues.push({
+      code: 'invalid_dependency_name',
+      message: 'package.json dependency name is not a valid npm package name',
+      dependency,
+    });
+  }
+
   for (const requirement of skillExport.requires || []) {
-    if (packageNameForRequirement(requirement) === packageMetadata.packageName) {
+    const dependencyName = packageNameForRequirement(requirement);
+    if (dependencyName === packageMetadata.packageName) {
       continue;
     }
-    if (!packageMetadata.dependencies[requirement]) {
+    if (!packageMetadata.dependencies[dependencyName]) {
       issues.push({
         code: 'missing_dependency_declaration',
-        message: 'required skill is not declared in package dependencies',
-        dependency: requirement,
+        message: 'required skill package is not declared in package dependencies',
+        dependency: dependencyName,
       });
     }
   }
+
+  const details = options.verbose
+    ? {
+        sources: buildSourceValidationDetails(repoRoot, skillExport),
+        dependencies: buildDependencyValidationDetails(skillExport, packageMetadata),
+      }
+    : null;
 
   return {
     valid: issues.length === 0,
@@ -1018,6 +1101,7 @@ export function validatePackagedSkillExport(repoRoot, pkg, skillExport) {
     status: metadataStatus,
     replacement: skillExport.replacement || null,
     nextSteps: buildValidateNextSteps(packageMetadata, issues.length === 0),
+    ...(details ? { details } : {}),
     issues,
   };
 }

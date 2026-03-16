@@ -3,6 +3,7 @@ import { basename, join } from 'node:path';
 import { compileSkillDocument } from '../compiler/skill-compiler.js';
 import { AgentpackError, ValidationError } from '../../utils/errors.js';
 import {
+  buildExpectedRuntimeSkillName,
   listPackageSkillEntries,
   normalizeDisplayPath,
   parseSkillFrontmatterFile,
@@ -114,9 +115,10 @@ function compileExportNode(repoRoot, packageNode, entry) {
   }
 
   const declaredName = frontmatter?.name || defaultExportName(entry, packageNode.packageName);
+  const moduleName = defaultExportName(entry, packageNode.packageName);
   const exportId = entry.kind === 'primary'
     ? packageNode.packageName
-    : `${packageNode.packageName}:${declaredName}`;
+    : `${packageNode.packageName}:${moduleName}`;
   const baseNode = {
     id: exportId,
     kind: entry.kind,
@@ -125,7 +127,15 @@ function compileExportNode(repoRoot, packageNode, entry) {
     packageDir: packageNode.packageDir,
     packagePath: packageNode.packagePath,
     declaredName,
-    name: declaredName,
+    name: buildExpectedRuntimeSkillName(packageNode.packageName, {
+      ...entry,
+      moduleName,
+    }),
+    moduleName,
+    runtimeName: buildExpectedRuntimeSkillName(packageNode.packageName, {
+      ...entry,
+      moduleName,
+    }),
     description: frontmatter?.description || null,
     skillDirPath: entry.skillDir,
     skillFilePath: entry.skillFile,
@@ -158,9 +168,20 @@ function compileExportNode(repoRoot, packageNode, entry) {
     }
 
     const compiled = compileSkillDocument(content);
+    const expectedName = baseNode.runtimeName;
+    if (compiled.metadata.name !== expectedName) {
+      throw new ValidationError(
+        `SKILL.md frontmatter name must be "${expectedName}"`,
+        {
+          code: 'invalid_skill_name',
+          path: entry.skillFile,
+        }
+      );
+    }
     return {
       ...baseNode,
-      name: compiled.metadata.name,
+      declaredName: compiled.metadata.name,
+      name: baseNode.runtimeName,
       description: compiled.metadata.description,
       compiled,
       sources: Object.values(compiled.sourceBindings).map((binding) => binding.sourcePath),

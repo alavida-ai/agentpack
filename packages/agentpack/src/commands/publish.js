@@ -7,7 +7,48 @@ function maybeHide(command, hide) {
   if (hide) command._hidden = true;
 }
 
-function renderValidationSummary(result, target) {
+function renderValidationIssues(skill) {
+  if (skill.issues.length === 0) return;
+  output.write('  Validation Issues:');
+  for (const issue of skill.issues) {
+    output.write(`  - ${issue.code}: ${issue.message}`);
+    if (issue.path) output.write(`    path: ${issue.path}`);
+    if (issue.dependency) output.write(`    dependency: ${issue.dependency}`);
+  }
+}
+
+function renderVerboseDetails(skill) {
+  if (!skill.details) return;
+  output.write('');
+  output.write('Verbose Details:');
+
+  if (Array.isArray(skill.details.sources)) {
+    output.write('Resolved Source Paths:');
+    for (const source of skill.details.sources) {
+      output.write(`- ${source.path}`);
+    }
+
+    output.write('Hash Comparisons:');
+    for (const source of skill.details.sources) {
+      output.write(`- ${source.path}`);
+      output.write(`  previous: ${source.previousHash || 'none'}`);
+      output.write(`  current: ${source.currentHash || 'missing'}`);
+      output.write(`  status: ${source.status}`);
+    }
+  }
+
+  if (Array.isArray(skill.details.dependencies)) {
+    output.write('Dependency Alignment:');
+    for (const dependency of skill.details.dependencies) {
+      output.write(`- ${dependency.requirement}`);
+      output.write(`  dependency: ${dependency.dependency || 'none'}`);
+      output.write(`  same_package: ${dependency.samePackage ? 'yes' : 'no'}`);
+      output.write(`  declared: ${dependency.declared ? 'yes' : 'no'}`);
+    }
+  }
+}
+
+function renderValidationSummary(result, target, { verbose = false } = {}) {
   if (target) {
     if (result.count > 1) {
       output.write(`Validated Skills: ${result.count}`);
@@ -18,6 +59,7 @@ function renderValidationSummary(result, target) {
         output.write(`- ${skill.name || skill.packageName || skill.packagePath}`);
         output.write(`  status: ${skill.valid ? 'valid' : 'invalid'}`);
         output.write(`  path: ${skill.skillFile}`);
+        renderValidationIssues(skill);
       }
       if (!result.valid) process.exitCode = EXIT_CODES.VALIDATION;
       return;
@@ -43,6 +85,9 @@ function renderValidationSummary(result, target) {
         if (issue.path) output.write(`  path: ${issue.path}`);
         if (issue.dependency) output.write(`  dependency: ${issue.dependency}`);
       }
+    }
+    if (verbose) {
+      renderVerboseDetails(skill);
     }
   } else {
     output.write(`Validated Skills: ${result.count}`);
@@ -70,7 +115,7 @@ export function attachPublishValidateCommand(cmd, { hide = false } = {}) {
     .argument('[target]', 'Optional packaged skill directory, SKILL.md path, or package name')
     .action((target, opts, command) => {
       const globalOpts = command.optsWithGlobals();
-      const result = validateSkillsUseCase(target);
+      const result = validateSkillsUseCase(target, { verbose: globalOpts.verbose });
 
       if (globalOpts.json) {
         output.json(target && result.count === 1 ? result.skills[0] : result);
@@ -78,7 +123,7 @@ export function attachPublishValidateCommand(cmd, { hide = false } = {}) {
         return;
       }
 
-      renderValidationSummary(result, target);
+      renderValidationSummary(result, target, { verbose: globalOpts.verbose });
     });
 
   maybeHide(validateCmd, hide);

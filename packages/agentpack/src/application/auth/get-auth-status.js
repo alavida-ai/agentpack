@@ -4,7 +4,6 @@ import { readUserConfig } from '../../infrastructure/fs/user-config-repository.j
 import { readUserCredentials } from '../../infrastructure/fs/user-credentials-repository.js';
 import { getUserNpmrcPath, parseNpmrc, readUserNpmrc } from '../../infrastructure/fs/user-npmrc-repository.js';
 import { resolveRegistryConfig } from '../../domain/auth/registry-resolution.js';
-import { verifyAuth } from './verify-auth.js';
 
 function findRepoNpmrc(cwd) {
   let current = cwd;
@@ -46,7 +45,6 @@ export async function getAuthStatus({
     scope: config.scope,
     defaults: {
       registry: config.registry,
-      verificationPackage: config.verificationPackage,
     },
     userNpmrc,
     repoNpmrc: repoNpmrc.config,
@@ -87,11 +85,9 @@ export async function getAuthStatus({
     return result;
   }
 
-  result.verification = await verifyAuth({
-    registry: resolved.registry,
-    authToken: credentials?.token || null,
-    verificationPackage: resolved.verificationPackage,
-  });
+  result.verification = {
+    status: 'unsupported',
+  };
 
   return result;
 }

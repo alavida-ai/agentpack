@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.11
+
+### Patch Changes
+
+- [#52](https://github.com/alavida-ai/agentpack/pull/52) [`5f8f85d`](https://github.com/alavida-ai/agentpack/commit/5f8f85dc50f55157d5217045a510f35b1e8486ec) Thanks [@alexandergirardet](https://github.com/alexandergirardet)! - Add tanstack-intent keyword and Intent CI workflows for skill validation, staleness checks, and change notifications
+
 ## 0.1.10
 
 ### Patch Changes

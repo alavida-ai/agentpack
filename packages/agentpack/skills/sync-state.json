@@ -2,82 +2,34 @@
   "version": 1,
   "skills": {
     "agentpack-cli": {
-      "library_version": "0.1.3",
-      "synced_at": "2026-03-12T00:00:00.000Z",
-      "sources_sha": {
-        "README.md": "2680d4fa603b070e6bd92c162b3d172131b71c39c9dc39351ed452d95567b0bd",
-        "docs/introduction.mdx": "c1a8989382dc81a3a33dae1e8f243d159b92835a1999a8793741a25b317b455d",
-        "docs/overview.mdx": "48151b11dfef153223ba2aed7100eeeafc100c475694c98e053f9c4ffb025357",
-        "docs/architecture.mdx": "400617fb8ba4a5f09a78b998e3b1a01262caed05e0344206ca1f8fd71519ea22",
-        "docs/build-lifecycle.mdx": "0e697180c639a72514272e6421f900ac3d5248ecc09220409efc716bf0d4fa71",
-        "docs/commands.mdx": "5f2ec2839caa8a6758f36daaa150f6af8d3700e26b135333fad6a0719dacb05b",
-        "docs/current-state.mdx": "b4ad89e40706aff29bbe3149daeeb3feac6d07bb3ddfd4f164e630cd5b7997a8",
-        "docs/distribution.mdx": "060e47b28c3da13ff61e6b1b04e018beb8dc5d6ebd30b5a3d1574fceb289e3f4",
-        "docs/end-to-end-test-plan.md": "c1e37589660a438cb1a9742f68e769ed68f6f8849f1510d8445e99c2bff1ec21"
-      }
+      "library_version": "0.1.4",
+      "synced_at": "2026-03-16T00:00:00.000Z",
+      "sources_sha": {}
     },
     "authoring-skillgraphs-from-knowledge": {
-      "library_version": "0.1.3",
-      "synced_at": "2026-03-12T00:00:00.000Z",
-      "sources_sha": {
-        "alavida-ai/agentpack:docs/commands.mdx": "5f2ec2839caa8a6758f36daaa150f6af8d3700e26b135333fad6a0719dacb05b",
-        "alavida-ai/agentpack:docs/architecture.mdx": "400617fb8ba4a5f09a78b998e3b1a01262caed05e0344206ca1f8fd71519ea22",
-        "alavida-ai/agentpack:skills/agentpack-cli/SKILL.md": "54d9a43172ff6b7e7218bb9a9454b56d38233e9d1a6df9362e7167ceb9dc2249"
-      }
+      "library_version": "0.1.4",
+      "synced_at": "2026-03-16T00:00:00.000Z",
+      "sources_sha": {}
     },
     "developing-and-testing-skills": {
-      "library_version": "0.1.3",
-      "synced_at": "2026-03-12T00:00:00.000Z",
-      "sources_sha": {
-        "alavida-ai/agentpack:docs/commands.mdx": "5f2ec2839caa8a6758f36daaa150f6af8d3700e26b135333fad6a0719dacb05b",
-        "alavida-ai/agentpack:docs/introduction.mdx": "c1a8989382dc81a3a33dae1e8f243d159b92835a1999a8793741a25b317b455d",
-        "alavida-ai/agentpack:README.md": "2680d4fa603b070e6bd92c162b3d172131b71c39c9dc39351ed452d95567b0bd"
-      }
+      "library_version": "0.1.4",
+      "synced_at": "2026-03-16T00:00:00.000Z",
+      "sources_sha": {}
     },
     "getting-started-skillgraphs": {
-      "library_version": "0.1.3",
-      "synced_at": "2026-03-12T00:00:00.000Z",
-      "sources_sha": {
-        "alavida-ai/agentpack:docs/introduction.mdx": "c1a8989382dc81a3a33dae1e8f243d159b92835a1999a8793741a25b317b455d",
-        "alavida-ai/agentpack:docs/commands.mdx": "5f2ec2839caa8a6758f36daaa150f6af8d3700e26b135333fad6a0719dacb05b",
-        "alavida-ai/agentpack:README.md": "2680d4fa603b070e6bd92c162b3d172131b71c39c9dc39351ed452d95567b0bd"
-      }
+      "library_version": "0.1.4",
+      "synced_at": "2026-03-16T00:00:00.000Z",
+      "sources_sha": {}
     },
     "identifying-skill-opportunities": {
-      "library_version": "0.1.3",
-      "synced_at": "2026-03-12T00:00:00.000Z",
-      "sources_sha": {
-        "alavida-ai/agentpack:docs/architecture.mdx": "400617fb8ba4a5f09a78b998e3b1a01262caed05e0344206ca1f8fd71519ea22",
-        "alavida-ai/agentpack:docs/overview.mdx": "48151b11dfef153223ba2aed7100eeeafc100c475694c98e053f9c4ffb025357",
-        "alavida-ai/agentpack:skills/agentpack-cli/SKILL.md": "54d9a43172ff6b7e7218bb9a9454b56d38233e9d1a6df9362e7167ceb9dc2249"
-      }
+      "library_version": "0.1.4",
+      "synced_at": "2026-03-16T00:00:00.000Z",
+      "sources_sha": {}
     },
     "maintaining-skillgraph-freshness": {
-      "library_version": "0.1.3",
-      "synced_at": "2026-03-12T00:00:00.000Z",
-      "sources_sha": {
-        "alavida-ai/agentpack:docs/commands.mdx": "5f2ec2839caa8a6758f36daaa150f6af8d3700e26b135333fad6a0719dacb05b",
-        "alavida-ai/agentpack:docs/current-state.mdx": "b4ad89e40706aff29bbe3149daeeb3feac6d07bb3ddfd4f164e630cd5b7997a8",
-        "alavida-ai/agentpack:README.md": "2680d4fa603b070e6bd92c162b3d172131b71c39c9dc39351ed452d95567b0bd"
-      }
-    },
-    "repairing-broken-skill-or-plugin-state": {
-      "library_version": "0.1.3",
-      "synced_at": "2026-03-12T00:00:00.000Z",
-      "sources_sha": {
-        "alavida-ai/agentpack:docs/current-state.mdx": "b4ad89e40706aff29bbe3149daeeb3feac6d07bb3ddfd4f164e630cd5b7997a8",
-        "alavida-ai/agentpack:docs/commands.mdx": "5f2ec2839caa8a6758f36daaa150f6af8d3700e26b135333fad6a0719dacb05b",
-        "alavida-ai/agentpack:src/domain/plugins/load-plugin-definition.js": "3aac67288351229e878d0877097b41cd369cc594fc8683fccf2506b94a5f17e7"
-      }
-    },
-    "shipping-production-plugins-and-packages": {
-      "library_version": "0.1.3",
-      "synced_at": "2026-03-12T00:00:00.000Z",
-      "sources_sha": {
-        "alavida-ai/agentpack:docs/commands.mdx": "5f2ec2839caa8a6758f36daaa150f6af8d3700e26b135333fad6a0719dacb05b",
-        "alavida-ai/agentpack:docs/architecture.mdx": "400617fb8ba4a5f09a78b998e3b1a01262caed05e0344206ca1f8fd71519ea22",
-        "alavida-ai/agentpack:README.md": "2680d4fa603b070e6bd92c162b3d172131b71c39c9dc39351ed452d95567b0bd"
-      }
+      "library_version": "0.1.4",
+      "synced_at": "2026-03-16T00:00:00.000Z",
+      "sources_sha": {}
     }
   }
 }

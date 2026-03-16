@@ -1,6 +1,6 @@
 ---
 name: identifying-skill-opportunities
-description: Use when deciding what raw knowledge should become a packaged skill, a reusable capability boundary, a requires edge, or a plugin-local wrapper in an agentpack skillgraph.
+description: Use when deciding what raw knowledge should become a packaged skill, a reusable capability boundary, or a requires edge in an agentpack skillgraph.
 type: core
 library: agentpack
 library_version: "0.1.3"
@@ -40,9 +40,9 @@ If a knowledge area should be reused compositionally in work, give it its own pa
 
 Use a task skill when the work needs several reusable capabilities together.
 
-### Keep plugin-local skills as delivery wrappers
+### Keep capability boundaries explicit
 
-Use plugin-local skills to expose packaged capabilities inside a runtime shell, not to hide the capability graph.
+Use packaged skills and explicit `requires` edges to expose reusable capabilities. Runtime materialization belongs downstream from the compiled graph.
 
 ## Common Mistakes
 
@@ -64,13 +64,12 @@ Flattening multiple capabilities into one skill destroys explicit dependency edg
 
 Source: maintainer interview
 
-### CRITICAL Using plugin boundaries as the dependency model
+### CRITICAL Hiding dependency boundaries inside one task skill
 
 Wrong:
 
 ```text
-plugins/website-dev/skills/copywriting/SKILL.md
-plugins/website-dev/skills/research/SKILL.md
+domains/brand/skills/website-ops/SKILL.md
 ```
 
 Correct:
@@ -78,10 +77,10 @@ Correct:
 ```text
 domains/brand/skills/copywriting/SKILL.md
 domains/research/skills/interview-research/SKILL.md
-plugins/website-dev/skills/copywriting/SKILL.md # requires packaged skills
+domains/brand/skills/website-ops/SKILL.md # requires packaged skills
 ```
 
-Plugins are a delivery surface, not the architectural place to hide reusable capability boundaries.
+The compiled skill graph is the architectural source of truth. Reusable capability boundaries should remain explicit in packaged skills and `requires` edges.
 
 Source: docs/architecture.mdx
 

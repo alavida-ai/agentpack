@@ -3,11 +3,11 @@ library:
   name: '@alavida/agentpack'
   version: '0.1.2'
   repository: 'git+https://github.com/alavida-ai/agentpack.git'
-  description: 'Package-backed lifecycle CLI for building maintained skillgraphs and production-ready plugin artifacts.'
+  description: 'Package-backed lifecycle CLI for maintained source-backed skillgraphs.'
 generated_from:
   domain_map: 'skills/_artifacts/domain_map.yaml'
   skill_spec: 'skills/_artifacts/skill_spec.md'
-generated_at: '2026-03-11'
+generated_at: '2026-03-16'
 
 skills:
   - name: 'getting started on an empty skillgraph'
@@ -19,7 +19,6 @@ skills:
     requires: []
     sources:
       - 'alavida-ai/agentpack:docs/introduction.mdx'
-      - 'alavida-ai/agentpack:docs/commands.mdx'
       - 'alavida-ai/agentpack:README.md'
     references:
       - 'references/command-routing.md'
@@ -28,11 +27,9 @@ skills:
     type: 'core'
     domain: 'starting-and-shaping-a-skillgraph'
     path: 'skills/identifying-skill-opportunities/SKILL.md'
-    description: 'Load when deciding what raw knowledge should become a packaged skill, a reusable capability boundary, or a plugin-local wrapper.'
+    description: 'Load when deciding what raw knowledge should become a packaged skill, a reusable capability boundary, or an explicit dependency edge.'
     requires: []
     sources:
-      - 'alavida-ai/agentpack:docs/architecture.mdx'
-      - 'alavida-ai/agentpack:docs/overview.mdx'
       - 'alavida-ai/agentpack:skills/agentpack-cli/SKILL.md'
     references:
       - 'references/capability-boundaries.md'
@@ -45,25 +42,17 @@ skills:
     requires:
       - 'identifying-skill-opportunities'
     sources:
-      - 'alavida-ai/agentpack:docs/commands.mdx'
-      - 'alavida-ai/agentpack:docs/architecture.mdx'
       - 'alavida-ai/agentpack:skills/agentpack-cli/SKILL.md'
-    references:
-      - 'references/authored-metadata.md'
   - name: 'maintaining skillgraph freshness'
     slug: 'maintaining-skillgraph-freshness'
     type: 'lifecycle'
     domain: 'keeping-a-skillgraph-aligned-with-source-truth'
     path: 'skills/maintaining-skillgraph-freshness/SKILL.md'
-    description: 'Load when validating authored skills, checking stale state, and keeping build-state and catalog metadata aligned with changing knowledge.'
+    description: 'Load when validating authored skills, checking stale state, and keeping compiled metadata aligned with changing knowledge.'
     requires:
       - 'authoring-skillgraphs-from-knowledge'
     sources:
-      - 'alavida-ai/agentpack:docs/commands.mdx'
-      - 'alavida-ai/agentpack:docs/current-state.mdx'
       - 'alavida-ai/agentpack:README.md'
-    references:
-      - 'references/authored-metadata.md'
   - name: 'developing and testing skills'
     slug: 'developing-and-testing-skills'
     type: 'core'
@@ -74,39 +63,4 @@ skills:
       - 'authoring-skillgraphs-from-knowledge'
       - 'maintaining-skillgraph-freshness'
     sources:
-      - 'alavida-ai/agentpack:docs/commands.mdx'
-      - 'alavida-ai/agentpack:docs/introduction.mdx'
       - 'alavida-ai/agentpack:README.md'
-    references:
-      - 'references/local-workbench.md'
-  - name: 'repairing broken skill or plugin state'
-    slug: 'repairing-broken-skill-or-plugin-state'
-    type: 'lifecycle'
-    domain: 'developing-and-debugging-runtime-skill-state'
-    path: 'skills/repairing-broken-skill-or-plugin-state/SKILL.md'
-    description: 'Load when auditing or repairing stale skills, unresolved requires, runtime dependency gaps, or malformed plugin definition files.'
-    requires:
-      - 'maintaining-skillgraph-freshness'
-      - 'developing-and-testing-skills'
-    sources:
-      - 'alavida-ai/agentpack:docs/current-state.mdx'
-      - 'alavida-ai/agentpack:docs/commands.mdx'
-      - 'alavida-ai/agentpack:src/domain/plugins/load-plugin-definition.js'
-    references:
-      - 'references/diagnostic-flows.md'
-  - name: 'shipping production plugins and packages'
-    slug: 'shipping-production-plugins-and-packages'
-    type: 'core'
-    domain: 'shipping-deployable-plugin-artifacts'
-    path: 'skills/shipping-production-plugins-and-packages/SKILL.md'
-    description: 'Load when turning maintained skills into deployable bundled plugins or publishable standalone packages with explicit dependency closure and production checks.'
-    requires:
-      - 'identifying-skill-opportunities'
-      - 'authoring-skillgraphs-from-knowledge'
-      - 'repairing-broken-skill-or-plugin-state'
-    sources:
-      - 'alavida-ai/agentpack:docs/commands.mdx'
-      - 'alavida-ai/agentpack:docs/architecture.mdx'
-      - 'alavida-ai/agentpack:README.md'
-    references:
-      - 'references/plugin-delivery.md'

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.10
+
+### Patch Changes
+
+- [#48](https://github.com/alavida-ai/agentpack/pull/48) [`5dab678`](https://github.com/alavida-ai/agentpack/commit/5dab678560cdb3988a8863e7f244a1f5c8c9a73f) Thanks [@alexandergirardet](https://github.com/alexandergirardet)! - Hard-delete the remaining legacy plugin-facing docs, packaged skill artifacts, and shipped plugin-oriented skills, and tighten the release contract so the old plugin surface cannot regress.
+
 ## 0.1.9
 
 ### Patch Changes

@@ -17,7 +17,7 @@ Go from zero to a running skill with the visual dashboard open in under 5 minute
     A minimal compiler-mode skill package needs `SKILL.md` and `package.json` in the same directory.
 
     **`skills/hello-world/SKILL.md`**
-    ```markdown
+    ````markdown
     ---
     name: hello-world
     description: A minimal skill to verify agentpack is working.
@@ -27,12 +27,12 @@ Go from zero to a running skill with the visual dashboard open in under 5 minute
     ```
 
     Respond with a friendly greeting when the user says hello.
-    ```
+    ````
 
     **`skills/hello-world/package.json`**
     ```json
     {
-      "name": "@my-org/hello-world",
+      "name": "@acme/hello-world",
       "version": "0.1.0"
     }
     ```
@@ -46,6 +46,17 @@ Go from zero to a running skill with the visual dashboard open in under 5 minute
     ```
 
     agentpack compiles the skill, links it into `.claude/skills/` and `.agents/skills/`, and starts the workbench.
+  </Step>
+
+  <Step title="See what the agent sees">
+    The skill is now materialized. Check what the agent will discover at runtime:
+
+    ```bash
+    ls .claude/skills/
+    cat .claude/skills/hello-world.md
+    ```
+
+    The materialized file is the final output agents read at session start.
   </Step>
 
   <Step title="Explore the dashboard">
@@ -69,8 +80,27 @@ Go from zero to a running skill with the visual dashboard open in under 5 minute
 - Runtime outputs were recorded in `.agentpack/materialization-state.json`.
 - The dashboard visualized the compiled graph instead of inferring relationships from prose.
 
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="agentpack: command not found">
+    Make sure you installed globally: `npm install -g @alavida/agentpack`. Verify with `agentpack --version`. If using `npx`, run `npx @alavida/agentpack skills dev skills/hello-world`.
+  </Accordion>
+  <Accordion title="SKILL.md missing required agentpack declarations block">
+    Every SKILL.md needs a fenced code block with the `agentpack` language tag. Even if you have no sources or imports, include an empty block.
+  </Accordion>
+  <Accordion title="Dashboard doesn't open">
+    Pass `--no-dashboard` if your environment doesn't support opening a browser. The CLI workflow works without it.
+  </Accordion>
+</AccordionGroup>
+
 ## Next steps
 
-<Card title="Model real dependencies" icon="diagram-project" href="/skill-dependencies">
-  Add explicit skill imports and source bindings, then watch the graph update.
-</Card>
+<CardGroup cols={2}>
+  <Card title="Build your first skill" icon="hammer" href="/first-skill">
+    Create a real skill with source bindings, skill imports, and body references.
+  </Card>
+  <Card title="The skill graph" icon="diagram-project" href="/skill-graph">
+    Understand how dependencies form a compiled graph.
+  </Card>
+</CardGroup>

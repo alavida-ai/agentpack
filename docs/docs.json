@@ -15,22 +15,22 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["introduction", "quickstart", "first-skill", "skill-dependencies", "publishing"]
+            "pages": ["introduction", "quickstart", "first-skill", "publishing"]
           },
           {
             "group": "Core Concepts",
-            "pages": ["how-it-works", "dashboard", "skill-graph", "staleness"]
+            "pages": ["how-it-works", "skill-graph", "staleness", "dashboard"]
           },
           {
             "group": "Guides",
-            "pages": ["docs-as-sources", "sharing-skills", "ci-integration"]
+            "pages": ["docs-as-sources", "authentication", "ci-integration"]
           },
           {
             "group": "CLI Reference",
-            "pages": ["cli-skills"]
+            "pages": ["cli-skills", "cli-auth"]
           },
           {
-            "group": "Reference",
+            "group": "File Reference",
             "pages": ["schema-skill-md", "schema-package-json", "schema-generated-files"]
           }
         ]

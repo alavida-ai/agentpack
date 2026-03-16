@@ -12,7 +12,7 @@ Every packaged skill module ships inside an npm package. The `package.json` prov
 | `name` | Yes | Scoped package name (e.g., `@acme/brand-copywriting`). |
 | `version` | Yes | Semver version (e.g., `1.2.0`). |
 | `description` | Recommended | Package-level summary. |
-| `agentpack.skills` | Yes | Explicit exported skill map. Keys must match each exported `SKILL.md` frontmatter `name`. |
+| `agentpack.skills` | Yes | Explicit exported skill map. Keys must match each exported `SKILL.md` frontmatter `name`. For single-skill packages, agentpack falls back to a single `SKILL.md` at the package root if this field is omitted. |
 | `files` | Yes | Which files to include in the published package. Must include the exported skill paths (for example `"skills/"`). |
 | `dependencies` | Managed | Required for cross-package skill references. Managed from exported skills' `requires`. |
 | `publishConfig` | Yes | Registry configuration for GitHub Packages. |

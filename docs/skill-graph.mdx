@@ -1,54 +1,141 @@
 ---
 title: "The Skill Graph"
-description: "How source bindings, skill imports, and contextual usage references form the compiled graph."
+description: "How source bindings, skill imports, and contextual usage references form the compiled skill graph."
 ---
 
-The skill graph is built from:
+The skill graph is the dependency structure agentpack builds from your SKILL.md files. It captures which skills depend on which sources and other skills, and **why** — every edge carries context you wrote.
 
-- source bindings in the `agentpack` block
-- skill imports in the `agentpack` block
-- explicit body references with `{context="..."}`
+## How the graph is built
 
-## Node types
+The compiler reads three things from each SKILL.md:
 
-- source nodes
-- skill nodes
+1. **Source bindings** in the agentpack block — bind local aliases to repo-relative file paths
+2. **Skill imports** in the agentpack block — declare dependencies on other skill packages
+3. **Body references** in the markdown body — create edges with semantic context
+
+Declarations without body references are registered but do not produce graph edges. The graph only contains relationships that are actually used in the skill body.
+
+## Source bindings
+
+A source binding maps a local alias to a repo-relative file path. The compiler records the file's SHA-256 content hash for [staleness detection](/staleness).
+
+```
+source tone = "domains/brand/knowledge/tone-of-voice.md"
+source selling_points = "domains/brand/knowledge/selling-points.md"
+```
+
+Use sources for knowledge files, process docs, guidelines — any file your skill was built from that should trigger a staleness check when it changes.
+
+## Skill imports
+
+Skill imports declare dependencies on other skill packages. Three forms:
+
+**Default import** — the package's default export:
+```
+import research from skill "@acme/research"
+```
+
+**Named imports** — specific exports from a multi-skill package:
+```
+import { editorial, voice_guide } from skill "@acme/editorial-suite"
+```
+
+**Aliased named import** — rename an import locally:
+```
+import { editorial as ed } from skill "@acme/editorial-suite"
+```
+
+**Combined default + named:**
+```
+import research, { editorial } from skill "@acme/research"
+```
+
+Skill imports create `skill_usage` edges in the graph. The package specifier maps to an npm dependency — agentpack validates that the corresponding package exists in `package.json` dependencies.
+
+## Body references
+
+Body references are inline markdown links that connect to declared sources or skills. Every reference requires a `{context="..."}` attribute that explains **why** the reference exists.
+
+```markdown
+Apply [tone guidance](source:tone){context="primary source of brand voice constraints"}.
+
+Use [research](skill:research){context="required verification workflow before factual claims"}.
+```
+
+The syntax is:
+```
+[display text](source:<alias>){context="<why>"}
+[display text](skill:<alias>){context="<why>"}
+```
+
+The `context` string becomes part of the compiled graph edge. It's how agentpack (and your team) understands the semantic relationship, not just the structural one.
 
 ## Edge types
 
-- source usage edges
-- skill usage edges
+The compiled graph has two edge types:
 
-## Example
+| Edge type | From | To | Created by |
+|---|---|---|---|
+| `source_usage` | Skill | Source file path | `[text](source:alias){context="..."}` |
+| `skill_usage` | Skill | Package specifier (or specifier:name) | `[text](skill:alias){context="..."}` |
 
-```markdown
+Each edge aggregates all body references to the same target. If you reference `source:tone` three times with different contexts, the graph has one `source_usage` edge with three context strings and an `occurrenceCount` of 3.
+
+## Same-package vs cross-package dependencies
+
+**Same-package sources** (source bindings) point to files in the same repository. They create `source_usage` edges and enable staleness detection.
+
+**Cross-package skills** (skill imports) point to npm packages. They create `skill_usage` edges. The target is `@scope/package` for default imports, or `@scope/package:exportName` for named imports.
+
+## Worked example
+
+Given this SKILL.md:
+
+````markdown
 ---
-name: copywriting
-description: Brand-consistent copywriting.
+name: brand-copywriting
+description: Write brand-consistent copy using company tone and voice guidelines.
 ---
 
 ```agentpack
-import research from skill "@alavida/research"
 source tone = "domains/brand/knowledge/tone-of-voice.md"
+import editorial from skill "@acme/editorial-principles"
 ```
 
-Use [research](skill:research){context="required verification workflow before factual claims"}.
 Apply [tone guidance](source:tone){context="primary source of brand voice constraints"}.
-```
+Follow [editorial standards](skill:editorial){context="house style rules for formatting"}.
+Also reference [tone](source:tone){context="secondary check for vocabulary choices"}.
+````
 
-This yields:
+The compiled graph contains:
 
-- one skill edge from `copywriting` to `@alavida/research`
-- one source edge from `copywriting` to `tone-of-voice.md`
+| Edge | Source | Target | Contexts | Occurrences |
+|---|---|---|---|---|
+| `source_usage` | `skill:brand-copywriting` | `domains/brand/knowledge/tone-of-voice.md` | "primary source of brand voice constraints", "secondary check for vocabulary choices" | 2 |
+| `skill_usage` | `skill:brand-copywriting` | `@acme/editorial-principles` | "house style rules for formatting" | 1 |
 
 ## Inspecting the graph
 
-Use:
-
 ```bash
+# See source bindings, imports, and metadata for one skill
 agentpack skills inspect <target>
+
+# Compile and write the full graph to .agentpack/compiled.json
 agentpack skills build <target>
+
+# Compile + open the visual dashboard
 agentpack skills dev <target>
 ```
 
-The dashboard renders the aggregated graph, while compiled state keeps the exact occurrences and contexts.
+The dashboard renders the aggregated graph as an interactive DAG with D3. Nodes are colored by status (current, stale, affected). Click any node to see its sources, imports, and contexts.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Staleness detection" icon="clock-rotate-left" href="/staleness">
+    How agentpack tracks whether compiled skills still match their sources.
+  </Card>
+  <Card title="SKILL.md reference" icon="file-lines" href="/schema-skill-md">
+    Full syntax reference for frontmatter, declarations, and body references.
+  </Card>
+</CardGroup>

@@ -1,11 +1,15 @@
 ---
 title: "Create Your First Skill"
-description: "Build a compiler-mode skill from source knowledge, validate it, and make it discoverable by agents."
+description: "Build a compiler-mode skill from source knowledge, add a dependency on another skill, validate it, and make it discoverable by agents."
 ---
 
 ## What you'll build
 
-You'll create a **copywriting package** with one exported `copywriting` skill. By the end, it will be validated, compiled, linked for local development, and visible in the dashboard.
+You'll create a **copywriting package** with one exported `copywriting` skill. It will:
+- Bind a source knowledge doc for staleness tracking
+- Import another skill as a dependency
+- Use contextual body references to create graph edges
+- Be validated, compiled, and visible in the dashboard
 
 ## Directory layout
 
@@ -23,8 +27,23 @@ your-repo/
     └── skills/
 ```
 
+## Anatomy of a SKILL.md
+
+Every SKILL.md has three parts:
+
+1. **Frontmatter** — `name` and `description` between `---` delimiters. These are the only two fields the compiler accepts.
+2. **Agentpack block** — a fenced code block tagged `agentpack` that declares `source` bindings and `import` statements.
+3. **Body** — the markdown instructions agents read at runtime. Body references like `[text](source:alias){context="..."}` create edges in the skill graph.
+
+The compiler rejects any SKILL.md missing the agentpack block, even if it's empty.
+
+## Part 1: A skill with source bindings
+
 <Steps>
   <Step title="Write the source knowledge">
+    Create a knowledge doc your skill will be built from. This is the source of truth — it lives in your repo and gets updated through normal pull requests.
+
+    **`domains/brand/knowledge/tone-of-voice.md`**
     ```markdown
     # Tone of Voice
 
@@ -34,8 +53,11 @@ your-repo/
     ```
   </Step>
 
-  <Step title="Create the skill">
-    ```markdown
+  <Step title="Create the SKILL.md">
+    The SKILL.md has three parts: **frontmatter** (name + description), an **agentpack block** (source bindings and imports), and a **body** (agent instructions with references).
+
+    **`domains/brand/skills/copywriting/SKILL.md`**
+    ````markdown
     ---
     name: copywriting
     description: Brand-consistent copywriting using company tone guidance.
@@ -46,13 +68,16 @@ your-repo/
     ```
 
     Apply [tone guidance](source:tone){context="primary source of tone constraints for customer-facing copy"}.
-    ```
+    ````
+
+    The `source` binding tells agentpack this skill was built from `tone-of-voice.md`. The `[tone guidance](source:tone){context="..."}` reference creates a graph edge with semantic context.
   </Step>
 
   <Step title="Create the package metadata">
+    **`domains/brand/skills/copywriting/package.json`**
     ```json
     {
-      "name": "@alavida/copywriting",
+      "name": "@acme/brand-copywriting",
       "version": "0.1.0",
       "files": ["SKILL.md"],
       "repository": {
@@ -66,28 +91,113 @@ your-repo/
     ```
   </Step>
 
-  <Step title="Validate and build">
+  <Step title="Validate and run dev mode">
     ```bash
     agentpack skills validate domains/brand/skills/copywriting
-    agentpack skills build @alavida/copywriting
-    ```
-  </Step>
-
-  <Step title="Run dev mode">
-    ```bash
     agentpack skills dev domains/brand/skills/copywriting
     ```
 
-    This compiles the skill, materializes runtime links, and starts the dashboard.
+    The dashboard opens showing your skill with a `source_usage` edge pointing to `tone-of-voice.md`.
   </Step>
 </Steps>
 
+## Part 2: Adding a skill dependency
+
+Skills can import other published skills. This is how you compose capabilities — a copywriting skill can pull in editorial standards from a separate package maintained by another team.
+
+<Steps>
+  <Step title="Import another skill">
+    Add an `import` statement to the agentpack block. This declares a dependency on the `@acme/editorial-principles` package.
+
+    **Updated `SKILL.md`**
+    ````markdown
+    ---
+    name: copywriting
+    description: Brand-consistent copywriting using company tone guidance.
+    ---
+
+    ```agentpack
+    source tone = "domains/brand/knowledge/tone-of-voice.md"
+    import editorial from skill "@acme/editorial-principles"
+    ```
+
+    Apply [tone guidance](source:tone){context="primary source of tone constraints for customer-facing copy"}.
+    Follow [editorial standards](skill:editorial){context="house style rules for grammar, punctuation, and formatting"}.
+    ````
+
+    The `import editorial from skill "@acme/editorial-principles"` line creates a skill-to-skill dependency. The `[editorial standards](skill:editorial){context="..."}` reference creates a `skill_usage` edge in the graph.
+  </Step>
+
+  <Step title="Add the package dependency">
+    Since the imported skill lives in a different npm package, add it to `package.json` dependencies:
+
+    ```json
+    {
+      "name": "@acme/brand-copywriting",
+      "version": "0.1.0",
+      "files": ["SKILL.md"],
+      "dependencies": {
+        "@acme/editorial-principles": "^1.0.0"
+      },
+      "repository": {
+        "type": "git",
+        "url": "git+https://github.com/your-org/knowledge-base.git"
+      },
+      "publishConfig": {
+        "registry": "https://npm.pkg.github.com"
+      }
+    }
+    ```
+
+    <Note>
+      Cross-package skill imports need a matching entry in `package.json` dependencies so npm can resolve the package. `agentpack skills validate` checks that every import has a corresponding dependency.
+    </Note>
+  </Step>
+
+  <Step title="Validate the updated skill">
+    ```bash
+    agentpack skills validate domains/brand/skills/copywriting
+    ```
+
+    Validation ensures the import aligns with the package dependency and that the SKILL.md body references match declared aliases.
+  </Step>
+</Steps>
+
+## Import syntax variants
+
+The agentpack block supports several import forms:
+
+```
+# Default import — the package's default skill
+import editorial from skill "@acme/editorial-principles"
+
+# Named imports — specific skills from a multi-skill package
+import { research, fact_check } from skill "@acme/research-suite"
+
+# Aliased import — rename locally
+import { research as verify } from skill "@acme/research-suite"
+
+# Combined default + named
+import editorial, { style_guide } from skill "@acme/editorial-principles"
+```
+
+Every import must have a matching body reference with `{context="..."}` to produce a graph edge. See [The Skill Graph](/skill-graph) for the full model.
+
 ## What agentpack manages
 
-- `.agentpack/compiled.json` for semantic state
-- `.agentpack/materialization-state.json` for runtime ownership
-- `.claude/skills/` and `.agents/skills/` as runtime outputs
+| File | Purpose |
+|---|---|
+| `.agentpack/compiled.json` | Semantic state: graph edges, source hashes, occurrences |
+| `.agentpack/materialization-state.json` | Runtime adapter ownership |
+| `.claude/skills/` and `.agents/skills/` | Runtime outputs where agents discover skills |
 
-## Next step
+## Next steps
 
-Add cross-skill dependencies with explicit `import ... from skill` declarations and contextual body references.
+<CardGroup cols={2}>
+  <Card title="Publishing" icon="upload" href="/publishing">
+    Publish your skill package to GitHub Packages and share it across teams.
+  </Card>
+  <Card title="The skill graph" icon="diagram-project" href="/skill-graph">
+    Understand how source and skill edges form the compiled dependency graph.
+  </Card>
+</CardGroup>

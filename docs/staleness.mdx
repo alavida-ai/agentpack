@@ -3,48 +3,113 @@ title: "Staleness Detection"
 description: "How agentpack tracks whether compiled skills still match their bound sources."
 ---
 
-Staleness detection compares the current content hash of each bound source file against the hash recorded in `.agentpack/compiled.json`.
+When a source document changes, agentpack knows. Staleness detection compares the current SHA-256 content hash of each bound source file against the hash recorded in `.agentpack/compiled.json`. If they differ, the skill is stale and needs to be recompiled.
 
-## The model
+## The status model
 
-- source file changed: the source node is `changed`
-- skill bound to that source: the skill is `stale`
-- skills importing that stale skill: they become `affected`
+Staleness propagates through the skill graph in three levels:
 
-## Check for staleness
+| Status | Meaning | Trigger |
+|---|---|---|
+| **changed** | A source file's content hash no longer matches the recorded hash. | Source file was edited. |
+| **stale** | A skill has at least one changed source binding. | Skill directly binds to a changed source. |
+| **affected** | A skill imports a stale skill. | Downstream skill depends on an upstream stale skill. |
+
+```
+domains/brand/knowledge/tone-of-voice.md    (changed)
+        │
+        ▼
+@acme/brand-copywriting                     (stale — source changed)
+        │
+        ▼
+@acme/landing-page-writer                   (affected — depends on stale skill)
+```
+
+## Hash mechanics
+
+When you run `skills build` or `skills validate`, the compiler reads each bound source file, computes its SHA-256 hash, and records it in `.agentpack/compiled.json` alongside the compiled graph.
+
+When you run `skills stale`, agentpack re-hashes each source file on disk and compares it to the recorded hash. If any hash differs, the skill is stale.
+
+## Checking for staleness
 
 ```bash
+# List all stale skills
 agentpack skills stale
-agentpack skills stale @scope/package
+
+# Inspect one skill's staleness details
+agentpack skills stale @acme/brand-copywriting
 ```
 
-If compiled state does not exist yet, build or validate first:
-
-```bash
-agentpack skills build <target>
-```
+The detailed view shows each changed source with its recorded and current hashes, so you can see exactly which files changed.
 
 ## Fixing a stale skill
 
-1. Update the source-backed `SKILL.md`
-2. Re-run:
+<Steps>
+
+<Step title="Update the SKILL.md if needed">
+  If the source doc change means the skill instructions need updating, edit the SKILL.md body.
+</Step>
+
+<Step title="Recompile">
 
 ```bash
-agentpack skills validate <target>
+agentpack skills build <target>
 ```
 
 or
 
 ```bash
-agentpack skills build <target>
+agentpack skills validate <target>
 ```
 
-3. Re-materialize if needed:
+Both re-record source hashes. The skill is no longer stale.
+
+</Step>
+
+<Step title="Re-materialize if needed">
 
 ```bash
 agentpack skills materialize
 ```
 
-## Shared state
+Only needed if the compiled output changed in a way that affects runtime files.
 
-Commit `.agentpack/compiled.json` when you want staleness and semantic graph state reviewed or shared in CI.
+</Step>
+
+</Steps>
+
+## What to commit
+
+| File | Commit? | Why |
+|---|---|---|
+| `.agentpack/compiled.json` | **Yes** | Contains recorded source hashes. Without it, staleness detection has no baseline. |
+| `.agentpack/install.json` | No | Runtime install state, repo-specific. |
+| `.agentpack/materialization-state.json` | No | Runtime adapter state, repo-specific. |
+| `.agentpack/dev-session.json` | No | Active dev session, ephemeral. |
+
+<Warning>
+  If `.agentpack/compiled.json` is not committed, staleness detection cannot work in CI, for teammates, or on fresh clones. There are no recorded hashes to compare against.
+</Warning>
+
+## CI integration
+
+Add staleness checks to your PR pipeline:
+
+```yaml
+- name: Check for stale skills
+  run: agentpack skills stale
+```
+
+This catches PRs that modify source knowledge docs without recompiling the skills built from them. See [CI Integration](/ci-integration) for a complete workflow.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="The skill graph" icon="diagram-project" href="/skill-graph">
+    Understand how source bindings and skill imports form the dependency graph.
+  </Card>
+  <Card title="Generated files" icon="folder-open" href="/schema-generated-files">
+    Reference for all files under .agentpack/.
+  </Card>
+</CardGroup>

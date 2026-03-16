@@ -64,7 +64,7 @@ With agentpack, skills are versioned packages with tracked provenance. You know 
 
 In Node.js, `require('lodash')` works because Node resolves it from `node_modules/`. The package being in `node_modules/` is what makes it usable at runtime.
 
-For agents, the equivalent is `.claude/skills/`. A skill sitting in an npm registry or in `node_modules/` is invisible to the agent. **Materialization** is the step that copies resolved skill packages into `.claude/skills/` and `.agents/skills/` where the agent can actually discover and read them.
+For agents, the equivalent is `.claude/skills/`. A skill sitting in an npm registry or in `node_modules/` is invisible to the agent. **Materialization** is the step that copies resolved skill packages into `.claude/skills/` and `.agents/skills/` where the agent can actually discover and read them. Each target directory (`.claude/skills/`, `.agents/skills/`) is called an **adapter** — it's the bridge between agentpack's package model and a specific agent runtime's discovery mechanism. agentpack tracks which adapters own which materialized files in `.agentpack/materialization-state.json`.
 
 This happens automatically during `agentpack skills install` (for published packages) and `agentpack skills dev` (for local authoring). You rarely need to think about it, but it explains why agentpack exists as a layer on top of plain npm -- npm handles resolution, agentpack handles the last mile of making skills visible to agents.
 

@@ -22,7 +22,8 @@
     "agentpack",
     "skills",
     "cli",
-    "alavida"
+    "alavida",
+    "tanstack-intent"
   ],
   "author": "Alavida AI",
   "license": "MIT",

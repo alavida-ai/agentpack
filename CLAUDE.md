@@ -8,6 +8,20 @@
 - After feature PRs merge to `main`, GitHub Actions opens or updates the `Version Packages` release PR.
 - Merging the generated release PR publishes the package to npm.
 
+## PR Workflow
+
+- `main` has branch protection: PRs must pass both `test` and `changeset-check` CI jobs before merging.
+- After pushing a branch and creating a PR, always verify CI passes:
+  ```bash
+  gh pr checks <pr-number> --watch
+  ```
+- If `changeset-check` fails, run `npx changeset`, select the package and bump type, write a summary, then commit the generated `.changeset/*.md` file and push.
+- If `test` fails, view the failure logs and fix:
+  ```bash
+  gh run view <run-id> --log-failed
+  ```
+- For PRs that don't need a release (docs-only, CI config), run `npx changeset --empty` to satisfy the check.
+
 ## Documentation & Code Generation
 
 - Always use Context7 CLI (`ctx7`) when working with library/API documentation, code generation, setup, or configuration steps — without waiting to be asked.

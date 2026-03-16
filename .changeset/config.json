@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
-  "changelog": false,
+  "changelog": ["@changesets/changelog-github", { "repo": "alavida-ai/agentpack" }],
   "commit": false,
   "fixed": [],
   "linked": [],

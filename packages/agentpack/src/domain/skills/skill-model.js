@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { basename, dirname, join, relative } from 'node:path';
 import { compileSkillDocument } from '../compiler/skill-compiler.js';
 import { NotFoundError, ValidationError } from '../../utils/errors.js';
 
@@ -207,6 +207,27 @@ export function buildCanonicalSkillRequirement(packageName, skillName) {
   return `${packageName}:${skillName}`;
 }
 
+export function inferPackageRuntimeNamespace(packageName) {
+  return packageName?.split('/').pop() || null;
+}
+
+export function inferSkillModuleName(skillEntry) {
+  if (skillEntry?.isPrimary || skillEntry?.kind === 'primary') {
+    return inferPackageRuntimeNamespace(skillEntry?.packageName || null);
+  }
+  if (skillEntry?.moduleName) return skillEntry.moduleName;
+  if (skillEntry?.skillDir) return basename(skillEntry.skillDir);
+  return null;
+}
+
+export function buildExpectedRuntimeSkillName(packageName, skillEntry) {
+  const namespace = inferPackageRuntimeNamespace(packageName);
+  if (!namespace) return skillEntry?.declaredName || skillEntry?.name || null;
+  if (skillEntry?.isPrimary || skillEntry?.kind === 'primary') return namespace;
+  const moduleName = inferSkillModuleName(skillEntry);
+  return moduleName ? `${namespace}:${moduleName}` : namespace;
+}
+
 function isCompilerModeDocument(content) {
   return content.includes('```agentpack');
 }
@@ -299,12 +320,19 @@ export function listPackageSkillEntries(packageDir) {
 export function readInstalledSkillExports(packageDir) {
   const exports = [];
   const skillEntries = listPackageSkillEntries(packageDir);
+  const packageMetadata = readPackageMetadata(packageDir);
 
   for (const entry of skillEntries) {
     const metadata = readCompilerSkillExport(entry.skillFile);
+    const moduleName = entry.kind === 'primary' ? inferPackageRuntimeNamespace(packageMetadata.packageName) : basename(entry.skillDir);
     exports.push({
       declaredName: metadata.name,
-      name: metadata.name,
+      name: moduleName,
+      moduleName,
+      runtimeName: buildExpectedRuntimeSkillName(packageMetadata.packageName, {
+        ...entry,
+        moduleName,
+      }),
       description: metadata.description,
       sources: metadata.sources,
       requires: metadata.requires,

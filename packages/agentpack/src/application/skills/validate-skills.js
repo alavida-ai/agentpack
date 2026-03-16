@@ -67,6 +67,7 @@ function compilerValidationResult(buildResult, packageValidation) {
         status: packageValidation.status,
         replacement: packageValidation.replacement,
         nextSteps: packageValidation.nextSteps,
+        ...(packageValidation.details ? { details: packageValidation.details } : {}),
         issues: [],
       },
     ],
@@ -157,7 +158,7 @@ function validateResolvedCompilerExport(repoRoot, resolved, options = {}) {
     return compilerGraphFailure(resolved);
   }
 
-  const packageValidation = validatePackagedSkillExport(repoRoot, resolved.package, resolved.export);
+  const packageValidation = validatePackagedSkillExport(repoRoot, resolved.package, resolved.export, options);
 
   try {
     const buildResult = buildCompiledStateUseCase(resolved.export.skillFilePath, { ...options, persist: false });

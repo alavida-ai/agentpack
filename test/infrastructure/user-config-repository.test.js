@@ -45,7 +45,6 @@ describe('user config repository', () => {
       provider: 'github-packages',
       scope: '@alavida-ai',
       registry: 'https://npm.pkg.github.com',
-      verificationPackage: '@alavida-ai/agentpack-auth-probe',
       managedNpmKeys: [],
     });
   });
@@ -57,7 +56,6 @@ describe('user config repository', () => {
       provider: 'github-packages',
       scope: '@acme',
       registry: 'https://npm.pkg.github.com',
-      verificationPackage: '@acme/registry-probe',
       managedNpmKeys: ['@acme:registry'],
     };
 

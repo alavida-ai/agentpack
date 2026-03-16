@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { addPackagedSkill, createTempRepo } from './fixtures.js';
+import { addPackagedSkill, createScenario, createTempRepo } from './fixtures.js';
 import { syncSkillDependencies } from '../../packages/agentpack/src/lib/skills.js';
 
 function buildCompilerSkill({ name, description, declarations = '' }) {
@@ -152,6 +152,64 @@ describe('agentpack skill dependency sync', () => {
       assert.deepEqual(result.removed, ['@alavida-ai/old-skill']);
       assert.equal(pkg.dependencies['@alavida-ai/value-proof-points'], '*');
       assert.equal(pkg.dependencies['@alavida-ai/old-skill'], undefined);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('skips same-package imports while still syncing cross-package dependencies', () => {
+    const repo = createScenario({
+      name: 'dep-sync-same-package-imports',
+      packages: [
+        {
+          relPath: 'skills/monorepo-architecture',
+          packageJson: {
+            name: '@alavida/monorepo-architecture',
+            version: '0.1.0',
+            files: ['SKILL.md', 'skills'],
+            agentpack: {
+              root: 'skills',
+            },
+            dependencies: {
+              '@alavida/old-skill': '^1.0.0',
+            },
+          },
+          files: {
+            'SKILL.md': buildCompilerSkill({
+              name: 'monorepo-architecture',
+              description: 'Root skill.',
+              declarations: 'import overview from skill "@alavida/monorepo-architecture:monorepo-overview"',
+            }),
+            'skills/monorepo-overview/SKILL.md': buildCompilerSkill({
+              name: 'monorepo-overview',
+              description: 'Overview skill.',
+              declarations: [
+                'import authoring from skill "@alavida/monorepo-architecture:domain-authoring"',
+                'import external from skill "@alavida/shared-methods"',
+              ].join('\n'),
+            }),
+            'skills/domain-authoring/SKILL.md': buildCompilerSkill({
+              name: 'domain-authoring',
+              description: 'Authoring skill.',
+            }),
+          },
+        },
+      ],
+    });
+
+    try {
+      const packageDir = join(repo.root, 'skills', 'monorepo-architecture');
+      const result = syncSkillDependencies(packageDir);
+      const pkg = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf-8'));
+
+      assert.deepEqual(result.added, ['@alavida/shared-methods']);
+      assert.deepEqual(result.removed, ['@alavida/old-skill']);
+      assert.equal(pkg.dependencies['@alavida/shared-methods'], '*');
+      assert.equal(pkg.dependencies['@alavida/monorepo-architecture'], undefined);
+      assert.deepEqual(
+        Object.keys(pkg.dependencies).filter((dependency) => dependency.includes(':')),
+        []
+      );
     } finally {
       repo.cleanup();
     }

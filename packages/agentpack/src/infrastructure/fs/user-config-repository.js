@@ -7,7 +7,6 @@ const DEFAULT_CONFIG = {
   provider: 'github-packages',
   scope: '@alavida-ai',
   registry: 'https://npm.pkg.github.com',
-  verificationPackage: '@alavida-ai/agentpack-auth-probe',
   managedNpmKeys: [],
 };
 

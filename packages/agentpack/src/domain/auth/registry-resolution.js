@@ -29,7 +29,6 @@ export function resolveRegistryConfig({
       scope,
       registry: repoRegistry,
       authToken: getAuthToken(repoNpmrc, repoRegistry),
-      verificationPackage: defaults.verificationPackage || null,
       source: 'repo',
     };
   }
@@ -40,7 +39,6 @@ export function resolveRegistryConfig({
       scope,
       registry: userRegistry,
       authToken: getAuthToken(userNpmrc, userRegistry),
-      verificationPackage: defaults.verificationPackage || null,
       source: 'user',
     };
   }
@@ -49,7 +47,6 @@ export function resolveRegistryConfig({
     scope,
     registry: defaults.registry || null,
     authToken: null,
-    verificationPackage: defaults.verificationPackage || null,
     source: 'default',
   };
 }

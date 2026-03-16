@@ -3,12 +3,9 @@ import { listInstalledSkillPackages } from './skill-catalog.js';
 import { readMaterializationState } from '../../infrastructure/fs/materialization-state-repository.js';
 import { NotFoundError, ValidationError } from '../../utils/errors.js';
 
-function inferPackageRuntimeNamespace(packageName) {
-  return packageName?.split('/').pop() || null;
-}
-
 export function buildRuntimeName(packageName, skillExport) {
-  const namespace = inferPackageRuntimeNamespace(packageName);
+  if (skillExport?.runtimeName) return skillExport.runtimeName;
+  const namespace = packageName?.split('/').pop() || null;
   if (!namespace) return skillExport.name;
   if (skillExport.isPrimary) return namespace;
   return `${namespace}:${skillExport.name}`;

@@ -139,7 +139,7 @@ sources:
           },
           files: {
             'skills/kickoff/SKILL.md': `---
-name: kickoff
+name: planning-kit:kickoff
 description: Plan the kickoff.
 ---
 
@@ -150,7 +150,7 @@ source agenda = "domains/planning/knowledge/kickoff-agenda.md"
 Use [the kickoff agenda](source:agenda){context="source material for kickoff planning"}.
 `,
             'skills/recap/SKILL.md': `---
-name: recap
+name: planning-kit:recap
 description: Plan the recap.
 ---
 
@@ -177,7 +177,7 @@ Use [the recap checklist](source:checklist){context="source material for recap p
       assert.equal(result.json.kind, 'package');
       assert.deepEqual(
         result.json.exports.map((entry) => entry.name).sort(),
-        ['kickoff', 'recap']
+        ['planning-kit:kickoff', 'planning-kit:recap']
       );
     } finally {
       repo.cleanup();
@@ -207,7 +207,7 @@ Use [the recap checklist](source:checklist){context="source material for recap p
           },
           files: {
             'skills/kickoff/SKILL.md': `---
-name: kickoff
+name: planning-kit:kickoff
 description: Plan the kickoff.
 ---
 
@@ -218,7 +218,7 @@ source agenda = "domains/planning/knowledge/kickoff-agenda.md"
 Use [the kickoff agenda](source:agenda){context="source material for kickoff planning"}.
 `,
             'skills/recap/SKILL.md': `---
-name: recap
+name: planning-kit:recap
 description: Plan the recap.
 ---
 
@@ -241,9 +241,49 @@ Use [the recap checklist](source:checklist){context="source material for recap p
       const result = runCLI(['author', 'inspect', 'workbenches/planning-kit/skills/kickoff'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
-      assert.match(result.stdout, /Skill: kickoff/);
+      assert.match(result.stdout, /Skill: planning-kit:kickoff/);
       assert.match(result.stdout, /Package: @alavida-ai\/planning-kit/);
       assert.match(result.stdout, /Path: workbenches\/planning-kit\/skills\/kickoff\/SKILL\.md/);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('fails inspect when a module name does not match the package:module convention', () => {
+    const repo = createScenario({
+      name: 'skills-inspect-invalid-module-name',
+      packages: [
+        {
+          relPath: 'workbenches/planning-kit',
+          packageJson: {
+            name: '@alavida-ai/planning-kit',
+            version: '0.1.0',
+            files: ['skills'],
+            agentpack: {
+              root: 'skills',
+            },
+          },
+          files: {
+            'skills/kickoff/SKILL.md': `---
+name: kickoff
+description: Plan the kickoff.
+---
+
+\`\`\`agentpack
+\`\`\`
+
+# Kickoff
+`,
+          },
+        },
+      ],
+    });
+
+    try {
+      const result = runCLI(['author', 'inspect', 'workbenches/planning-kit/skills/kickoff'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 2);
+      assert.match(result.stderr, /planning-kit:kickoff/);
     } finally {
       repo.cleanup();
     }

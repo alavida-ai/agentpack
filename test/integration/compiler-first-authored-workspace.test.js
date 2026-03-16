@@ -54,11 +54,11 @@ function createCompilerFirstRepo(name = 'compiler-first-authored-workspace') {
         files: {
           'SKILL.md': validRootSkillDocument(),
           'skills/monorepo-overview/SKILL.md': validNamedSkillDocument(
-            'monorepo-overview',
+            'monorepo-architecture:monorepo-overview',
             'workspace/active/architecture/agonda-monorepo/CONTINUE.md'
           ),
           'skills/monorepo-onboarding/SKILL.md': validNamedSkillDocument(
-            'monorepo-onboarding',
+            'monorepo-architecture:monorepo-onboarding',
             'workspace/active/architecture/agonda-monorepo/CONTINUE.md'
           ),
           'skills/broken-skill/SKILL.md': `---
@@ -120,7 +120,7 @@ describe('compiler-first authored workspace', () => {
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.equal(result.json.kind, 'export');
-      assert.equal(result.json.name, 'monorepo-overview');
+      assert.equal(result.json.name, 'monorepo-architecture:monorepo-overview');
     } finally {
       repo.cleanup();
     }

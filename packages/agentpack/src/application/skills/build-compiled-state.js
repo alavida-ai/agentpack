@@ -8,6 +8,7 @@ import { hashFile } from '../../domain/compiler/source-hash.js';
 import { ValidationError } from '../../utils/errors.js';
 
 function buildCompiledArtifact(repoRoot, resolved, compiled) {
+  const runtimeName = resolved.export.runtimeName || compiled.metadata.name;
   const sourceFiles = Object.values(compiled.sourceBindings).map((entry) => {
     const absolutePath = join(repoRoot, entry.sourcePath);
     if (!existsSync(absolutePath)) {
@@ -28,11 +29,12 @@ function buildCompiledArtifact(repoRoot, resolved, compiled) {
   return {
     version: 1,
     generated_at: new Date().toISOString(),
-    root_skill: `skill:${compiled.metadata.name}`,
+    root_skill: `skill:${runtimeName}`,
     skills: [
       {
-        id: `skill:${compiled.metadata.name}`,
-        name: compiled.metadata.name,
+        id: `skill:${runtimeName}`,
+        name: runtimeName,
+        declaredName: compiled.metadata.name,
         description: compiled.metadata.description,
         packageName: resolved.package.packageName,
         packageVersion: resolved.package.packageVersion,

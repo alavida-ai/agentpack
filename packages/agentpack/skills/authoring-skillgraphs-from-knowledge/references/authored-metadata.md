@@ -1,7 +1,7 @@
 # Authored Metadata
 
-- `SKILL.md` owns `name`, `description`, `metadata.sources`, and `requires`
-- `package.json.agentpack.skills` owns the exported skill map and each exported skill path
+- `SKILL.md` owns `name`, `description`, `source` bindings, and skill `import` declarations
+- Root `SKILL.md` is the primary export; `agentpack.root` declares the directory for named exports (discovered from the filesystem)
 - `package.json` owns package-level distribution metadata such as package name, version, publish config, and repository
-- `requires` uses canonical ids like `@scope/package:skill-name`
-- `skills validate` syncs managed cross-package dependencies from `requires` and refreshes `.agentpack/build-state.json`
+- `import` uses canonical ids like `@scope/package` or `@scope/package:skill-name`
+- `publish validate` checks managed cross-package dependencies derived from imports and refreshes `.agentpack/compiled.json`

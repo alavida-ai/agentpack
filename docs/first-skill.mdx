@@ -93,8 +93,8 @@ The compiler rejects any SKILL.md missing the agentpack block, even if it's empt
 
   <Step title="Validate and run dev mode">
     ```bash
-    agentpack skills validate domains/brand/skills/copywriting
-    agentpack skills dev domains/brand/skills/copywriting
+    agentpack publish validate domains/brand/skills/copywriting
+    agentpack author dev domains/brand/skills/copywriting
     ```
 
     The dashboard opens showing your skill with a `source_usage` edge pointing to `tone-of-voice.md`.
@@ -150,13 +150,13 @@ Skills can import other published skills. This is how you compose capabilities â
     ```
 
     <Note>
-      Cross-package skill imports need a matching entry in `package.json` dependencies so npm can resolve the package. `agentpack skills validate` checks that every import has a corresponding dependency.
+      Cross-package skill imports need a matching entry in `package.json` dependencies so npm can resolve the package. `agentpack publish validate` checks that every import has a corresponding dependency.
     </Note>
   </Step>
 
   <Step title="Validate the updated skill">
     ```bash
-    agentpack skills validate domains/brand/skills/copywriting
+    agentpack publish validate domains/brand/skills/copywriting
     ```
 
     Validation ensures the import aligns with the package dependency and that the SKILL.md body references match declared aliases.

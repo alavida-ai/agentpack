@@ -1,6 +1,6 @@
 # Command Routing
 
-- Authoring repo: `skills inspect`, `skills validate`, `skills dev`, `skills stale`
-- Consumer repo: `skills install`, `skills env`, `skills status`, `skills missing`
-- Compiler/runtime refresh: `skills build`, `skills materialize`
+- Authoring repo: `author inspect`, `author dev`, `author build`, `author stale`, `publish validate`
+- Consumer repo: `npm install`, `skills list`, `skills enable`, `skills disable`, `skills status`
+- Compiler/runtime refresh: `author build`, `author materialize`
 - If sources live under `domains/.../knowledge/*.md`, run authored commands from that repo root

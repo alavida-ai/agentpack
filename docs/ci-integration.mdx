@@ -9,29 +9,28 @@ agentpack commands are designed for CI. Every command runs non-interactively, re
 
 | Check | Command | When to run |
 |---|---|---|
-| Skill structure is valid | `agentpack skills validate` | Every PR |
-| No stale skills | `agentpack skills stale` | Every PR |
-| No missing dependencies | `agentpack skills missing` | Every PR |
+| Skill structure is valid | `agentpack publish validate` | Every PR |
+| No stale skills | `agentpack author stale` | Every PR |
 | Publish on merge | `npm publish` | On merge to main |
 
 ## Validation in CI
 
-Run `agentpack skills validate` on every pull request to catch broken skills early. It checks SKILL.md parsing, source file existence, dependency sync, and package metadata.
+Run `agentpack publish validate` on every pull request to catch broken skills early. It checks SKILL.md parsing, source file existence, dependency sync, and package metadata.
 
 ```yaml
 - name: Validate skills
-  run: agentpack skills validate
+  run: agentpack publish validate
 ```
 
 When run without a target, it validates every authored skill in the repository. Exit code `0` means all skills pass. Exit code `2` means at least one skill has validation issues.
 
 ## Stale detection in CI
 
-Run `agentpack skills stale` to catch cases where source knowledge docs changed but the skills built from them have not been updated.
+Run `agentpack author stale` to catch cases where source knowledge docs changed but the skills built from them have not been updated.
 
 ```yaml
 - name: Check for stale skills
-  run: agentpack skills stale
+  run: agentpack author stale
 ```
 
 This is especially powerful on PRs that modify knowledge docs. If a PR updates `domains/brand/knowledge/tone-of-voice.md`, the stale check will flag every skill that lists it as a source.
@@ -39,17 +38,6 @@ This is especially powerful on PRs that modify knowledge docs. If a PR updates `
 <Note>
   Stale detection requires `.agentpack/compiled.json` to be committed to the repo. Without it, there are no recorded hashes to compare against.
 </Note>
-
-## Missing dependency check
-
-Run `agentpack skills missing` to verify that every installed skill has its required dependencies present.
-
-```yaml
-- name: Check for missing dependencies
-  run: agentpack skills missing
-```
-
-This catches cases where a skill was installed but one of its transitive dependencies was not resolved.
 
 ## Complete GitHub Actions workflow
 
@@ -82,13 +70,10 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
 
       - name: Validate all skills
-        run: agentpack skills validate
+        run: agentpack publish validate
 
       - name: Check for stale skills
-        run: agentpack skills stale
-
-      - name: Check for missing dependencies
-        run: agentpack skills missing
+        run: agentpack author stale
 
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -125,7 +110,7 @@ Every agentpack command supports `--json` for structured output. Use this when y
 ```yaml
 - name: Check stale skills (JSON)
   run: |
-    STALE_OUTPUT=$(agentpack skills stale --json)
+    STALE_OUTPUT=$(agentpack author stale --json)
     echo "$STALE_OUTPUT" | jq '.count'
 ```
 
@@ -159,9 +144,6 @@ Use exit codes directly in CI `if` conditions or shell scripts. Codes 3 and 4 ar
   </Accordion>
   <Accordion title="Recommended: stale">
     Warn (or block) when a PR modifies source docs without updating the skills built from them. Prevents knowledge drift from shipping.
-  </Accordion>
-  <Accordion title="Recommended: missing">
-    Warn when installed skills have unresolved dependencies. Catches incomplete installs before agents encounter missing capabilities.
   </Accordion>
 </AccordionGroup>
 

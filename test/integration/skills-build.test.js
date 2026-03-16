@@ -36,7 +36,7 @@ Ground this in [our PRD principles](source:principles){context="primary source m
     });
 
     try {
-      const result = runCLIJson(['skills', 'build', 'skills/prd-agent'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'build', 'skills/prd-agent'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr || result.stdout);
       assert.equal(result.json.rootSkill, 'skill:prd-agent');
@@ -85,7 +85,7 @@ Ground this in [our PRD principles](source:principles){context="primary source m
     });
 
     try {
-      const result = runCLIJson(['skills', 'build', 'skills/prd-agent'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'build', 'skills/prd-agent'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 2);
       assert.equal(result.json.error, 'bound_source_not_found');

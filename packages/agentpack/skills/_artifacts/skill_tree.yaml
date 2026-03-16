@@ -58,7 +58,7 @@ skills:
     type: 'core'
     domain: 'developing-and-debugging-runtime-skill-state'
     path: 'skills/developing-and-testing-skills/SKILL.md'
-    description: 'Load when iterating locally on a packaged skill with skills dev, the localhost workbench, local materialization, and runtime testing feedback loops.'
+    description: 'Load when iterating locally on a packaged skill with author dev, the localhost workbench, local materialization, and runtime testing feedback loops.'
     requires:
       - 'authoring-skillgraphs-from-knowledge'
       - 'maintaining-skillgraph-freshness'

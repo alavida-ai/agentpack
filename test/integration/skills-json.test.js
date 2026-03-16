@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createRepoFromFixture, runCLIJson } from './fixtures.js';
+import { createRepoFromFixture, runCLIJson, runNpm } from './fixtures.js';
 
 describe('agentpack skills JSON outputs', () => {
   it('returns structured JSON for inspect', () => {
@@ -31,7 +31,7 @@ Apply [tone of voice](source:toneOfVoice){context="tone constraints for the fina
       );
 
       const result = runCLIJson(
-        ['skills', 'inspect', '@alavida/value-copywriting'],
+        ['author', 'inspect', '@alavida/value-copywriting'],
         { cwd: repo.root }
       );
 
@@ -50,7 +50,7 @@ Apply [tone of voice](source:toneOfVoice){context="tone constraints for the fina
     const repo = createRepoFromFixture('monorepo', 'skills-json-stale');
 
     try {
-      const build = runCLIJson(['skills', 'build', 'domains/value/skills/copywriting'], { cwd: repo.root });
+      const build = runCLIJson(['author', 'build', 'domains/value/skills/copywriting'], { cwd: repo.root });
       assert.equal(build.exitCode, 0, build.stderr);
 
       writeFileSync(
@@ -58,7 +58,7 @@ Apply [tone of voice](source:toneOfVoice){context="tone constraints for the fina
         '# Tone Of Voice\n\nBold, direct, and provocative.\n'
       );
 
-      const result = runCLIJson(['skills', 'stale'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'stale'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.equal(result.json.count, 1);
@@ -69,21 +69,21 @@ Apply [tone of voice](source:toneOfVoice){context="tone constraints for the fina
     }
   });
 
-  it('returns structured JSON for env after install', () => {
+  it('returns structured JSON for installed package inventory', () => {
     const monorepo = createRepoFromFixture('monorepo', 'skills-json-source');
     const consumer = createRepoFromFixture('consumer', 'skills-json-consumer');
 
     try {
       const target = join(monorepo.root, 'domains', 'value', 'skills', 'copywriting');
-      const install = runCLIJson(['skills', 'install', target], { cwd: consumer.root });
+      const install = runNpm(['install', target], { cwd: consumer.root });
       assert.equal(install.exitCode, 0, install.stderr);
 
-      const env = runCLIJson(['skills', 'env'], { cwd: consumer.root });
+      const list = runCLIJson(['skills', 'list'], { cwd: consumer.root });
 
-      assert.equal(env.exitCode, 0, env.stderr);
-      assert.equal(env.json.installs.length, 2);
-      assert.equal(env.json.installs[0].packageName, '@alavida/methodology-gary-provost');
-      assert.equal(env.json.installs[1].packageName, '@alavida/value-copywriting');
+      assert.equal(list.exitCode, 0, list.stderr);
+      assert.equal(list.json.packageCount, 1);
+      assert.equal(list.json.packages[0].packageName, '@alavida/value-copywriting');
+      assert.equal(list.json.packages[0].exports[0].enabled.length, 0);
     } finally {
       monorepo.cleanup();
       consumer.cleanup();

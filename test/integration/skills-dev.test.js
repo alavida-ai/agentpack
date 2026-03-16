@@ -56,7 +56,7 @@ describe('agentpack skills dev', () => {
         },
       });
 
-      const session = startCLI(['skills', 'dev', 'skills/copywriting'], { cwd: repo.root });
+      const session = startCLI(['author', 'dev', 'skills/copywriting'], { cwd: repo.root });
       await session.waitForOutput(/Linked Skill: value-copywriting/);
       await session.waitForOutput(/fresh session to pick up newly linked skills/);
 
@@ -89,7 +89,7 @@ describe('agentpack skills dev', () => {
         },
       });
 
-      const session = startCLI(['skills', 'dev', 'skills/copywriting'], { cwd: repo.root });
+      const session = startCLI(['author', 'dev', 'skills/copywriting'], { cwd: repo.root });
       await session.waitForOutput(/Linked Skill: value-copywriting/);
 
       const claudePath = join(repo.root, '.claude', 'skills', 'value-copywriting');
@@ -134,7 +134,7 @@ describe('agentpack skills dev', () => {
         },
       });
 
-      const session = startCLI(['skills', 'dev', 'skills/copywriting'], { cwd: repo.root });
+      const session = startCLI(['author', 'dev', 'skills/copywriting'], { cwd: repo.root });
       await session.waitForOutput(/Linked Skill: value-copywriting/);
 
       const rootLink = join(repo.root, '.claude', 'skills', 'value-copywriting');
@@ -174,7 +174,7 @@ describe('agentpack skills dev', () => {
         },
       });
 
-      const session = startCLI(['skills', 'dev', 'skills/copywriting'], { cwd: repo.root });
+      const session = startCLI(['author', 'dev', 'skills/copywriting'], { cwd: repo.root });
       await session.waitForOutput(/Linked Skill: value-copywriting/);
 
       let pkg = JSON.parse(readFileSync(packagePath, 'utf-8'));
@@ -216,7 +216,7 @@ describe('agentpack skills dev', () => {
         },
       });
 
-      const session = startCLI(['skills', 'dev', '--no-sync', 'skills/copywriting'], { cwd: repo.root });
+      const session = startCLI(['author', 'dev', '--no-sync', 'skills/copywriting'], { cwd: repo.root });
       await session.waitForOutput(/Linked Skill: value-copywriting/);
 
       const pkg = JSON.parse(readFileSync(join(repo.root, 'skills', 'copywriting', 'package.json'), 'utf-8'));
@@ -232,7 +232,7 @@ describe('agentpack skills dev', () => {
     const repo = createAuthoredMultiSkillFixture('skills-dev-multi-skill-dir');
 
     try {
-      const session = startCLI(['skills', 'dev', 'workbenches/planning-kit/skills/kickoff'], { cwd: repo.root });
+      const session = startCLI(['author', 'dev', 'workbenches/planning-kit/skills/kickoff'], { cwd: repo.root });
       await session.waitForOutput(/Linked Skill: kickoff/);
 
       const claudePath = join(repo.root, '.claude', 'skills', 'kickoff');
@@ -245,16 +245,18 @@ describe('agentpack skills dev', () => {
     }
   });
 
-  it('fails clearly when a multi-skill package target is ambiguous', () => {
-    const repo = createAuthoredMultiSkillFixture('skills-dev-multi-skill-ambiguous');
+  it('uses the package root as the primary export for a compiler-first multi-skill package', async () => {
+    const repo = createAuthoredMultiSkillFixture('skills-dev-multi-skill-primary');
 
     try {
-      const result = runCLI(['skills', 'dev', 'workbenches/planning-kit'], { cwd: repo.root });
+      const session = startCLI(['author', 'dev', 'workbenches/planning-kit'], { cwd: repo.root });
+      await session.waitForOutput(/Linked Skill: planning-kit/);
 
-      assert.equal(result.exitCode, 1);
-      assert.match(result.stderr, /ambiguous/i);
-      assert.match(result.stderr, /kickoff/);
-      assert.match(result.stderr, /recap/);
+      const claudePath = join(repo.root, '.claude', 'skills', 'planning-kit');
+      assert.ok(existsSync(claudePath));
+
+      await session.stop();
+      await waitUntil(() => !existsSync(claudePath));
     } finally {
       repo.cleanup();
     }
@@ -299,7 +301,7 @@ describe('agentpack skills dev', () => {
         },
       });
 
-      const result = runCLI(['skills', 'dev', 'skills/copywriting'], {
+      const result = runCLI(['author', 'dev', 'skills/copywriting'], {
         cwd: repo.root,
         env: {
           AGENTPACK_DASHBOARD_BUNDLE_PATH: join(repo.root, 'missing-dashboard.js'),
@@ -335,7 +337,7 @@ describe('agentpack skills dev', () => {
         },
       });
 
-      const session = startCLI(['skills', 'dev', 'skills/copywriting'], { cwd: repo.root });
+      const session = startCLI(['author', 'dev', 'skills/copywriting'], { cwd: repo.root });
       await session.waitForOutput(/Unresolved Dependencies:/);
 
       assert.match(session.stdout, /@alavida\/missing-skill/);
@@ -355,13 +357,13 @@ describe('agentpack skills dev', () => {
       writeFileSync(join(repo.root, 'skills', 'broken', 'SKILL.md'), '# No frontmatter\n');
       writeFileSync(join(repo.root, 'skills', 'broken', 'package.json'), '{"name":"test","version":"1.0.0"}\n');
 
-      const broken = runCLI(['skills', 'dev', 'skills/broken'], { cwd: repo.root });
-      assert.equal(broken.exitCode, 1);
-      assert.match(broken.stderr, /error|frontmatter/i);
+      const broken = runCLI(['author', 'dev', 'skills/broken'], { cwd: repo.root });
+      assert.equal(broken.exitCode, 2);
+      assert.match(broken.stderr, /error|frontmatter|legacy skill\.md authoring/i);
 
       mkdirSync(join(repo.root, 'skills', 'empty'), { recursive: true });
-      const missingSkill = runCLI(['skills', 'dev', 'skills/empty'], { cwd: repo.root });
-      assert.equal(missingSkill.exitCode, 1);
+      const missingSkill = runCLI(['author', 'dev', 'skills/empty'], { cwd: repo.root });
+      assert.equal(missingSkill.exitCode, 4);
       assert.match(missingSkill.stderr, /SKILL\.md|not found/i);
 
       mkdirSync(join(repo.root, 'skills', 'no-pkg'), { recursive: true });
@@ -369,8 +371,8 @@ describe('agentpack skills dev', () => {
         join(repo.root, 'skills', 'no-pkg', 'SKILL.md'),
         buildCompilerSkill({ name: 'no-pkg', description: 'Test.' })
       );
-      const missingPackage = runCLI(['skills', 'dev', 'skills/no-pkg'], { cwd: repo.root });
-      assert.equal(missingPackage.exitCode, 1);
+      const missingPackage = runCLI(['author', 'dev', 'skills/no-pkg'], { cwd: repo.root });
+      assert.equal(missingPackage.exitCode, 4);
       assert.match(missingPackage.stderr, /package\.json|not found/i);
     } finally {
       repo.cleanup();
@@ -433,7 +435,7 @@ describe('agentpack skills dev', () => {
         updated_at: '2026-03-12T12:00:00.000Z',
       });
 
-      const session = startCLI(['skills', 'dev', 'skills/copywriting'], { cwd: repo.root });
+      const session = startCLI(['author', 'dev', 'skills/copywriting'], { cwd: repo.root });
       await session.waitForOutput(/Linked Skill: value-copywriting/);
 
       const sessionRecord = JSON.parse(readFileSync(join(repo.root, '.agentpack', 'dev-session.json'), 'utf-8'));
@@ -480,12 +482,12 @@ describe('agentpack skills dev', () => {
         updated_at: '2026-03-12T12:00:00.000Z',
       });
 
-      const result = runCLIJson(['skills', 'dev', 'skills/copywriting'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'dev', 'skills/copywriting'], { cwd: repo.root });
       assert.equal(result.exitCode, 1);
       assert.equal(result.json.error, 'skills_dev_session_active');
       assert.equal(result.json.details.rootSkill, 'other-skill');
       assert.equal(result.json.details.pid, process.pid);
-      assert.equal(result.json.nextSteps[0].command, 'agentpack skills dev cleanup');
+      assert.equal(result.json.nextSteps[0].command, 'agentpack author dev cleanup');
     } finally {
       repo.cleanup();
     }
@@ -523,7 +525,7 @@ describe('agentpack skills dev', () => {
         updated_at: '2026-03-12T12:00:00.000Z',
       });
 
-      const result = runCLIJson(['skills', 'dev', 'cleanup'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'dev', 'cleanup'], { cwd: repo.root });
       assert.equal(result.exitCode, 0, result.stderr);
       assert.equal(result.json.cleaned, true);
       assert.equal(existsSync(join(repo.root, '.claude', 'skills', 'value-copywriting')), false);
@@ -562,11 +564,11 @@ describe('agentpack skills dev', () => {
         updated_at: '2026-03-12T12:00:00.000Z',
       });
 
-      const blocked = runCLIJson(['skills', 'dev', 'cleanup'], { cwd: repo.root });
+      const blocked = runCLIJson(['author', 'dev', 'cleanup'], { cwd: repo.root });
       assert.equal(blocked.exitCode, 1);
       assert.equal(blocked.json.error, 'skills_dev_session_active');
 
-      const forced = runCLIJson(['skills', 'dev', 'cleanup', '--force'], { cwd: repo.root });
+      const forced = runCLIJson(['author', 'dev', 'cleanup', '--force'], { cwd: repo.root });
       assert.equal(forced.exitCode, 0, forced.stderr);
       assert.equal(forced.json.cleaned, true);
       assert.equal(existsSync(join(repo.root, '.claude', 'skills', 'value-copywriting')), false);
@@ -606,7 +608,7 @@ describe('agentpack skills dev', () => {
         updated_at: '2026-03-12T12:00:00.000Z',
       });
 
-      const result = runCLIJson(['skills', 'dev', 'cleanup'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'dev', 'cleanup'], { cwd: repo.root });
       assert.equal(result.exitCode, 0, result.stderr);
       assert.equal(existsSync(outsidePath), true);
       assert.equal(existsSync(join(repo.root, '.claude', 'skills', 'value-copywriting')), false);

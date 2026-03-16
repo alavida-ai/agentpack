@@ -1,14 +1,15 @@
 --------------------------- MODULE InstallFlow -----------------------------
 (* 
- * Formal specification of agentpack's compiler-driven install flow.
+ * Formal specification of agentpack's runtime activation flow.
  *
  * Models the hard-cut architecture:
- *   1. fetch packages into node_modules
- *   2. compile canonical semantic state
- *   3. materialize runtime outputs from compiled state
+ *   1. npm manages package presence in node_modules
+ *   2. agentpack compiles enabled package closure into semantic state
+ *   3. agentpack materializes runtime outputs from compiled state
  *
- * There is no legacy build-state or migration path in this model.
- * The canonical semantic truth is the compiled state.
+ * There is no agentpack-managed package fetch or uninstall path in this model.
+ * The canonical semantic truth for activation is the compiled state derived
+ * from enabled direct packages already present in node_modules.
  *)
 EXTENDS Integers, FiniteSets, TLC
 
@@ -17,18 +18,18 @@ CONSTANTS
     PackageDeps        \* Function: package -> set of transitive deps
 
 VARIABLES
-    phase,                \* "idle" | "fetch" | "compile" | "materialize" | "done"
+    phase,                \* "idle" | "compile-enable" | "compile-disable" | "materialize" | "done"
     nodeModules,          \* Set of packages present in node_modules
-    directInstalls,       \* Set of directly requested packages
+    directEnabled,        \* Set of directly enabled packages
     compiledState,        \* Canonical compiled closure
     materializationState, \* Recorded adapter ownership derived from compiled state
     claudeLinks,          \* Runtime outputs for claude adapter
     agentsLinks,          \* Runtime outputs for agents adapter
-    requested,            \* Packages being installed in current operation
+    requested,            \* Packages being enabled or disabled in current operation
     resolved,             \* Resolved closure for current operation
     crashed               \* BOOLEAN - has there been a crash since last clean op?
 
-vars == <<phase, nodeModules, directInstalls, compiledState, materializationState,
+vars == <<phase, nodeModules, directEnabled, compiledState, materializationState,
           claudeLinks, agentsLinks, requested, resolved, crashed>>
 
 -----------------------------------------------------------------------------
@@ -37,9 +38,9 @@ vars == <<phase, nodeModules, directInstalls, compiledState, materializationStat
 AllPackages == Packages \union UNION {PackageDeps[p] : p \in Packages}
 
 TypeOK ==
-    /\ phase \in {"idle", "fetch", "compile", "materialize", "done"}
+    /\ phase \in {"idle", "compile-enable", "compile-disable", "materialize", "done"}
     /\ nodeModules \subseteq AllPackages
-    /\ directInstalls \subseteq Packages
+    /\ directEnabled \subseteq Packages
     /\ compiledState \subseteq AllPackages
     /\ materializationState \subseteq AllPackages
     /\ claudeLinks \subseteq AllPackages
@@ -60,7 +61,7 @@ Closure(pkgs) ==
 Init ==
     /\ phase = "idle"
     /\ nodeModules = {}
-    /\ directInstalls = {}
+    /\ directEnabled = {}
     /\ compiledState = {}
     /\ materializationState = {}
     /\ claudeLinks = {}
@@ -72,33 +73,57 @@ Init ==
 -----------------------------------------------------------------------------
 (* Actions *)
 
-BeginInstall(pkgs) ==
+NpmInstall(pkgs) ==
     /\ phase = "idle"
     /\ pkgs /= {}
     /\ pkgs \subseteq Packages
-    /\ phase' = "fetch"
+    /\ nodeModules' = nodeModules \union Closure(pkgs)
+    /\ UNCHANGED <<phase, directEnabled, compiledState, materializationState,
+                   claudeLinks, agentsLinks, requested, resolved, crashed>>
+
+BeginEnable(pkgs) ==
+    /\ phase = "idle"
+    /\ pkgs /= {}
+    /\ pkgs \subseteq Packages
+    /\ Closure(pkgs \union directEnabled) \subseteq nodeModules
+    /\ phase' = "compile-enable"
     /\ requested' = pkgs
     /\ resolved' = {}
-    /\ UNCHANGED <<nodeModules, directInstalls, compiledState, materializationState,
+    /\ UNCHANGED <<nodeModules, directEnabled, compiledState, materializationState,
                    claudeLinks, agentsLinks, crashed>>
 
-FetchPackages ==
-    /\ phase = "fetch"
-    /\ LET closure == Closure(requested \union directInstalls)
-       IN /\ nodeModules' = nodeModules \union closure
-          /\ resolved' = closure
-    /\ phase' = "compile"
-    /\ UNCHANGED <<directInstalls, compiledState, materializationState,
-                   claudeLinks, agentsLinks, requested, crashed>>
-
-CompileState ==
-    /\ phase = "compile"
-    /\ resolved /= {}
-    /\ compiledState' = resolved
-    /\ directInstalls' = requested \union directInstalls
+CompileEnable ==
+    /\ phase = "compile-enable"
+    /\ requested /= {}
+    /\ LET closure == Closure(requested \union directEnabled)
+       IN /\ resolved' = closure
+          /\ compiledState' = closure
+          /\ directEnabled' = requested \union directEnabled
     /\ phase' = "materialize"
     /\ UNCHANGED <<nodeModules, materializationState, claudeLinks, agentsLinks,
-                   requested, resolved, crashed>>
+                   requested, crashed>>
+
+BeginDisable(pkgs) ==
+    /\ phase = "idle"
+    /\ pkgs /= {}
+    /\ pkgs \subseteq directEnabled
+    /\ phase' = "compile-disable"
+    /\ requested' = pkgs
+    /\ resolved' = {}
+    /\ UNCHANGED <<nodeModules, directEnabled, compiledState, materializationState,
+                   claudeLinks, agentsLinks, crashed>>
+
+CompileDisable ==
+    /\ phase = "compile-disable"
+    /\ requested /= {}
+    /\ LET remaining == directEnabled \ requested
+           closure == Closure(remaining)
+       IN /\ compiledState' = closure
+          /\ directEnabled' = remaining
+          /\ resolved' = closure
+    /\ phase' = "materialize"
+    /\ UNCHANGED <<nodeModules, materializationState, claudeLinks, agentsLinks,
+                   requested, crashed>>
 
 Materialize ==
     /\ phase = "materialize"
@@ -107,34 +132,32 @@ Materialize ==
     /\ materializationState' = compiledState
     /\ phase' = "done"
     /\ crashed' = FALSE
-    /\ UNCHANGED <<nodeModules, directInstalls, compiledState, requested, resolved>>
+    /\ UNCHANGED <<nodeModules, directEnabled, compiledState, requested, resolved>>
 
 CompleteInstall ==
     /\ phase = "done"
     /\ phase' = "idle"
     /\ requested' = {}
     /\ resolved' = {}
-    /\ UNCHANGED <<nodeModules, directInstalls, compiledState, materializationState,
+    /\ UNCHANGED <<nodeModules, directEnabled, compiledState, materializationState,
                    claudeLinks, agentsLinks, crashed>>
 
-CrashDuringFetch ==
-    /\ phase = "fetch"
-    /\ \E partial \in SUBSET Closure(requested) :
-        nodeModules' = nodeModules \union partial
+CrashDuringEnableCompile ==
+    /\ phase = "compile-enable"
     /\ phase' = "idle"
     /\ requested' = {}
     /\ resolved' = {}
     /\ crashed' = TRUE
-    /\ UNCHANGED <<directInstalls, compiledState, materializationState,
+    /\ UNCHANGED <<nodeModules, directEnabled, compiledState, materializationState,
                    claudeLinks, agentsLinks>>
 
-CrashDuringCompile ==
-    /\ phase = "compile"
+CrashDuringDisableCompile ==
+    /\ phase = "compile-disable"
     /\ phase' = "idle"
     /\ requested' = {}
     /\ resolved' = {}
     /\ crashed' = TRUE
-    /\ UNCHANGED <<nodeModules, directInstalls, compiledState, materializationState,
+    /\ UNCHANGED <<nodeModules, directEnabled, compiledState, materializationState,
                    claudeLinks, agentsLinks>>
 
 CrashDuringMaterialize ==
@@ -147,32 +170,19 @@ CrashDuringMaterialize ==
     /\ requested' = {}
     /\ resolved' = {}
     /\ crashed' = TRUE
-    /\ UNCHANGED <<nodeModules, directInstalls, compiledState, materializationState>>
-
-Uninstall(pkg) ==
-    /\ phase = "idle"
-    /\ pkg \in directInstalls
-    /\ LET remaining == directInstalls \ {pkg}
-           newClosure == Closure(remaining)
-       IN
-           /\ directInstalls' = remaining
-           /\ compiledState' = newClosure
-           /\ materializationState' = newClosure
-           /\ claudeLinks' = newClosure
-           /\ agentsLinks' = newClosure
-           /\ crashed' = FALSE
-    /\ UNCHANGED <<nodeModules, phase, requested, resolved>>
+    /\ UNCHANGED <<nodeModules, directEnabled, compiledState, materializationState>>
 
 Next ==
-    \/ \E pkgs \in (SUBSET Packages \ {{}}) : BeginInstall(pkgs)
-    \/ FetchPackages
-    \/ CompileState
+    \/ \E pkgs \in (SUBSET Packages \ {{}}) : NpmInstall(pkgs)
+    \/ \E pkgs \in (SUBSET Packages \ {{}}) : BeginEnable(pkgs)
+    \/ CompileEnable
+    \/ \E pkgs \in (SUBSET Packages \ {{}}) : BeginDisable(pkgs)
+    \/ CompileDisable
     \/ Materialize
     \/ CompleteInstall
-    \/ CrashDuringFetch
-    \/ CrashDuringCompile
+    \/ CrashDuringEnableCompile
+    \/ CrashDuringDisableCompile
     \/ CrashDuringMaterialize
-    \/ \E p \in Packages : Uninstall(p)
 
 Spec == Init /\ [][Next]_vars
 
@@ -181,7 +191,7 @@ Spec == Init /\ [][Next]_vars
 
 CompiledMatchesDirectInstalls ==
     (phase = "idle" /\ ~crashed) =>
-        compiledState = Closure(directInstalls)
+        compiledState = Closure(directEnabled)
 
 MaterializationDerivedFromCompiled ==
     (phase = "idle" /\ ~crashed) =>
@@ -198,11 +208,11 @@ CompiledPackagesExist ==
 
 DirectSubsetOfCompiled ==
     (phase = "idle" /\ ~crashed) =>
-        directInstalls \subseteq compiledState
+        directEnabled \subseteq compiledState
 
 CrashLeavesRecordedStateSelfConsistent ==
     (phase = "idle" /\ crashed) =>
-        directInstalls \subseteq compiledState
+        directEnabled \subseteq compiledState
 
 RecoveryRestoresConsistency ==
     phase = "done" =>

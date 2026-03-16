@@ -16,7 +16,7 @@ function ensureDashboardBundle() {
 
   throw new AgentpackError('Skill workbench bundle is missing from this install', {
     code: 'missing_skill_workbench_bundle',
-    suggestion: 'Reinstall agentpack or rebuild the dashboard bundle before starting skills dev.',
+    suggestion: 'Reinstall agentpack or rebuild the dashboard bundle before starting author dev.',
     path: bundlePath,
   });
 }

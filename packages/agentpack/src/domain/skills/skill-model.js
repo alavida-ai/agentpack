@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { compileSkillDocument } from '../compiler/skill-compiler.js';
 import { NotFoundError, ValidationError } from '../../utils/errors.js';
@@ -197,6 +197,7 @@ export function readPackageMetadata(packageDir) {
     files: Array.isArray(pkg.files) ? pkg.files : null,
     repository: pkg.repository || null,
     publishConfigRegistry: pkg.publishConfig?.registry || null,
+    skillRoot: typeof pkg.agentpack?.root === 'string' ? pkg.agentpack.root : null,
     exportedSkills: pkg.agentpack?.skills || null,
   };
 }
@@ -238,58 +239,86 @@ function readCompilerSkillExport(skillFile) {
   };
 }
 
-export function readInstalledSkillExports(packageDir) {
+function listNestedSkillFiles(rootDir) {
+  if (!existsSync(rootDir)) return [];
+
+  const stack = [rootDir];
+  const files = [];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    let entries = [];
+    try {
+      entries = readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      const entryPath = join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+        continue;
+      }
+      if (entry.name === 'SKILL.md') files.push(entryPath);
+    }
+  }
+
+  return files.sort((a, b) => a.localeCompare(b));
+}
+
+export function listPackageSkillEntries(packageDir) {
   const packageMetadata = readPackageMetadata(packageDir);
-  const exports = [];
+  const entries = [];
+  const rootSkillFile = join(packageDir, 'SKILL.md');
 
-  if (packageMetadata.exportedSkills && typeof packageMetadata.exportedSkills === 'object') {
-    for (const [declaredName, entry] of Object.entries(packageMetadata.exportedSkills)) {
-      const relativeSkillFile = typeof entry === 'string' ? entry : entry?.path;
-      if (!relativeSkillFile) continue;
+  if (existsSync(rootSkillFile)) {
+    entries.push({
+      kind: 'primary',
+      skillDir: packageDir,
+      skillFile: rootSkillFile,
+      relativeSkillFile: 'SKILL.md',
+    });
+  }
 
-      const skillFile = join(packageDir, relativeSkillFile);
-      if (!existsSync(skillFile)) continue;
-
-      const metadata = readCompilerSkillExport(skillFile);
-      exports.push({
-        declaredName,
-        name: metadata.name,
-        description: metadata.description,
-        sources: metadata.sources,
-        requires: metadata.requires,
-        status: metadata.status,
-        replacement: metadata.replacement,
-        message: metadata.message,
-        wraps: metadata.wraps,
-        overrides: metadata.overrides,
+  if (packageMetadata.skillRoot) {
+    const skillRootDir = join(packageDir, packageMetadata.skillRoot);
+    for (const skillFile of listNestedSkillFiles(skillRootDir)) {
+      entries.push({
+        kind: 'named',
         skillDir: dirname(skillFile),
         skillFile,
-        relativeSkillFile,
+        relativeSkillFile: relative(packageDir, skillFile).split('\\').join('/'),
       });
     }
   }
 
-  if (exports.length > 0) {
-    return exports.sort((a, b) => a.name.localeCompare(b.name));
+  return entries;
+}
+
+export function readInstalledSkillExports(packageDir) {
+  const exports = [];
+  const skillEntries = listPackageSkillEntries(packageDir);
+
+  for (const entry of skillEntries) {
+    const metadata = readCompilerSkillExport(entry.skillFile);
+    exports.push({
+      declaredName: metadata.name,
+      name: metadata.name,
+      description: metadata.description,
+      sources: metadata.sources,
+      requires: metadata.requires,
+      status: metadata.status,
+      replacement: metadata.replacement,
+      message: metadata.message,
+      wraps: metadata.wraps,
+      overrides: metadata.overrides,
+      skillDir: entry.skillDir,
+      skillFile: entry.skillFile,
+      relativeSkillFile: entry.relativeSkillFile,
+      isPrimary: entry.kind === 'primary',
+    });
   }
 
-  const rootSkillFile = join(packageDir, 'SKILL.md');
-  if (!existsSync(rootSkillFile)) return [];
-
-  const metadata = readCompilerSkillExport(rootSkillFile);
-  return [{
-    declaredName: metadata.name,
-    name: metadata.name,
-    description: metadata.description,
-    sources: metadata.sources,
-    requires: metadata.requires,
-    status: metadata.status,
-    replacement: metadata.replacement,
-    message: metadata.message,
-    wraps: metadata.wraps,
-    overrides: metadata.overrides,
-    skillDir: packageDir,
-    skillFile: rootSkillFile,
-    relativeSkillFile: 'SKILL.md',
-  }];
+  return exports.sort((a, b) => a.name.localeCompare(b.name));
 }

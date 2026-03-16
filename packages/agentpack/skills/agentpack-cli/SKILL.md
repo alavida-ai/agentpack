@@ -44,7 +44,7 @@ If the user is confused, explain the stage boundary first.
 
 For source-backed packaged skills, run authoring commands from the repo that owns the files referenced in the `agentpack` source bindings.
 
-If a skill points at `domains/.../knowledge/*.md`, run `skills validate`, `skills dev`, and `skills stale` from that knowledge-base repo root, not from the `agentpack` repo.
+If a skill points at `domains/.../knowledge/*.md`, run `publish validate`, `author dev`, and `author stale` from that knowledge-base repo root, not from the `agentpack` repo.
 
 ## Lifecycle Routing
 
@@ -54,19 +54,19 @@ Use when the user is creating or editing one packaged skill module or a package 
 
 Default flow:
 
-- `agentpack skills inspect <target>`
-- `agentpack skills validate <target>`
-- `agentpack skills dev <target>` if local runtime testing is needed
-- `agentpack skills dev --no-dashboard <target>` if the user wants to skip the local workbench
+- `agentpack author inspect <target>`
+- `agentpack publish validate <target>`
+- `agentpack author dev <target>` if local runtime testing is needed
+- `agentpack author dev --no-dashboard <target>` if the user wants to skip the local workbench
 
 Key idea:
 
-- `package.json.agentpack.skills` declares exported skill modules when one package exports more than one skill
+- root `SKILL.md` is the primary export; `agentpack.root` declares the directory for named exports
 - `import ... from skill "@scope/package"` is the source of truth for skill-to-skill edges
 - `package.json.dependencies` is the managed cross-package mirror
-- `validate` and `dev` sync dependencies automatically
-- `skills build` and compiler-mode `skills validate` update `.agentpack/compiled.json`
-- `skills dev` materializes the compiled skill artifact for runtime use
+- `publish validate` and `author dev` sync dependencies automatically
+- `author build` and compiler-mode `publish validate` update `.agentpack/compiled.json`
+- `author dev` materializes the compiled skill artifact for runtime use
 
 Persistence rule:
 
@@ -78,11 +78,11 @@ Persistence rule:
 
 Runtime notes:
 
-- after `skills dev` writes to `.claude/skills/` or `.agents/skills/`, start a fresh agent session if the current one was already running
-- `skills dev` starts a localhost workbench by default for one selected exported skill, with provenance edges, internal module edges, cross-package dependency edges, and actions like validate or stale checks
-- `skills dev` records the active session in `.agentpack/dev-session.json` so the next run can clean up stale runtime links after abnormal termination
-- if a stale local dev session blocks startup, use `agentpack skills dev cleanup` and escalate to `agentpack skills dev cleanup --force` only when the recorded pid is a false positive
-- use `agentpack skills unlink <root> --recursive` when you need to remove one active dev root plus its transitive local runtime links
+- after `author dev` writes to `.claude/skills/` or `.agents/skills/`, start a fresh agent session if the current one was already running
+- `author dev` starts a localhost workbench by default for one selected exported skill, with provenance edges, internal module edges, cross-package dependency edges, and actions like validate or stale checks
+- `author dev` records the active session in `.agentpack/dev-session.json` so the next run can clean up stale runtime links after abnormal termination
+- if a stale local dev session blocks startup, use `agentpack author dev cleanup` and escalate to `agentpack author dev cleanup --force` only when the recorded pid is a false positive
+- use `agentpack author unlink <root> --recursive` when you need to remove one active dev root plus its transitive local runtime links
 - do not manually reconstruct source provenance from prose once the dev-linked skill exists; trust the compiled `SKILL.md` artifact unless you are explicitly updating the skill
 - invoke the resulting skill through the runtime's skill mechanism, not by opening the file and reading it as plain text
 
@@ -94,10 +94,11 @@ Use when the skill is already published and the user wants it available in anoth
 
 Default flow:
 
-- `agentpack skills install <package-name-or-local-package-path>`
-- `agentpack skills env`
+- `npm install <package-name>`
+- `agentpack skills list`
+- `agentpack skills enable <package-name>`
 
-Do not prescribe `skills dev` here unless the user is authoring locally.
+Do not prescribe `author dev` here unless the user is authoring locally.
 
 ### 3. Compiled build and runtime materialization
 
@@ -105,9 +106,9 @@ Use when the user wants a canonical compiled artifact or needs runtime outputs r
 
 Default flow:
 
-- `agentpack skills build <target>`
-- `agentpack skills materialize`
-- `agentpack skills dev <target>` for local watch mode and the workbench
+- `agentpack author build <target>`
+- `agentpack author materialize`
+- `agentpack author dev <target>` for local watch mode and the workbench
 
 Key idea:
 
@@ -121,13 +122,13 @@ Use when the source docs changed and the user needs to know whether the packaged
 
 Default flow:
 
-- `agentpack skills stale`
-- `agentpack skills stale <target>`
-- `agentpack skills validate <target>`
+- `agentpack author stale`
+- `agentpack author stale <target>`
+- `agentpack publish validate <target>`
 
 Key idea:
 
-- `skills stale` compares current source hashes to the last known compiled state
+- `author stale` compares current source hashes to the last known compiled state
 - the canonical authored path is `.agentpack/compiled.json`
 
 ## Conceptual Frame
@@ -136,7 +137,7 @@ When the user is reasoning about the model itself, explain agentpack this way:
 
 - docs or knowledge files are source files
 - `SKILL.md` is the compiled artifact
-- `package.json` is the package manifest and export table
+- `package.json` is the package manifest and discovery config
 - canonical skill ids look like `@scope/package:skill-name`
 - install and materialization are the runtime-resolution step
 - staleness means the source changed after the last known compiled state

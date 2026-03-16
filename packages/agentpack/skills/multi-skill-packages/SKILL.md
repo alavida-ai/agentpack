@@ -1,55 +1,46 @@
 ---
 name: multi-skill-packages
-description: Use when deciding how to structure multi-skill packages, configure the agentpack.skills export table, and manage dependency edges between exported skills in agentpack.
+description: Use when deciding how to structure multi-skill packages, configure agentpack.root for named export discovery, and manage dependency edges between exported skills in agentpack.
 type: core
 library: agentpack
 library_version: "0.1.10"
 sources:
   - "alavida-ai/agentpack:docs/skill-graph.mdx"
   - "alavida-ai/agentpack:docs/schema-package-json.mdx"
-  - "alavida-ai/agentpack:docs/sharing-skills.mdx"
+  - "alavida-ai/agentpack:docs/publishing.mdx"
 ---
 
 # Agentpack - Multi-Skill Packages
 
 ## Setup
 
-A multi-skill package exports more than one skill from a single npm package. Each exported skill has its own `SKILL.md` in a separate directory under `skills/`. The `package.json` declares all exports explicitly in the `agentpack.skills` map.
+A multi-skill package exports more than one skill from a single npm package. The root `SKILL.md` is the primary export. Additional named exports each have their own `SKILL.md` in a separate directory under the path declared in `agentpack.root`. Named exports are discovered from the filesystem automatically -- there is no explicit export table.
 
 ### Minimal multi-skill package layout
 
 ```
 @acme/brand/
   package.json
+  SKILL.md                        # primary export
   skills/
     value-copywriting/
-      SKILL.md
+      SKILL.md                    # named export
     editorial-principles/
-      SKILL.md
+      SKILL.md                    # named export
     tone-of-voice/
-      SKILL.md
+      SKILL.md                    # named export
 ```
 
-### package.json with multiple exports
+### package.json with named exports
 
 ```json
 {
   "name": "@acme/brand",
   "version": "1.0.0",
   "description": "Brand copywriting and editorial skill package.",
-  "files": ["skills/"],
+  "files": ["SKILL.md", "skills/"],
   "agentpack": {
-    "skills": {
-      "value-copywriting": {
-        "path": "skills/value-copywriting/SKILL.md"
-      },
-      "editorial-principles": {
-        "path": "skills/editorial-principles/SKILL.md"
-      },
-      "tone-of-voice": {
-        "path": "skills/tone-of-voice/SKILL.md"
-      }
-    }
+    "root": "skills"
   },
   "repository": {
     "type": "git",
@@ -61,24 +52,27 @@ A multi-skill package exports more than one skill from a single npm package. Eac
 }
 ```
 
-Each key in `agentpack.skills` must match the `name` field in the corresponding `SKILL.md` frontmatter. The `path` value is relative to the package root.
+The `agentpack.root` tells the toolchain where to discover named exports. Each subdirectory containing a `SKILL.md` becomes a named export. The `name` field in each `SKILL.md` frontmatter determines the export name.
 
-### SKILL.md frontmatter for an exported skill
+### SKILL.md structure for an exported skill
 
-```yaml
+```markdown
 ---
 name: value-copywriting
 description: Messaging and copywriting guidance grounded in brand selling points.
-metadata:
-  sources:
-    - domains/brand/knowledge/selling-points.md
-requires:
-  - name: editorial-principles
-    package: "@acme/brand"
 ---
+
+```agentpack
+source sellingPoints = "domains/brand/knowledge/selling-points.md"
+import editorial from skill "@acme/brand:editorial-principles"
 ```
 
-The `requires` entry above points at a skill in the same package. Same-package requires do not generate a `package.json` dependency because npm does not need to fetch anything extra -- the skill is already present in the package.
+Use ^[source:sellingPoints]{context="core product claims and differentiation"}.
+
+Apply ^[skill:editorial]{context="baseline style rules shared across the brand package"}.
+```
+
+The `source` statement declares provenance. The `import` statement declares a semantic edge to another exported skill. When that import points at another package, agentpack also mirrors the package dependency into `package.json.dependencies`.
 
 ## Core Patterns
 
@@ -98,25 +92,22 @@ Split into separate packages when:
 
 The heuristic: if you would put the code in the same npm library, put the skills in the same package. If you would publish separate libraries, publish separate skill packages.
 
-### The `agentpack.skills` export table
+### The `agentpack.root` export discovery
 
-The `agentpack.skills` object in `package.json` is the package-level contract. It declares which skills ship and where they live. This is analogous to the `exports` field in a Node.js `package.json`.
+The `agentpack.root` field in `package.json` tells the toolchain which directory to scan for named exports. Every subdirectory under that path that contains a `SKILL.md` becomes a named export automatically.
 
 ```json
 "agentpack": {
-  "skills": {
-    "skill-a": { "path": "skills/skill-a/SKILL.md" },
-    "skill-b": { "path": "skills/skill-b/SKILL.md" }
-  }
+  "root": "skills"
 }
 ```
 
 Rules:
 
-- Every exported skill must have a matching `SKILL.md` at the declared path.
-- Every `SKILL.md` under `skills/` that you intend to distribute must appear in the export table.
-- The key must match the `name` field in the `SKILL.md` frontmatter exactly.
-- `agentpack skills validate` checks that each declared path resolves to a valid `SKILL.md`.
+- Every named export must have a valid `SKILL.md` in its directory.
+- The `name` field in each `SKILL.md` frontmatter determines the export name.
+- The root `SKILL.md` at the package root is the primary export (if present).
+- `agentpack publish validate` checks that each discovered export resolves to a valid `SKILL.md`.
 
 ### Canonical skill IDs
 
@@ -136,99 +127,76 @@ Examples:
 
 When a package exports exactly one skill with the same name as the package, the short form `@scope/package` is equivalent to `@scope/package:skill-name`.
 
-Use the full `@scope/package:skill-name` form in `requires` and `import` declarations when referencing a specific skill from a multi-export package.
+Use the full `@scope/package:skill-name` form in `import` declarations when referencing a specific skill from a multi-export package.
 
-### `requires` (frontmatter) vs `import` (agentpack block)
+### `import` is the dependency declaration
 
-These are two different edge types that serve different purposes.
+The current compiler-first model uses `import` statements in the `agentpack` block as the source of truth for skill-to-skill edges.
 
-**`requires` in SKILL.md frontmatter** declares a package-level dependency. It tells agentpack that this skill needs another skill to be installed. The `requires` array drives `package.json` dependency sync for cross-package references.
+An `import` both:
 
-```yaml
-requires:
-  - name: gary-provost
-    package: "@acme/methodology"
-```
+- creates the semantic edge in the compiled graph
+- drives managed `package.json.dependencies` sync for cross-package package references
 
-**`import` in the agentpack block** declares a semantic skill-to-skill edge in the compiled graph. It binds the imported skill to a local name so you can reference it in the body with contextual usage annotations.
+Same-package imports do not add a `dependencies` entry because npm already ships those skills in the same package. Cross-package imports do.
 
 ```markdown
 ```agentpack
 import research from skill "@acme/research"
+import editorial from skill "@acme/brand:editorial-principles"
 ```
 
 Use [research](skill:research){context="required verification workflow before factual claims"}.
 ```
 
-Key differences:
+Guidance:
 
-| Concern | `requires` (frontmatter) | `import` (agentpack block) |
-|---|---|---|
-| Purpose | Declare install-time dependency | Declare compile-time semantic edge |
-| Drives | `package.json.dependencies` sync | Compiled skill graph edges |
-| Scope | Package-level (which package to fetch) | Skill-level (which skill to reference in body) |
-| Syntax | YAML array of `{name, package}` | `import <name> from skill "<package>"` |
-| Required for cross-package | Yes | Optional (only if body references the skill) |
-
-A cross-package skill reference typically needs both: `requires` so the dependency is installed, and `import` if the body references the skill with context annotations. For same-package references, `requires` alone is sufficient and does not generate a `package.json` dependency entry.
+- Use same-package imports for explicit edges between co-exported skills.
+- Use cross-package imports for external skill dependencies.
+- Do not duplicate dependency declarations in frontmatter.
 
 ### How `package.json.dependencies` stays in sync
 
-agentpack manages `package.json.dependencies` the way `go mod tidy` manages `go.mod`:
+agentpack manages `package.json.dependencies` from exported skill imports, the way `go mod tidy` manages `go.mod`:
 
-1. Read `requires` from each exported `SKILL.md`.
+1. Read cross-package `import` statements from each exported `SKILL.md`.
 2. Compare against `dependencies` in `package.json`.
-3. Add any cross-package `requires` entries that are missing.
-4. Remove any `dependencies` entries that no longer appear in any exported skill's `requires`.
+3. Add any required package entries that are missing.
+4. Remove any `dependencies` entries that are no longer referenced by those imports.
 5. Write the updated `package.json`.
 
-This sync runs automatically inside `agentpack skills validate` and `agentpack skills dev`. You never run it manually, and you never edit `dependencies` by hand for skill edges.
+This sync runs automatically inside `agentpack author dev`. `agentpack publish validate` checks alignment but does not write. You never edit `dependencies` by hand for skill edges.
 
-Same-package requires (where the required skill is exported from the same package) do not generate dependency entries. Only cross-package requires produce `dependencies` entries.
+Same-package imports do not generate dependency entries. Only cross-package imports produce `dependencies` entries.
 
 ### Inspecting and validating multi-skill packages
 
 ```bash
 # Inspect a specific exported skill by path
-agentpack skills inspect domains/brand/skills/value-copywriting
+agentpack author inspect domains/brand/skills/value-copywriting
 
 # Inspect by canonical ID
-agentpack skills inspect @acme/brand:value-copywriting
+agentpack author inspect @acme/brand:value-copywriting
 
 # Validate the entire package (checks all exports)
-agentpack skills validate domains/brand
+agentpack publish validate domains/brand
 
 # Dev mode for a specific exported skill
-agentpack skills dev domains/brand/skills/value-copywriting
+agentpack author dev domains/brand/skills/value-copywriting
 ```
 
-`skills validate` checks all exported skills declared in `agentpack.skills`:
+`publish validate` checks all exports discovered from the filesystem:
 
-- Each declared path resolves to a valid `SKILL.md`.
-- Each `SKILL.md` `name` matches its export table key.
-- All cross-package `requires` are reflected in `dependencies`.
+- Each discovered `SKILL.md` parses correctly.
+- All cross-package skill imports are reflected in `dependencies`.
 - `files` includes the exported skill paths.
 - Package identity fields (`name`, `version`, `repository`, `publishConfig`) are present.
 
-`skills inspect` shows the skill graph for one exported skill, including its source bindings, skill imports, and requires edges.
+`author inspect` shows the skill graph for one exported skill, including its source bindings and skill-import edges.
 
 ### Internal edges between co-exported skills
 
-Skills within the same package can depend on each other. Use `requires` in the frontmatter to declare the edge:
-
-```yaml
----
-name: value-copywriting
-description: Messaging and copywriting guidance.
-requires:
-  - name: editorial-principles
-    package: "@acme/brand"
----
-```
-
-This creates a same-package edge. Because both skills ship in `@acme/brand`, no `dependencies` entry is generated. The skill graph still records the edge for staleness propagation and visualization.
-
-If the body also references the co-exported skill with context annotations, add an `import` in the agentpack block:
+Skills within the same package can depend on each other through same-package imports:
 
 ```markdown
 ```agentpack
@@ -238,21 +206,19 @@ import editorial from skill "@acme/brand:editorial-principles"
 Follow the [editorial principles](skill:editorial){context="baseline style rules that all copy must satisfy"}.
 ```
 
+This creates a same-package edge. Because both skills ship in `@acme/brand`, no `dependencies` entry is generated. The skill graph still records the edge for staleness propagation and visualization.
+
 ### Cross-package edges from a multi-skill package
 
-When an exported skill depends on a skill in a different package, declare it in `requires`:
+When an exported skill depends on a skill in a different package, declare it with an import:
 
-```yaml
----
-name: value-copywriting
-description: Messaging and copywriting guidance.
-requires:
-  - name: gary-provost
-    package: "@acme/methodology"
----
+```markdown
+```agentpack
+import provost from skill "@acme/methodology:gary-provost"
+```
 ```
 
-After running `agentpack skills validate`, the package.json will contain:
+After running `agentpack publish validate`, the package.json will contain:
 
 ```json
 {
@@ -262,24 +228,19 @@ After running `agentpack skills validate`, the package.json will contain:
 }
 ```
 
-Multiple exported skills can require different skills from the same external package. The dependency appears once in `package.json`.
+Multiple exported skills can import different skills from the same external package. The dependency appears once in `package.json`.
 
 ## Common Mistakes
 
 ### CRITICAL Putting all skills in one mega-package
 
-Wrong:
+Wrong: one package with skills from unrelated domains.
 
 ```json
 {
   "name": "@acme/everything",
   "agentpack": {
-    "skills": {
-      "brand-copy": { "path": "skills/brand-copy/SKILL.md" },
-      "engineering-standards": { "path": "skills/engineering-standards/SKILL.md" },
-      "legal-review": { "path": "skills/legal-review/SKILL.md" },
-      "devops-runbooks": { "path": "skills/devops-runbooks/SKILL.md" }
-    }
+    "root": "skills"
   }
 }
 ```
@@ -291,10 +252,7 @@ Correct: split by domain boundary.
 {
   "name": "@acme/brand",
   "agentpack": {
-    "skills": {
-      "brand-copy": { "path": "skills/brand-copy/SKILL.md" },
-      "editorial-principles": { "path": "skills/editorial-principles/SKILL.md" }
-    }
+    "root": "skills"
   }
 }
 
@@ -302,16 +260,14 @@ Correct: split by domain boundary.
 {
   "name": "@acme/engineering",
   "agentpack": {
-    "skills": {
-      "engineering-standards": { "path": "skills/engineering-standards/SKILL.md" }
-    }
+    "root": "skills"
   }
 }
 ```
 
 A mega-package forces every consumer to install every skill even when they only need one domain. Version bumps in unrelated skills force unnecessary upgrades across all consumers.
 
-### CRITICAL Forgetting to declare exports in `agentpack.skills`
+### CRITICAL Missing `agentpack.root` for named exports
 
 Wrong:
 
@@ -329,18 +285,14 @@ Correct:
 {
   "name": "@acme/brand",
   "version": "1.0.0",
-  "files": ["skills/"],
+  "files": ["SKILL.md", "skills/"],
   "agentpack": {
-    "skills": {
-      "value-copywriting": {
-        "path": "skills/value-copywriting/SKILL.md"
-      }
-    }
+    "root": "skills"
   }
 }
 ```
 
-Without the `agentpack.skills` export table, agentpack cannot discover, validate, or materialize any skills from the package. The `SKILL.md` files are invisible to the toolchain even if they exist on disk.
+Without `agentpack.root`, the toolchain only discovers the root `SKILL.md` as the primary export. Named exports under subdirectories are invisible unless `agentpack.root` points to the directory that contains them.
 
 Source: docs/schema-package-json.mdx
 
@@ -357,57 +309,42 @@ Wrong:
 }
 ```
 
-Correct: author `requires` in each `SKILL.md` frontmatter.
+Correct: author cross-package imports in each `SKILL.md`.
 
-```yaml
-requires:
-  - name: gary-provost
-    package: "@acme/methodology"
-  - name: fact-checking
-    package: "@acme/research"
+```markdown
+```agentpack
+import provost from skill "@acme/methodology:gary-provost"
+import research from skill "@acme/research:fact-checking"
+```
 ```
 
-`package.json.dependencies` is managed output. agentpack derives it from exported skills' `requires` arrays during `validate` and `dev`. Manual edits will be overwritten on the next sync.
+`package.json.dependencies` is managed output. agentpack derives it from exported skills' cross-package imports during `author dev`. `publish validate` checks alignment but does not write. Manual edits will be overwritten on the next `author dev` run.
 
 Source: docs/schema-package-json.mdx
 
-### HIGH Mismatched export key and SKILL.md name
+### HIGH Mismatched directory name and SKILL.md name
+
+The directory name under `agentpack.root` is cosmetic -- the export name comes from the `name` field in `SKILL.md` frontmatter. But keeping them aligned avoids confusion:
 
 Wrong:
 
-```json
-"agentpack": {
-  "skills": {
-    "copywriting": {
-      "path": "skills/value-copywriting/SKILL.md"
-    }
-  }
-}
+```
+skills/
+  copywriting/
+    SKILL.md   # name: value-copywriting
 ```
 
-```yaml
----
-name: value-copywriting
----
+Correct:
+
+```
+skills/
+  value-copywriting/
+    SKILL.md   # name: value-copywriting
 ```
 
-The export key `copywriting` does not match the SKILL.md `name` field `value-copywriting`. `skills validate` will flag this as a structural error.
+### MEDIUM Treating imports as optional for cross-package dependencies
 
-Correct: use the same identifier in both places.
-
-```json
-"agentpack": {
-  "skills": {
-    "value-copywriting": {
-      "path": "skills/value-copywriting/SKILL.md"
-    }
-  }
-}
-```
-
-### MEDIUM Confusing `requires` and `import` scopes
-
-Wrong: using `import` in the agentpack block without a corresponding `requires` for a cross-package dependency.
+Wrong: describing an external dependency in prose but never declaring the import.
 
 ```markdown
 ```agentpack
@@ -415,15 +352,9 @@ import research from skill "@acme/research"
 ```
 ```
 
-Without a `requires` entry for `@acme/research`, the skill will not trigger a `package.json` dependency and consumers will not have the package installed. `skills validate` will report the missing dependency.
+If the external skill is part of the package contract, declare the import explicitly so agentpack can sync the package dependency and the compiled graph edge.
 
-Correct: declare both when referencing a cross-package skill in the body.
-
-```yaml
-requires:
-  - name: research
-    package: "@acme/research"
-```
+Correct: declare the import and reference it in the body when needed.
 
 ```markdown
 ```agentpack
@@ -439,9 +370,7 @@ Wrong:
 {
   "files": ["README.md"],
   "agentpack": {
-    "skills": {
-      "value-copywriting": { "path": "skills/value-copywriting/SKILL.md" }
-    }
+    "root": "skills"
   }
 }
 ```
@@ -450,22 +379,20 @@ Correct:
 
 ```json
 {
-  "files": ["skills/"],
+  "files": ["SKILL.md", "skills/"],
   "agentpack": {
-    "skills": {
-      "value-copywriting": { "path": "skills/value-copywriting/SKILL.md" }
-    }
+    "root": "skills"
   }
 }
 ```
 
-The `files` array controls what npm publishes. If it does not include the exported skill directories, the published package will be empty. `skills validate` checks that `files` includes the exported paths.
+The `files` array controls what npm publishes. If it does not include the exported skill directories, the published package will be empty. `publish validate` checks that `files` includes the exported paths.
 
 Source: docs/schema-package-json.mdx
 
 ## References
 
-- [Package.json schema](references/schema-package-json.md)
-- [SKILL.md schema](references/schema-skill-md.md)
-- [The skill graph](references/skill-graph.md)
-- [Sharing skills](references/sharing-skills.md)
+- `docs/schema-package-json.mdx`
+- `docs/schema-skill-md.mdx`
+- `docs/skill-graph.mdx`
+- `docs/publishing.mdx`

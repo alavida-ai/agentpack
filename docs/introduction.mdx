@@ -37,16 +37,16 @@ agentpack follows a compiler model. Your knowledge docs are source files. Skills
     A SKILL.md file declares which source docs it was built from and which other skills it depends on. It is the agent-facing artifact — the compiled output of your knowledge.
   </Step>
   <Step title="Packages make skills distributable">
-    Each skill becomes its own npm package with a version, dependencies, and a registry. Teams install exactly the skills they need, and npm handles the dependency graph.
+    Each skill ships inside an npm package with a version, dependencies, and a registry. Teams install exactly the skills they need with `npm install`, and npm handles the dependency graph.
   </Step>
   <Step title="Agents discover skills at runtime">
-    Installed skills are materialized into `.claude/skills/` and `.agents/skills/` where agent runtimes find them. Every agent on your team runs the same versioned playbook.
+    Enabled skills are materialized into `.claude/skills/` and `.agents/skills/` where agent runtimes find them. Every agent on your team runs the same versioned playbook.
   </Step>
 </Steps>
 
 ## The dashboard
 
-When you run `agentpack skills dev`, a visual workbench opens in your browser. It renders the skill graph with D3 — showing dependency edges, source provenance links, and lifecycle status for every node.
+When you run `agentpack author dev`, a visual workbench opens in your browser. It renders the skill graph with D3 — showing dependency edges, source provenance links, and lifecycle status for every node.
 
 <CardGroup cols={2}>
   <Card title="Skill graph" icon="diagram-project">

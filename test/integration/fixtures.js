@@ -135,10 +135,21 @@ export function addPackagedSkill(root, relPath, { skillMd, packageJson }) {
   writeFileSync(join(skillDir, 'package.json'), JSON.stringify(packageJson, null, 2) + '\n');
 }
 
-export function addMultiSkillPackage(root, relPath, { packageJson, skills }) {
+export function addMultiSkillPackage(root, relPath, { packageJson, rootSkillMd = null, skills }) {
   const packageDir = join(root, relPath);
   mkdirSync(packageDir, { recursive: true });
-  writeFileSync(join(packageDir, 'package.json'), JSON.stringify(packageJson, null, 2) + '\n');
+  const normalizedPackageJson = JSON.parse(JSON.stringify(packageJson));
+  if (normalizedPackageJson.agentpack?.skills && !normalizedPackageJson.agentpack.root) {
+    normalizedPackageJson.agentpack = {
+      ...normalizedPackageJson.agentpack,
+      root: 'skills',
+    };
+    delete normalizedPackageJson.agentpack.skills;
+  }
+  writeFileSync(join(packageDir, 'package.json'), JSON.stringify(normalizedPackageJson, null, 2) + '\n');
+  if (typeof rootSkillMd === 'string') {
+    writeFileSync(join(packageDir, 'SKILL.md'), ensureAgentpackBlock(rootSkillMd));
+  }
 
   for (const skill of skills) {
     const skillDir = join(packageDir, skill.path);
@@ -181,10 +192,9 @@ description: Foundation primer.
     packageJson: {
       name: '@alavida-ai/prd-development',
       version: '0.1.1',
-      files: ['skills'],
+      files: ['SKILL.md', 'skills'],
       agentpack: {
         skills: {
-          'prd-development': { path: 'skills/prd-development/SKILL.md' },
           'proto-persona': { path: 'skills/proto-persona/SKILL.md' },
           'problem-statement': { path: 'skills/problem-statement/SKILL.md' },
         },
@@ -193,10 +203,7 @@ description: Foundation primer.
         '@alavida-ai/foundation-primer': 'file:../foundation-primer',
       },
     },
-    skills: [
-      {
-        path: 'skills/prd-development',
-        skillMd: `---
+    rootSkillMd: `---
 name: prd-development
 description: Root workflow.
 ---
@@ -208,7 +215,7 @@ import { problem-statement as problemStatement, proto-persona as protoPersona } 
 Use [problem statement](skill:problemStatement){context="subskill dependency for defining the problem"}.
 Use [proto persona](skill:protoPersona){context="subskill dependency for defining the user"}.
 `,
-      },
+    skills: [
       {
         path: 'skills/proto-persona',
         skillMd: `---
@@ -244,6 +251,7 @@ Use [proto persona](skill:protoPersona){context="subskill dependency for refinin
     source,
     consumer,
     target: join(source.root, 'packages', 'prd-development'),
+    dependencyTarget: join(source.root, 'packages', 'foundation-primer'),
     cleanup() {
       source.cleanup();
       consumer.cleanup();
@@ -262,7 +270,7 @@ export function createAuthoredMultiSkillFixture(name = 'authored-multi-skill') {
     packageJson: {
       name: '@alavida-ai/planning-kit',
       version: '0.1.0',
-      files: ['skills'],
+      files: ['SKILL.md', 'skills'],
       repository: {
         type: 'git',
         url: 'git+https://github.com/alavida-ai/agentpack.git',
@@ -271,12 +279,20 @@ export function createAuthoredMultiSkillFixture(name = 'authored-multi-skill') {
         registry: 'https://npm.pkg.github.com',
       },
       agentpack: {
-        skills: {
-          kickoff: { path: 'skills/kickoff/SKILL.md' },
-          recap: { path: 'skills/recap/SKILL.md' },
-        },
+        root: 'skills',
       },
     },
+    rootSkillMd: `---
+name: planning-kit
+description: Primary planning package skill.
+---
+
+\`\`\`agentpack
+import kickoff from skill "@alavida-ai/planning-kit:kickoff"
+\`\`\`
+
+Use [kickoff](skill:kickoff){context="primary package entrypoint delegates to the kickoff workflow"}.
+`,
     skills: [
       {
         path: 'skills/kickoff',
@@ -473,4 +489,21 @@ export function runCLIJson(args, opts) {
   } catch {
     return { ...result, json: null };
   }
+}
+
+export function runNpm(args, { cwd, env = {}, timeoutMs = 20000 } = {}) {
+  const npmCli = process.env.npm_execpath;
+  const command = npmCli ? process.execPath : (process.platform === 'win32' ? 'npm.cmd' : 'npm');
+  const finalArgs = npmCli ? [npmCli, ...args] : args;
+  const result = spawnSync(command, finalArgs, {
+    cwd,
+    env: { ...process.env, ...env },
+    encoding: 'utf-8',
+    timeout: timeoutMs,
+  });
+  return {
+    stdout: result.stdout || '',
+    stderr: result.stderr || '',
+    exitCode: result.status ?? 1,
+  };
 }

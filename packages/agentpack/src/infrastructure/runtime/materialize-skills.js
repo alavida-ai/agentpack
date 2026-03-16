@@ -2,6 +2,7 @@ import { existsSync, lstatSync, mkdirSync, rmSync, symlinkSync, unlinkSync } fro
 import { dirname, join, relative, resolve } from 'node:path';
 import { writeInstallState } from '../fs/install-state-repository.js';
 import { writeMaterializationState } from '../fs/materialization-state-repository.js';
+import { buildRuntimeName } from '../../domain/skills/installed-workspace-graph.js';
 
 function ensureDir(pathValue) {
   mkdirSync(pathValue, { recursive: true });
@@ -82,19 +83,6 @@ function ensureSymlink(targetPath, linkPath) {
   symlinkSync(targetPath, linkPath, 'dir');
 }
 
-function inferPackageRuntimeNamespace(packageName) {
-  return packageName?.split('/').pop() || null;
-}
-
-function buildRuntimeName(packageName, exportedSkills, entry) {
-  if (exportedSkills.length <= 1) return entry.name;
-
-  const namespace = inferPackageRuntimeNamespace(packageName);
-  if (!namespace) return entry.name;
-  if (entry.name === namespace) return namespace;
-  return `${namespace}:${entry.name}`;
-}
-
 function buildMaterializationState(installs) {
   const adapters = {
     claude: [],
@@ -150,7 +138,7 @@ export function buildInstallRecord(repoRoot, packageDir, directTargetMap, {
   const skills = [];
 
   for (const entry of exportedSkills) {
-    const runtimeName = buildRuntimeName(packageMetadata.packageName, exportedSkills, entry);
+    const runtimeName = buildRuntimeName(packageMetadata.packageName, entry);
     const skillMaterializations = [];
 
     const claudeTargetAbs = join(repoRoot, '.claude', 'skills', runtimeName);

@@ -70,7 +70,7 @@ Apply [tone guidance](source:tone){context="primary source of tone constraints f
 ### Step 3: Validate and publish
 
 ```bash
-agentpack skills validate domains/brand/skills/copywriting
+agentpack publish validate domains/brand/skills/copywriting
 npm version patch -w domains/brand/skills/copywriting
 npm publish -w domains/brand/skills/copywriting
 ```
@@ -84,7 +84,7 @@ Three weeks later, the content team updates the tone-of-voice guide to add a new
 ### Step 5: Staleness is detected
 
 ```bash
-agentpack skills stale
+agentpack author stale
 ```
 
 ```
@@ -104,7 +104,7 @@ The skill author now knows to update the copywriting skill to reflect the new em
 |---|---|---|
 | Knowledge location | Copy-pasted into skill files | Lives in source docs, referenced by path |
 | Change detection | None -- silent drift | Automatic hash comparison on every `stale` check |
-| Update workflow | "Did someone update that prompt?" | `agentpack skills stale` shows exactly what changed |
+| Update workflow | "Did someone update that prompt?" | `agentpack author stale` shows exactly what changed |
 | Downstream impact | Unknown | Dependency graph shows every affected skill |
 | Audit trail | None | `compiled.json` records the semantic graph and bound source hashes for the current build |
 
@@ -119,5 +119,5 @@ The skill author now knows to update the copywriting skill to reflect the new em
 </Note>
 
 <Tip>
-  Run `agentpack skills stale` in CI on every pull request. If a PR modifies a knowledge doc, CI will flag every skill that depends on it -- before the PR merges.
+  Run `agentpack author stale` in CI on every pull request. If a PR modifies a knowledge doc, CI will flag every skill that depends on it -- before the PR merges.
 </Tip>

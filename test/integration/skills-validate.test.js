@@ -15,7 +15,7 @@ describe('agentpack skills validate', () => {
     const repo = createValidateFixture();
 
     try {
-      const result = runCLI(['skills', 'validate', 'domains/value/skills/copywriting'], { cwd: repo.root });
+      const result = runCLI(['publish', 'validate', 'domains/value/skills/copywriting'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.match(result.stdout, /Skill: @alavida\/value-copywriting/);
@@ -35,7 +35,7 @@ describe('agentpack skills validate', () => {
 
     try {
       const result = runCLIJson(
-        ['skills', 'validate', 'domains/value/skills/copywriting'],
+        ['publish', 'validate', 'domains/value/skills/copywriting'],
         { cwd: repo.root }
       );
 
@@ -119,7 +119,7 @@ Ground this in [research principles](source:principles){context="primary source 
     });
 
     try {
-      const result = runCLI(['skills', 'validate'], { cwd: repo.root });
+      const result = runCLI(['publish', 'validate'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.match(result.stdout, /Validated Skills: 2/);
@@ -198,7 +198,7 @@ requires: []
     });
 
     try {
-      const result = runCLIJson(['skills', 'validate'], { cwd: repo.root });
+      const result = runCLIJson(['publish', 'validate'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 2);
       assert.equal(result.json.valid, false);
@@ -219,7 +219,7 @@ requires: []
     try {
       rmSync(join(repo.root, 'domains', 'value', 'knowledge', 'selling-points.md'));
 
-      const result = runCLI(['skills', 'validate', 'domains/value/skills/copywriting'], { cwd: repo.root });
+      const result = runCLI(['publish', 'validate', 'domains/value/skills/copywriting'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 2);
       assert.match(result.stdout, /Status: invalid/);
@@ -254,7 +254,7 @@ requires: []
       );
 
       const result = runCLIJson(
-        ['skills', 'validate', 'domains/value/skills/copywriting'],
+        ['publish', 'validate', 'domains/value/skills/copywriting'],
         { cwd: repo.root }
       );
 
@@ -294,7 +294,7 @@ requires: []
       );
 
       const result = runCLIJson(
-        ['skills', 'validate', 'domains/value/skills/copywriting'],
+        ['publish', 'validate', 'domains/value/skills/copywriting'],
         { cwd: repo.root }
       );
 
@@ -349,7 +349,7 @@ requires: []
       );
 
       const result = runCLIJson(
-        ['skills', 'validate', 'domains/value/skills/copywriting'],
+        ['publish', 'validate', 'domains/value/skills/copywriting'],
         { cwd: repo.root }
       );
 
@@ -403,7 +403,7 @@ Ground this in [our PRD principles](source:principles){context="primary source m
     });
 
     try {
-      const result = runCLIJson(['skills', 'validate', 'skills/prd-agent'], { cwd: repo.root });
+      const result = runCLIJson(['publish', 'validate', 'skills/prd-agent'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr || result.stdout);
       assert.equal(result.json.valid, true);

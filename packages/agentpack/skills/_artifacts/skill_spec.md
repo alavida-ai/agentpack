@@ -20,7 +20,7 @@ The maintainer framing is explicit: developers use `agentpack` to create and mai
 | identifying-skill-opportunities | core | starting and shaping a skillgraph | opportunity discovery, skill/package boundaries, and explicit requires edges |
 | authoring-skillgraphs-from-knowledge | core | starting and shaping a skillgraph | SKILL.md, package.json, source provenance, requires, dependency sync |
 | maintaining-skillgraph-freshness | lifecycle | keeping a skillgraph aligned with source truth | validate, stale, compiled state |
-| developing-and-testing-skills | core | developing and debugging runtime skill state | skills dev, unlink, local dashboard, local runtime links |
+| developing-and-testing-skills | core | developing and debugging runtime skill state | author dev, unlink, local dashboard, local runtime links |
 
 ## Recommended Skill File Structure
 

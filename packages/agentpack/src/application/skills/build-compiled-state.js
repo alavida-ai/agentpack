@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { findRepoRoot } from '../../lib/context.js';
-import { resolveSingleSkillTarget } from '../../domain/skills/skill-target-resolution.js';
+import { ensureResolvedExportIsValid, resolveSingleSkillTarget } from '../../domain/skills/skill-target-resolution.js';
 import { compileSkillDocument } from '../../domain/compiler/skill-compiler.js';
 import { writeCompiledState } from '../../infrastructure/fs/compiled-state-repository.js';
 import { hashFile } from '../../domain/compiler/source-hash.js';
@@ -54,7 +54,9 @@ function buildCompiledArtifact(repoRoot, resolved, compiled) {
 
 export function buildCompiledStateUseCase(target, { cwd = process.cwd(), persist = true } = {}) {
   const repoRoot = findRepoRoot(cwd);
-  const resolved = resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false });
+  const resolved = ensureResolvedExportIsValid(
+    resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false })
+  );
   const content = readFileSync(resolved.export.skillFilePath, 'utf-8');
   const compiled = compileSkillDocument(content);
   const artifact = buildCompiledArtifact(repoRoot, resolved, compiled);

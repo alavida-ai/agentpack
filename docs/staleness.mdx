@@ -3,7 +3,7 @@ title: "Staleness Detection"
 description: "How agentpack tracks whether compiled skills still match their bound sources."
 ---
 
-When a source document changes, agentpack knows. Staleness detection compares the current SHA-256 content hash of each bound source file against the hash recorded in `.agentpack/compiled.json`. If they differ, the skill is stale and needs to be recompiled.
+When a source document changes, agentpack knows. Staleness detection compares the current SHA-256 content hash of each bound source file against the hash recorded in `.agentpack/compiled.json`. If they differ, the skill is stale and needs to be updated.
 
 ## The status model
 
@@ -27,18 +27,18 @@ domains/brand/knowledge/tone-of-voice.md    (changed)
 
 ## Hash mechanics
 
-When you run `skills build` or `skills validate`, the compiler reads each bound source file, computes its SHA-256 hash, and records it in `.agentpack/compiled.json` alongside the compiled graph.
+When you run `author build` or `publish validate`, the compiler reads each bound source file, computes its SHA-256 hash, and records it in `.agentpack/compiled.json` alongside the compiled graph.
 
-When you run `skills stale`, agentpack re-hashes each source file on disk and compares it to the recorded hash. If any hash differs, the skill is stale.
+When you run `author stale`, agentpack re-hashes each source file on disk and compares it to the recorded hash. If any hash differs, the skill is stale.
 
 ## Checking for staleness
 
 ```bash
 # List all stale skills
-agentpack skills stale
+agentpack author stale
 
 # Inspect one skill's staleness details
-agentpack skills stale @acme/brand-copywriting
+agentpack author stale @acme/brand-copywriting
 ```
 
 The detailed view shows each changed source with its recorded and current hashes, so you can see exactly which files changed.
@@ -54,13 +54,13 @@ The detailed view shows each changed source with its recorded and current hashes
 <Step title="Recompile">
 
 ```bash
-agentpack skills build <target>
+agentpack author build <target>
 ```
 
 or
 
 ```bash
-agentpack skills validate <target>
+agentpack publish validate <target>
 ```
 
 Both re-record source hashes. The skill is no longer stale.
@@ -70,7 +70,7 @@ Both re-record source hashes. The skill is no longer stale.
 <Step title="Re-materialize if needed">
 
 ```bash
-agentpack skills materialize
+agentpack author materialize
 ```
 
 Only needed if the compiled output changed in a way that affects runtime files.
@@ -84,12 +84,12 @@ Only needed if the compiled output changed in a way that affects runtime files.
 | File | Commit? | Why |
 |---|---|---|
 | `.agentpack/compiled.json` | **Yes** | Contains recorded source hashes. Without it, staleness detection has no baseline. |
-| `.agentpack/install.json` | No | Runtime install state, repo-specific. |
+| `.agentpack/install.json` | No | Enabled-target state, repo-specific. |
 | `.agentpack/materialization-state.json` | No | Runtime adapter state, repo-specific. |
 | `.agentpack/dev-session.json` | No | Active dev session, ephemeral. |
 
 <Warning>
-  If `.agentpack/compiled.json` is not committed, staleness detection cannot work in CI, for teammates, or on fresh clones. There are no recorded hashes to compare against.
+  If `.agentpack/compiled.json` is not committed, staleness detection cannot work in CI, for teammates, or on fresh clones.
 </Warning>
 
 ## CI integration
@@ -98,7 +98,7 @@ Add staleness checks to your PR pipeline:
 
 ```yaml
 - name: Check for stale skills
-  run: agentpack skills stale
+  run: agentpack author stale
 ```
 
 This catches PRs that modify source knowledge docs without recompiling the skills built from them. See [CI Integration](/ci-integration) for a complete workflow.

@@ -162,4 +162,32 @@ requires:
       /legacy/i
     );
   });
+
+  it('allows legacy-looking examples in the body when frontmatter is valid', () => {
+    const parsed = parseSkillDocument(`---
+name: prd-agent
+description: Create strong PRDs.
+---
+
+\`\`\`agentpack
+source principles = "domains/product/knowledge/prd-principles.md"
+\`\`\`
+
+\`\`\`yaml
+requires:
+  - "@alavida/prd-development"
+metadata:
+  sources:
+    - domains/product/knowledge/prd-principles.md
+\`\`\`
+
+Ground this in [our PRD principles](source:principles){context="primary source material"}.
+`);
+
+    assert.deepEqual(parsed.metadata, {
+      name: 'prd-agent',
+      description: 'Create strong PRDs.',
+    });
+    assert.equal(parsed.references.length, 1);
+  });
 });

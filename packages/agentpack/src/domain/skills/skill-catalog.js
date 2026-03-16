@@ -6,6 +6,7 @@ import {
   readInstalledSkillExports,
   readPackageMetadata,
 } from './skill-model.js';
+import { buildAuthoredWorkspaceGraph } from './workspace-graph.js';
 
 function isIgnoredEntry(name) {
   return name === '.git' || name === 'node_modules' || name === '.agentpack';
@@ -31,7 +32,7 @@ function listSkillPackageDirs(repoRoot, { installed = false } = {}) {
     let packageMetadata = null;
 
     for (const entry of entries) {
-      if (entry.isDirectory()) {
+      if (entry.isDirectory() || entry.isSymbolicLink()) {
         if (!installed && isIgnoredEntry(entry.name)) continue;
         stack.push(join(current, entry.name));
         continue;
@@ -48,7 +49,7 @@ function listSkillPackageDirs(repoRoot, { installed = false } = {}) {
     }
 
     if (!packageMetadata?.packageName) continue;
-    if (packageMetadata.exportedSkills || hasRootSkillFile) {
+    if (packageMetadata.skillRoot || hasRootSkillFile) {
       results.push(current);
     }
   }
@@ -57,7 +58,9 @@ function listSkillPackageDirs(repoRoot, { installed = false } = {}) {
 }
 
 export function listAuthoredSkillPackageDirs(repoRoot) {
-  return listSkillPackageDirs(repoRoot);
+  return Object.values(buildAuthoredWorkspaceGraph(repoRoot).packages)
+    .map((pkg) => pkg.packageDir)
+    .sort((a, b) => a.localeCompare(b));
 }
 
 export function listInstalledSkillPackageDirs(repoRoot) {
@@ -66,6 +69,7 @@ export function listInstalledSkillPackageDirs(repoRoot) {
 
 function buildCatalogKey(packageName, exportedSkills, entry) {
   if (!packageName) return null;
+  if (entry.isPrimary) return packageName;
   if (exportedSkills.length <= 1) return packageName;
   return buildCanonicalSkillRequirement(packageName, entry.name);
 }
@@ -100,15 +104,24 @@ export function readSkillPackage(repoRoot, packageDir, { origin = 'authored' } =
 }
 
 export function listAuthoredSkillPackages(repoRoot) {
-  return listAuthoredSkillPackageDirs(repoRoot)
-    .map((packageDir) => {
-      try {
-        return readSkillPackage(repoRoot, packageDir);
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean);
+  const graph = buildAuthoredWorkspaceGraph(repoRoot);
+
+  return Object.values(graph.packages)
+    .map((pkg) => ({
+      origin: 'authored',
+      packageDir: pkg.packageDir,
+      packagePath: pkg.packagePath,
+      packageName: pkg.packageName,
+      packageVersion: pkg.packageVersion,
+      packageMetadata: pkg.packageMetadata,
+      primaryExport: pkg.primaryExport,
+      status: pkg.status,
+      diagnostics: pkg.diagnostics,
+      exports: pkg.exports
+        .map((exportId) => graph.exports[exportId])
+        .filter(Boolean),
+    }))
+    .sort((a, b) => a.packageName.localeCompare(b.packageName));
 }
 
 export function listInstalledSkillPackages(repoRoot) {

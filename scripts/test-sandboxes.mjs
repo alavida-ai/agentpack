@@ -86,7 +86,7 @@ async function waitForWorkbench(child) {
     });
     child.on('exit', (code) => {
       clearTimeout(timeout);
-      rejectPromise(new Error(`skills dev exited before exposing a workbench URL (code ${code}).\nOutput:\n${output}`));
+      rejectPromise(new Error(`author dev exited before exposing a workbench URL (code ${code}).\nOutput:\n${output}`));
     });
     child.on('error', (error) => {
       clearTimeout(timeout);
@@ -113,7 +113,7 @@ async function checkWorkbench(url, expectedText) {
 }
 
 async function runDevCheck(cwd, target, expectedText, { noBrowserChecks = false } = {}) {
-  const child = spawn('node', [cliPath, 'skills', 'dev', target], {
+  const child = spawn('node', [cliPath, 'author', 'dev', target], {
     cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
@@ -131,30 +131,21 @@ async function runDevCheck(cwd, target, expectedText, { noBrowserChecks = false 
 async function runSandbox(label, config, options) {
   assert(existsSync(config.root), `${label} sandbox not found: ${config.root}`);
 
-  const validate = runCliJson(config.root, ['skills', 'validate']);
+  const validate = runCliJson(config.root, ['publish', 'validate']);
   assert(validate.valid === true, `${label} validate failed`);
   assert(validate.count >= 1, `${label} validate returned no skills`);
 
-  const inspect = runCliJson(config.root, ['skills', 'inspect', config.inspectTarget]);
+  const inspect = runCliJson(config.root, ['author', 'inspect', config.inspectTarget]);
   assert(inspect.name, `${label} inspect did not return a skill name`);
 
-  const build = runCliJson(config.root, ['skills', 'build', config.buildTarget]);
+  const build = runCliJson(config.root, ['author', 'build', config.buildTarget]);
   assert(build.rootSkill, `${label} build did not return a compiled root skill`);
 
-  const materialize = runCliJson(config.root, ['skills', 'materialize']);
+  const materialize = runCliJson(config.root, ['author', 'materialize']);
   assert(materialize.adapterCount >= 1, `${label} materialize did not emit adapters`);
 
-  const status = runCliJson(config.root, ['skills', 'status']);
-  assert(status.health, `${label} status did not return health`);
-
-  const stale = runCliJson(config.root, ['skills', 'stale']);
+  const stale = runCliJson(config.root, ['author', 'stale']);
   assert(typeof stale.count === 'number', `${label} stale did not return a count`);
-
-  const missing = runCliJson(config.root, ['skills', 'missing', config.devTarget]);
-  assert(typeof missing.count === 'number', `${label} missing did not return a count`);
-
-  const env = runCliJson(config.root, ['skills', 'env']);
-  assert(Array.isArray(env.installs), `${label} env did not return installs`);
 
   const dev = await runDevCheck(config.root, config.devTarget, config.expectText, options);
 
@@ -163,9 +154,7 @@ async function runSandbox(label, config, options) {
     inspectTarget: config.inspectTarget,
     rootSkill: build.rootSkill,
     adapterCount: materialize.adapterCount,
-    health: status.health,
     staleCount: stale.count,
-    missingCount: missing.count,
     workbench: dev,
   };
 }

@@ -11,7 +11,7 @@ export function materializeCompiledStateUseCase({ cwd = process.cwd() } = {}) {
   if (!compiledState) {
     throw new NotFoundError('compiled state not found', {
       code: 'compiled_state_not_found',
-      suggestion: 'Run `agentpack skills build <target>` first.',
+      suggestion: 'Run `agentpack author build <target>` first.',
     });
   }
 

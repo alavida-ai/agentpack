@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { findRepoRoot } from '../../lib/context.js';
 import { parseSkillFrontmatterFile } from '../../domain/skills/skill-model.js';
-import { resolveSingleSkillTarget } from '../../domain/skills/skill-target-resolution.js';
+import { ensureResolvedExportIsValid, resolveSingleSkillTarget } from '../../domain/skills/skill-target-resolution.js';
 import { buildCompiledStateUseCase } from './build-compiled-state.js';
 import { ValidationError } from '../../utils/errors.js';
 
@@ -28,8 +28,11 @@ export function inspectCompiledSkillUseCase(target, { cwd = process.cwd() } = {}
   let resolved;
 
   try {
-    resolved = resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false });
-  } catch {
+    resolved = ensureResolvedExportIsValid(
+      resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false })
+    );
+  } catch (error) {
+    if (error.code === 'export_invalid' || error.code === 'package_invalid') throw error;
     return null;
   }
 

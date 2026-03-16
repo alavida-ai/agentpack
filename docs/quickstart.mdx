@@ -39,10 +39,10 @@ Go from zero to a running skill with the visual dashboard open in under 5 minute
   </Step>
 
   <Step title="Run dev mode">
-    From your repo root, point `skills dev` at the skill package:
+    From your repo root, point `author dev` at the skill package:
 
     ```bash
-    agentpack skills dev skills/hello-world
+    agentpack author dev skills/hello-world
     ```
 
     agentpack compiles the skill, links it into `.claude/skills/` and `.agents/skills/`, and starts the workbench.
@@ -68,7 +68,7 @@ Go from zero to a running skill with the visual dashboard open in under 5 minute
   If you prefer a CLI-only workflow, pass `--no-dashboard`:
 
   ```bash
-  agentpack skills dev --no-dashboard skills/hello-world
+  agentpack author dev --no-dashboard skills/hello-world
   ```
 </Tip>
 
@@ -76,7 +76,7 @@ Go from zero to a running skill with the visual dashboard open in under 5 minute
 
 - `SKILL.md` stayed the authored artifact.
 - The `agentpack` block established the compiler contract, even when empty.
-- `skills dev` compiled the package into `.agentpack/compiled.json`.
+- `author dev` compiled the package into `.agentpack/compiled.json`.
 - Runtime outputs were recorded in `.agentpack/materialization-state.json`.
 - The dashboard visualized the compiled graph instead of inferring relationships from prose.
 
@@ -84,7 +84,7 @@ Go from zero to a running skill with the visual dashboard open in under 5 minute
 
 <AccordionGroup>
   <Accordion title="agentpack: command not found">
-    Make sure you installed globally: `npm install -g @alavida/agentpack`. Verify with `agentpack --version`. If using `npx`, run `npx @alavida/agentpack skills dev skills/hello-world`.
+    Make sure you installed globally: `npm install -g @alavida/agentpack`. Verify with `agentpack --version`. If using `npx`, run `npx @alavida/agentpack author dev skills/hello-world`.
   </Accordion>
   <Accordion title="SKILL.md missing required agentpack declarations block">
     Every SKILL.md needs a fenced code block with the `agentpack` language tag. Even if you have no sources or imports, include an empty block.

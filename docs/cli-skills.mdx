@@ -1,13 +1,15 @@
 ---
 title: "Skills Commands"
-description: "CLI reference for all agentpack skills subcommands."
+description: "CLI reference for agentpack skills subcommands — runtime activation of installed skill packages."
 ---
 
 ```bash
 agentpack skills <command> [options]
 ```
 
-The `skills` command group manages the full skill lifecycle: authoring, compiling, developing, installing, and inspecting.
+The `skills` command group manages runtime activation: listing installed skill packages from `node_modules`, enabling or disabling them for agent discovery, and inspecting runtime health.
+
+Package installation and removal are handled by npm directly. See [Publishing & Consuming Skills](/publishing) for the full workflow.
 
 ## Global flags
 
@@ -35,301 +37,92 @@ All commands use consistent exit codes:
 
 ---
 
-## Authoring commands
+## `skills list`
 
-### `skills validate`
-
-Validate one packaged skill or all authored packaged skills.
+List installed skill packages and their enabled runtimes.
 
 ```bash
-agentpack skills validate [target]
+agentpack skills list
 ```
 
-| Argument | Description |
-|---|---|
-| `target` | Optional. Packaged skill directory, SKILL.md path, or package name. Omit to validate all authored skills. |
-
-Checks:
-- SKILL.md parsing (frontmatter, agentpack block, body references)
-- Source file existence
-- Skill imports align with package dependencies
-- Package metadata is publishable
-
-Exit code `2` if any skill fails validation.
+No arguments. Scans `node_modules` for installed skill packages and shows each package with its exports and which runtimes they are enabled for.
 
 ```bash
-# Validate one skill
-agentpack skills validate domains/brand/skills/copywriting
-
-# Validate all authored skills
-agentpack skills validate
-```
-
-### `skills inspect`
-
-Inspect one packaged or local skill.
-
-```bash
-agentpack skills inspect <target>
-```
-
-| Argument | Description |
-|---|---|
-| `target` | Required. Skill directory, SKILL.md path, or package name. |
-
-Shows the resolved package, exported skills, source bindings, imported skills, lifecycle status, and overrides.
-
-```bash
-agentpack skills inspect @acme/brand-copywriting
-agentpack skills inspect domains/brand/skills/copywriting/SKILL.md
-```
-
-### `skills build`
-
-Compile one packaged skill into `.agentpack/compiled.json`.
-
-```bash
-agentpack skills build <target>
-```
-
-| Argument | Description |
-|---|---|
-| `target` | Required. Packaged skill directory or SKILL.md path. |
-
-Produces the compiled state file with skills, source hashes, occurrences, and graph edges. This is the semantic source of truth for staleness detection and the dashboard.
-
-<Note>
-  `validate` checks structure and reports errors. `build` does everything `validate` does, but also writes `compiled.json` — the persistent semantic state used by `stale`, `dev`, and the dashboard. Use `validate` for quick checks (CI, pre-commit). Use `build` when you need compiled output.
-</Note>
-
-```bash
-agentpack skills build domains/brand/skills/copywriting
-```
-
-### `skills materialize`
-
-Materialize runtime outputs from `.agentpack/compiled.json`.
-
-```bash
-agentpack skills materialize
-```
-
-No arguments. Reads the compiled state and emits runtime skill files into `.claude/skills/` and `.agents/skills/`, then records adapter ownership in `.agentpack/materialization-state.json`.
-
-```bash
-agentpack skills materialize
+agentpack skills list
 ```
 
 ---
 
-## Development commands
+## `skills enable`
 
-### `skills dev`
-
-Link one local packaged skill for local Claude and agent discovery.
+Materialize one installed skill package or export into runtime directories.
 
 ```bash
-agentpack skills dev [target]
+agentpack skills enable <target>
 ```
 
 | Argument | Description |
 |---|---|
-| `target` | Packaged skill directory or SKILL.md path. |
+| `target` | Required. Installed package name, export id, or installed skill path. |
 
 | Option | Description |
 |---|---|
-| `--no-sync` | Skip syncing managed package dependencies from requires. |
-| `--no-dashboard` | Skip starting the local skill development workbench. |
+| `-r, --runtime <runtime>` | Enable only for the selected runtime. Can be specified multiple times. Supported: `agents`, `claude`. |
 
-Compiles, materializes, links the skill for discovery, watches for file changes, and starts the localhost dashboard. On file change, the skill is automatically recompiled and re-materialized.
+Resolves the target from `node_modules`, materializes the skill and its transitive dependencies into `.claude/skills/` and `.agents/skills/`, and records the enabled-target state in `.agentpack/install.json`.
 
 ```bash
-# Full dev mode with dashboard
-agentpack skills dev domains/brand/skills/copywriting
+# Enable for all runtimes
+agentpack skills enable @acme/brand-copywriting
 
-# CLI-only, no browser
-agentpack skills dev --no-dashboard domains/brand/skills/copywriting
+# Enable only for Claude
+agentpack skills enable @acme/brand-copywriting -r claude
 ```
 
 <Note>
-  If your agent session was already running, start a fresh session to pick up newly linked skills.
+  If your agent session was already running, start a fresh session to pick up newly enabled skills.
 </Note>
 
-### `skills dev cleanup`
+---
 
-Remove recorded skills dev links for a stale session.
+## `skills disable`
 
-```bash
-agentpack skills dev cleanup
-```
-
-| Option | Description |
-|---|---|
-| `--force` | Remove recorded links even if the session PID still appears alive. |
-
-Use this if a previous `skills dev` session crashed without cleaning up.
+Remove one installed skill package or export from runtime directories.
 
 ```bash
-agentpack skills dev cleanup
-agentpack skills dev cleanup --force
-```
-
-### `skills unlink`
-
-Remove one locally linked skill from Claude and agent discovery paths.
-
-```bash
-agentpack skills unlink <name>
+agentpack skills disable <target>
 ```
 
 | Argument | Description |
 |---|---|
-| `name` | Required. Skill frontmatter name. |
+| `target` | Required. Installed package name, export id, or installed skill path. |
 
 | Option | Description |
 |---|---|
-| `--recursive` | Remove the active dev root and its recorded transitive links. |
+| `-r, --runtime <runtime>` | Disable only for the selected runtime. Can be specified multiple times. Supported: `agents`, `claude`. |
+
+Removes the target from the enabled set, reconciles runtime materializations, and updates `.agentpack/install.json`.
 
 ```bash
-agentpack skills unlink brand-copywriting
-agentpack skills unlink brand-copywriting --recursive
+# Disable for all runtimes
+agentpack skills disable @acme/brand-copywriting
+
+# Disable only for agents runtime
+agentpack skills disable @acme/brand-copywriting -r agents
 ```
 
 ---
 
-## Install commands
+## `skills status`
 
-### `skills install`
-
-Install one packaged skill and materialize the resolved graph.
-
-```bash
-agentpack skills install [target]
-```
-
-| Argument | Description |
-|---|---|
-| `target` | Optional. Packaged skill directory or package target (e.g., `@acme/brand-copywriting`). |
-
-Resolves packages through npm, compiles the resulting graph, and materializes runtime outputs. Reinstall a package to pick up the latest version.
-
-```bash
-agentpack skills install @acme/brand-copywriting
-```
-
-### `skills uninstall`
-
-Uninstall one direct skill package and reconcile runtime state.
-
-```bash
-agentpack skills uninstall <target>
-```
-
-| Argument | Description |
-|---|---|
-| `target` | Required. Installed skill package name. |
-
-Removes the package from the direct install set, rebuilds runtime state, and cleans up materialized links that are no longer needed.
-
-```bash
-agentpack skills uninstall @acme/brand-copywriting
-```
-
----
-
-## Inspection commands
-
-### `skills status`
-
-Show a high-level health summary for the entire skill environment.
+Show runtime health: installed vs enabled counts, selection issues, drift, and orphaned materializations.
 
 ```bash
 agentpack skills status
 ```
 
-No arguments. Reports installed count, direct vs transitive breakdown, outdated packages, deprecated skills, incomplete installs, runtime drift, orphaned materializations, and registry configuration. Use this as a single command to check overall health — it combines what `env`, `registry`, `outdated`, and `missing` report individually.
+No arguments. Reports installed package and export counts, enabled counts, selection issues (enabled targets no longer installed), runtime drift, and orphaned materializations.
 
 ```bash
 agentpack skills status
-```
-
-### `skills env`
-
-Show what's installed and where it's materialized.
-
-```bash
-agentpack skills env
-```
-
-No arguments. Lists every installed package with its version, source path, exported skills, and materialized targets. Use this when you need the detailed per-package view (e.g., "which version of `@acme/copywriting` is installed and where did it materialize?").
-
-```bash
-agentpack skills env
-```
-
-### `skills registry`
-
-Show the npm registry configuration agentpack is using.
-
-```bash
-agentpack skills registry
-```
-
-No arguments. Shows the configured scope, registry URL, auth mode, and `.npmrc` path. Use this to debug authentication or registry issues (e.g., "is my `.npmrc` pointing at the right registry?").
-
-```bash
-agentpack skills registry
-```
-
-### `skills stale`
-
-Show stale packaged skills from recorded semantic state.
-
-```bash
-agentpack skills stale [target]
-```
-
-| Argument | Description |
-|---|---|
-| `target` | Optional. Package name or skill path. Omit to list all stale skills. |
-
-When given a target, shows the specific changed sources with recorded vs current hashes. Without a target, lists all stale skills with their changed source counts.
-
-```bash
-# List all stale skills
-agentpack skills stale
-
-# Inspect one skill's staleness
-agentpack skills stale @acme/brand-copywriting
-```
-
-### `skills missing`
-
-Show local or installed skills with unmet required skill dependencies.
-
-```bash
-agentpack skills missing [target]
-```
-
-| Argument | Description |
-|---|---|
-| `target` | Optional. Installed package name or skill path. Omit to check all skills. |
-
-```bash
-agentpack skills missing
-agentpack skills missing @acme/brand-copywriting
-```
-
-### `skills outdated`
-
-Show installed packaged skills with newer versions available in the current discovery root.
-
-```bash
-agentpack skills outdated
-```
-
-No arguments. Lists each outdated package with current version, available version, update type, and a recommended install command.
-
-```bash
-agentpack skills outdated
 ```

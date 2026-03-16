@@ -35,7 +35,7 @@ Ground this in [our PRD principles](source:principles){context="primary source m
     });
 
     try {
-      const result = runCLIJson(['skills', 'stale'], { cwd: repo.root });
+      const result = runCLIJson(['author', 'stale'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 4);
       assert.equal(result.json.error, 'compiled_state_not_found');
@@ -75,10 +75,10 @@ Ground this in [our PRD principles](source:principles){context="primary source m
     });
 
     try {
-      const buildResult = runCLIJson(['skills', 'build', 'skills/prd-agent'], { cwd: repo.root });
+      const buildResult = runCLIJson(['author', 'build', 'skills/prd-agent'], { cwd: repo.root });
       assert.equal(buildResult.exitCode, 0, buildResult.stderr || buildResult.stdout);
 
-      const result = runCLI(['skills', 'stale'], { cwd: repo.root });
+      const result = runCLI(['author', 'stale'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.match(result.stdout, /Stale Skills: 0/);
@@ -117,7 +117,7 @@ Ground this in [our PRD principles](source:principles){context="primary source m
     });
 
     try {
-      const buildResult = runCLIJson(['skills', 'build', 'skills/prd-agent'], { cwd: repo.root });
+      const buildResult = runCLIJson(['author', 'build', 'skills/prd-agent'], { cwd: repo.root });
       assert.equal(buildResult.exitCode, 0, buildResult.stderr || buildResult.stdout);
 
       writeFileSync(
@@ -125,7 +125,7 @@ Ground this in [our PRD principles](source:principles){context="primary source m
         '# Principles\n\nUpdated.\n'
       );
 
-      const result = runCLI(['skills', 'stale'], { cwd: repo.root });
+      const result = runCLI(['author', 'stale'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.match(result.stdout, /Stale Skills: 1/);
@@ -166,7 +166,7 @@ Ground this in [our PRD principles](source:principles){context="primary source m
     });
 
     try {
-      const buildResult = runCLIJson(['skills', 'build', 'skills/prd-agent'], { cwd: repo.root });
+      const buildResult = runCLIJson(['author', 'build', 'skills/prd-agent'], { cwd: repo.root });
       assert.equal(buildResult.exitCode, 0, buildResult.stderr || buildResult.stdout);
 
       writeFileSync(
@@ -174,7 +174,7 @@ Ground this in [our PRD principles](source:principles){context="primary source m
         '# Principles\n\nUpdated.\n'
       );
 
-      const result = runCLI(['skills', 'stale', '@alavida/prd-agent'], { cwd: repo.root });
+      const result = runCLI(['author', 'stale', '@alavida/prd-agent'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.match(result.stdout, /Skill: @alavida\/prd-agent/);

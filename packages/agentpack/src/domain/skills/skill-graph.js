@@ -1,11 +1,11 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { findPackageDirByName } from './package-discovery.js';
 
 export function readSkillGraphNode(repoRoot, packageDir, {
   directInstallNames = new Set(),
   parseSkillFrontmatterFile,
   readPackageMetadata,
-  findPackageDirByName,
   normalizeDisplayPath,
 } = {}) {
   const skillFile = join(packageDir, 'SKILL.md');

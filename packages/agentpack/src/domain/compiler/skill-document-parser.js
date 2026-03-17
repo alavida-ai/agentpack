@@ -46,7 +46,7 @@ function parseFrontmatter(frontmatterText) {
   };
 }
 
-function extractFrontmatter(content) {
+export function extractFrontmatter(content) {
   if (!content.startsWith('---\n')) {
     throw diagnostic('SKILL.md missing frontmatter', {
       code: 'missing_frontmatter',
@@ -75,6 +75,14 @@ function extractFrontmatter(content) {
   };
 }
 
+export function hasLegacyFrontmatterFields(frontmatterText) {
+  return (
+    /\brequires:\s*(?:\n\s*-\s+.+|\[[^\]]*\]|.+)/m.test(frontmatterText)
+    || /\bmetadata:\s*(?:\n(?:\s+.+\n?)*)?\s+sources:/m.test(frontmatterText)
+    || /\bsources:\s*(?:\n\s*-\s+.+|\[[^\]]*\])/m.test(frontmatterText)
+  );
+}
+
 function findAgentpackBlock(tree) {
   const blocks = [];
 
@@ -84,11 +92,7 @@ function findAgentpackBlock(tree) {
     }
   });
 
-  if (blocks.length === 0) {
-    throw diagnostic('SKILL.md missing required agentpack declarations block', {
-      code: 'missing_agentpack_block',
-    });
-  }
+  if (blocks.length === 0) return null;
 
   if (blocks.length > 1) {
     throw diagnostic('SKILL.md may contain only one agentpack declarations block', {
@@ -124,9 +128,11 @@ export function parseSkillDocument(content) {
   assertNoLegacyFields(frontmatterText);
   const tree = unified().use(remarkParse).parse(body);
   const agentpackBlock = findAgentpackBlock(tree);
-  const declarations = parseAgentpackBlock(agentpackBlock.value, {
-    startLine: bodyStartLine + (agentpackBlock.position?.start?.line || 1) - 1,
-  });
+  const declarations = agentpackBlock
+    ? parseAgentpackBlock(agentpackBlock.value, {
+      startLine: bodyStartLine + (agentpackBlock.position?.start?.line || 1) - 1,
+    })
+    : { imports: [], sources: [] };
   const references = parseBodyReferences(tree);
 
   return {

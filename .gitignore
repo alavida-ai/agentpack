@@ -8,3 +8,4 @@ eval-results/
 .agentpack/install.json
 .agentpack/dev-session.json
 .agentpack/dist/
+**/dist/

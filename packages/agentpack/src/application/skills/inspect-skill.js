@@ -1,11 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { inspectCompiledSkillUseCase } from './inspect-compiled-skill.js';
+import { inspectAuthoredSkillUseCase } from './inspect-authored-skill.js';
 import { findRepoRoot } from '../../lib/context.js';
+import { findPackageDirByName } from '../../domain/skills/package-discovery.js';
 import { resolveSkillTarget } from '../../domain/skills/skill-target-resolution.js';
-import { findPackageDirByName } from '../../lib/skills.js';
 import { ValidationError } from '../../utils/errors.js';
-import { inspectSkill } from '../../lib/skills.js';
 
 function isCompilerModeDocument(content) {
   return content.includes('```agentpack');
@@ -71,5 +71,5 @@ export function inspectSkillUseCase(target, options = {}) {
   const compiled = inspectCompiledSkillUseCase(target, options);
   if (compiled) return compiled;
   assertNoLegacyAuthoredTarget(target, options);
-  return inspectSkill(target, options);
+  return inspectAuthoredSkillUseCase(target, options);
 }

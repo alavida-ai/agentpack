@@ -11,3 +11,27 @@ export function writeCompiledState(repoRoot, state) {
   mkdirSync(join(repoRoot, '.agentpack'), { recursive: true });
   writeFileSync(join(repoRoot, '.agentpack', 'compiled.json'), JSON.stringify(state, null, 2) + '\n');
 }
+
+export function writeCompiledPackageState(repoRoot, packageState) {
+  const current = readCompiledState(repoRoot) || {
+    version: 2,
+    active_package: null,
+    packages: {},
+  };
+
+  const next = {
+    version: 2,
+    active_package: packageState.packageName,
+    packages: {
+      ...(current.packages || {}),
+      [packageState.packageName]: packageState,
+    },
+  };
+
+  writeCompiledState(repoRoot, next);
+  return next;
+}
+
+export function readCompiledPackageState(repoRoot, packageName) {
+  return readCompiledState(repoRoot)?.packages?.[packageName] || null;
+}

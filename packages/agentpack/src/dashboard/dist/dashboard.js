@@ -21743,6 +21743,20 @@ async function runWorkbenchAction(action) {
   return response.json();
 }
 
+// packages/agentpack/src/dashboard/lib/navigation.js
+function resolveWorkbenchNodeInteraction(node, selectedId = null) {
+  if (!node) {
+    return {
+      action: "select",
+      target: null
+    };
+  }
+  return {
+    action: "select",
+    target: selectedId === node.id ? null : node.id
+  };
+}
+
 // packages/agentpack/src/dashboard/lib/router.js
 function getSkillFromHash() {
   const hash = window.location.hash;
@@ -25571,14 +25585,19 @@ var GLOW_COLORS = {
 };
 function nodeRadius(node) {
   if (node.type === "skill") return 14;
+  if (node.type === "internal-skill") return 11;
   return 9;
 }
 function nodeColor(node) {
   if (node.type === "source") return SOURCE_COLOR;
+  if (node.type === "internal-skill") return "#b3c28d";
+  if (node.type === "external-package") return "#8d9fc2";
   return STATUS_COLORS[node.status] || STATUS_COLORS.unknown;
 }
 function isFilled(node) {
   if (node.type === "source") return true;
+  if (node.type === "internal-skill") return false;
+  if (node.type === "external-package") return false;
   return node.status === "current" || node.status === "unknown";
 }
 function diamondPath(size) {
@@ -25752,6 +25771,9 @@ function SkillGraph({
       if (depth === 2) return 0.35;
       return 0.2;
     }).style("transition", "opacity 200ms ease, stroke-width 200ms ease");
+    if (labelsVisible) {
+      g.append("g").attr("class", "edge-labels").selectAll("text").data(hierarchy2.links().filter((d) => d.target.data?.data?.context)).join("text").attr("x", (d) => (d.source.x + d.target.x) / 2).attr("y", (d) => (d.source.y + treeTopPad + (d.target.y + treeTopPad)) / 2 - 8).attr("fill", theme.textDim).attr("font-size", 10).attr("font-family", "var(--font-mono)").attr("text-anchor", "middle").attr("opacity", 0.75).text((d) => d.target.data.data.context);
+    }
     const crossGroup = g.append("g").attr("class", "cross-edges");
     crossGroup.selectAll("path").data(crossLinks).join("path").attr("class", "edge cross-edge").attr("d", (e) => {
       const s = posMap.get(e.source);
@@ -25765,7 +25787,7 @@ function SkillGraph({
       const sourceGs = sourceGroup.selectAll("g").data(sourceNodes).join("g").attr("data-node-id", (n) => n.id).attr("data-node-type", (n) => n.type).attr("data-node-status", (n) => n.status).attr("transform", (n) => {
         const p = posMap.get(n.id);
         return `translate(${p.x},${p.y})`;
-      }).style("cursor", "pointer").on("click", (_, n) => onSelect(n.id)).on("mouseenter", (event, n) => {
+      }).style("cursor", "pointer").on("click", (_, n) => onSelect(n)).on("mouseenter", (event, n) => {
         highlightConnected(n, model, posMap, g);
         onHover(n, { x: event.clientX, y: event.clientY });
       }).on("mousemove", (event, n) => onHover(n, { x: event.clientX, y: event.clientY })).on("mouseleave", () => {
@@ -25781,7 +25803,7 @@ function SkillGraph({
     }
     const skillNodeData = hierarchy2.descendants();
     const nodeGroup = g.append("g").attr("class", "skill-nodes");
-    const nodeGs = nodeGroup.selectAll("g").data(skillNodeData).join("g").attr("data-node-id", (d) => d.data.data.id).attr("data-node-type", (d) => d.data.data.type).attr("data-node-status", (d) => d.data.data.status).attr("transform", (d) => `translate(${d.x},${d.y + treeTopPad})`).style("cursor", "pointer").on("click", (_, d) => onSelect(d.data.data.id)).on("mouseenter", (event, d) => {
+    const nodeGs = nodeGroup.selectAll("g").data(skillNodeData).join("g").attr("data-node-id", (d) => d.data.data.id).attr("data-node-type", (d) => d.data.data.type).attr("data-node-status", (d) => d.data.data.status).attr("transform", (d) => `translate(${d.x},${d.y + treeTopPad})`).style("cursor", "pointer").on("click", (_, d) => onSelect(d.data.data)).on("mouseenter", (event, d) => {
       highlightConnected(d.data.data, model, posMap, g);
       onHover(d.data.data, { x: event.clientX, y: event.clientY });
     }).on("mousemove", (event, d) => onHover(d.data.data, { x: event.clientX, y: event.clientY })).on("mouseleave", () => {
@@ -26008,16 +26030,18 @@ function InspectorPanel({ node, onClose, onNavigate }) {
             color: "var(--edge-provenance)"
           }, children: skillName }, skillName)) }) })
         ] }),
-        (node.type === "skill" || node.type === "dependency") && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+        (node.type === "skill" || node.type === "dependency" || node.type === "internal-skill" || node.type === "external-package") && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
           node.version && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: "Version", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: { fontFamily: "var(--font-mono)", fontSize: 12 }, children: node.version }) }),
+          (node.type === "internal-skill" || node.type === "external-package") && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: "Dependency Type", children: node.type === "internal-skill" ? "Internal sub-skill" : "External package" }),
+          node.type === "skill" && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: "Source Material", children: node.sourceSummary || "No bound source material in this graph" }),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: "Explanation", children: node.explanation })
         ] }),
-        node.type === "dependency" && onNavigate && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+        (node.type === "dependency" || node.type === "external-package" || node.type === "internal-skill") && onNavigate && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
           "button",
           {
             "data-testid": "inspector-navigate",
             type: "button",
-            onClick: () => onNavigate(node.packageName),
+            onClick: () => onNavigate(node.navigationTarget || node.packageName),
             style: {
               marginTop: 24,
               width: "100%",
@@ -26323,6 +26347,14 @@ function Tooltip({ node, position }) {
           color: statusColor,
           marginBottom: truncated ? 10 : 0
         }, children: node.type }),
+        node.type === "internal-skill" || node.type === "external-package" ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: {
+          fontFamily: "var(--font-mono)",
+          fontSize: 10,
+          color: "var(--text-faint)",
+          marginBottom: truncated ? 10 : 0,
+          textTransform: "uppercase",
+          letterSpacing: "0.04em"
+        }, children: node.type === "internal-skill" ? "Internal Sub-skill" : "External Package" }) : null,
         truncated && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: {
           fontFamily: "var(--font-body)",
           fontSize: 14,
@@ -26469,9 +26501,14 @@ function App() {
     setTooltipNode(null);
     setTooltipPos(null);
   }, []);
-  const handleGraphClick = (0, import_react2.useCallback)((nodeId) => {
-    setSelectedId((prev) => prev === nodeId ? null : nodeId);
-  }, []);
+  const handleGraphClick = (0, import_react2.useCallback)((node) => {
+    const interaction = resolveWorkbenchNodeInteraction(node, selectedId);
+    if (interaction.action === "navigate") {
+      navigateToSkill(interaction.target);
+      return;
+    }
+    setSelectedId(interaction.target);
+  }, [selectedId]);
   return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
       "header",
@@ -26520,6 +26557,8 @@ function App() {
             /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "var(--status-current)", label: "Current", shape: "dot" }),
             /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "var(--status-stale)", label: "Stale", shape: "dot" }),
             /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "var(--status-affected)", label: "Affected", shape: "ring" }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "#b3c28d", label: "Internal", shape: "ring" }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "#8d9fc2", label: "External", shape: "ring" }),
             /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "var(--edge-requires)", label: "Requires", shape: "line" }),
             /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(LegendItem, { color: "var(--edge-provenance)", label: "Provenance", shape: "dashed" })
           ] })

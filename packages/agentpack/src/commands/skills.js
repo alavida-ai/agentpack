@@ -24,7 +24,9 @@ function renderListResult(result) {
 
   for (const pkg of result.packages) {
     output.write('');
-    output.write(`  ${pkg.packageName}${pkg.packageVersion ? `@${pkg.packageVersion}` : ''}`);
+    const versionLabel = pkg.packageVersion ? `@${pkg.packageVersion}` : '';
+    const updateLabel = pkg.updateAvailable ? `  newer version: ${pkg.availableVersion}` : '';
+    output.write(`  ${pkg.packageName}${versionLabel}${updateLabel}`);
     for (const skillExport of pkg.exports) {
       const marker = skillExport.enabled.length > 0 ? '●' : '○';
       const runtimes = skillExport.enabled.length > 0 ? skillExport.enabled.join(' · ') : '—';

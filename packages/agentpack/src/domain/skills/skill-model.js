@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
 import { compileSkillDocument } from '../compiler/skill-compiler.js';
+import { extractFrontmatter, hasLegacyFrontmatterFields } from '../compiler/skill-document-parser.js';
 import { NotFoundError, ValidationError } from '../../utils/errors.js';
 
 function parseScalar(value) {
@@ -228,13 +229,10 @@ export function buildExpectedRuntimeSkillName(packageName, skillEntry) {
   return moduleName ? `${namespace}:${moduleName}` : namespace;
 }
 
-function isCompilerModeDocument(content) {
-  return content.includes('```agentpack');
-}
-
 function readCompilerSkillExport(skillFile) {
   const content = readFileSync(skillFile, 'utf-8');
-  if (!isCompilerModeDocument(content)) {
+  const { frontmatterText } = extractFrontmatter(content);
+  if (!content.includes('```agentpack') && hasLegacyFrontmatterFields(frontmatterText)) {
     throw new ValidationError(
       'Legacy SKILL.md authoring is not supported. Use an `agentpack` declaration block and explicit body references.',
       {

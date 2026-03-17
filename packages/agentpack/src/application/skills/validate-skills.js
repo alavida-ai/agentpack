@@ -3,15 +3,12 @@ import { buildCompiledStateUseCase } from './build-compiled-state.js';
 import { listAuthoredSkillPackages } from '../../domain/skills/skill-catalog.js';
 import { resolveSkillTarget } from '../../domain/skills/skill-target-resolution.js';
 import { CompilerDiagnosticError } from '../../domain/compiler/compile-diagnostics.js';
+import { extractFrontmatter, hasLegacyFrontmatterFields } from '../../domain/compiler/skill-document-parser.js';
 import { findRepoRoot } from '../../lib/context.js';
 import { validatePackagedSkillExport } from '../../lib/skills.js';
 import { writeCompiledState } from '../../infrastructure/fs/compiled-state-repository.js';
 import { AgentpackError } from '../../utils/errors.js';
 import { collectDiagnosticNextSteps } from '../../domain/skills/workspace-graph.js';
-
-function isCompilerModeDocument(content) {
-  return content.includes('```agentpack');
-}
 
 function toValidationIssue(error) {
   if (error && typeof error.code === 'string' && typeof error.message === 'string') {
@@ -47,8 +44,9 @@ function toValidationIssue(error) {
   };
 }
 
-function compilerValidationResult(buildResult, packageValidation) {
-  const skill = buildResult.artifact.skills[0];
+function compilerValidationResult(buildResult, packageValidation, resolvedExport) {
+  const skill = buildResult.artifact.skills.find((entry) => entry.exportId === resolvedExport.id)
+    || buildResult.artifact.skills[0];
 
   return {
     valid: true,
@@ -154,7 +152,8 @@ function validateResolvedCompilerExport(repoRoot, resolved, options = {}) {
   }
 
   const content = readFileSync(resolved.export.skillFilePath, 'utf-8');
-  if (!isCompilerModeDocument(content)) {
+  const { frontmatterText } = extractFrontmatter(content);
+  if (!content.includes('```agentpack') && hasLegacyFrontmatterFields(frontmatterText)) {
     return compilerGraphFailure(resolved);
   }
 
@@ -182,7 +181,7 @@ function validateResolvedCompilerExport(repoRoot, resolved, options = {}) {
     if (options.persist !== false) {
       writeCompiledState(buildResult.repoRoot, buildResult.artifact);
     }
-    return compilerValidationResult(buildResult, packageValidation);
+    return compilerValidationResult(buildResult, packageValidation, resolved.export);
   } catch (error) {
     if (packageValidation.issues.length > 0) {
       return {
@@ -204,9 +203,12 @@ function validateResolvedCompilerExport(repoRoot, resolved, options = {}) {
   }
 }
 
-function resolveValidationTargets(repoRoot, target) {
+function resolveValidationTargets(repoRoot, target, options = {}) {
   if (target) {
-    const resolved = resolveSkillTarget(repoRoot, target, { includeInstalled: false });
+    const resolved = resolveSkillTarget(repoRoot, target, {
+      includeInstalled: false,
+      cwd: options.cwd,
+    });
     if (resolved.kind === 'package' && resolved.exports.length === 0 && resolved.package.diagnostics?.length > 0) {
       return [{ package: resolved.package, export: null }];
     }
@@ -227,7 +229,7 @@ function resolveValidationTargets(repoRoot, target) {
 export function validateSkillsUseCase(target, options = {}) {
   const cwd = options.cwd || process.cwd();
   const repoRoot = findRepoRoot(cwd);
-  const targets = resolveValidationTargets(repoRoot, target);
+  const targets = resolveValidationTargets(repoRoot, target, { cwd });
   const skills = targets
     .flatMap((resolved) => validateResolvedCompilerExport(
       repoRoot,

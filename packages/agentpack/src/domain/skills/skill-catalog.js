@@ -12,8 +12,44 @@ function isIgnoredEntry(name) {
   return name === '.git' || name === 'node_modules' || name === '.agentpack';
 }
 
+function listInstalledNodeModulesRoots(repoRoot) {
+  const results = [];
+  const stack = [repoRoot];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    let entries = [];
+    try {
+      entries = readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
+      if (entry.name === '.git' || entry.name === '.agentpack') continue;
+
+      const fullPath = join(current, entry.name);
+      if (entry.name === 'node_modules') {
+        results.push(fullPath);
+        continue;
+      }
+
+      stack.push(fullPath);
+    }
+  }
+
+  return [...new Set(results)].sort((a, b) => a.localeCompare(b));
+}
+
 function listSkillPackageDirs(repoRoot, { installed = false } = {}) {
-  const root = installed ? join(repoRoot, 'node_modules') : repoRoot;
+  if (installed) {
+    return listInstalledNodeModulesRoots(repoRoot)
+      .flatMap((root) => listSkillPackageDirs(root, { installed: false }))
+      .sort((a, b) => a.localeCompare(b));
+  }
+
+  const root = repoRoot;
   if (!existsSync(root)) return [];
 
   const stack = [root];

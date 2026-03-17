@@ -1,11 +1,13 @@
 import { existsSync, readdirSync, watch } from 'node:fs';
 import { join } from 'node:path';
 
-export function watchDirectoryTree(rootDir, onChange) {
+export function watchDirectoryTree(rootDir, onChange, {
+  shouldIncludePath = () => true,
+} = {}) {
   const watchers = new Map();
 
   const watchDir = (dirPath) => {
-    if (watchers.has(dirPath) || !existsSync(dirPath)) return;
+    if (watchers.has(dirPath) || !existsSync(dirPath) || !shouldIncludePath(dirPath)) return;
 
     let entries = [];
     try {
@@ -17,6 +19,9 @@ export function watchDirectoryTree(rootDir, onChange) {
     const watcher = watch(dirPath, (_eventType, filename) => {
       if (filename) {
         const changedPath = join(dirPath, String(filename));
+        if (!shouldIncludePath(changedPath)) {
+          return;
+        }
         if (existsSync(changedPath)) {
           watchDir(changedPath);
         }

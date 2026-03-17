@@ -126,20 +126,55 @@ function buildModelFromSelection(repoRoot, selection) {
   });
   const statusMaps = buildStatusMaps(selection, sourceNodes, selectedSkill);
 
-  const dependencyNodes = (selectedSkill.skillImports || []).map((skillImport) => {
-    const dependencyMetadata = resolveDependencyMetadata(repoRoot, skillImport, selection);
-    const type = inferDependencyType(selectedSkill, skillImport.target, selection);
-    const dependencyStatus = statusMaps.staleExports.has(skillImport.target)
-      ? 'stale'
-      : (statusMaps.affectedExports.has(skillImport.target) ? 'affected' : dependencyMetadata.status);
+  // BFS from selected skill: compute depths for all transitive dependencies and collect all requires edges
+  const skillByExportId = new Map(selection.exports.map((skill) => [skill.exportId, skill]));
+  const depthMap = new Map();
+  const primaryContext = new Map();
+  const requiresEdges = [];
+  depthMap.set(selectedSkill.exportId, 0);
+  const bfsQueue = [selectedSkill];
 
-    return {
-      id: skillImport.target,
+  while (bfsQueue.length > 0) {
+    const currentSkill = bfsQueue.shift();
+    const currentDepth = depthMap.get(currentSkill.exportId);
+
+    for (const skillImport of currentSkill.skillImports || []) {
+      requiresEdges.push({
+        source: currentSkill.exportId,
+        target: skillImport.target,
+        kind: 'requires',
+        context: skillImport.context || null,
+        targetType: inferDependencyType(selectedSkill, skillImport.target, selection),
+      });
+
+      if (depthMap.has(skillImport.target)) continue;
+      depthMap.set(skillImport.target, currentDepth + 1);
+      primaryContext.set(skillImport.target, skillImport.context || null);
+
+      const depSkill = skillByExportId.get(skillImport.target);
+      if (depSkill) {
+        bfsQueue.push(depSkill);
+      }
+    }
+  }
+
+  const dependencyNodes = [];
+  for (const [exportId, depth] of depthMap) {
+    if (exportId === selectedSkill.exportId) continue;
+
+    const dependencyMetadata = resolveDependencyMetadata(repoRoot, { target: exportId }, selection);
+    const type = inferDependencyType(selectedSkill, exportId, selection);
+    const dependencyStatus = statusMaps.staleExports.has(exportId)
+      ? 'stale'
+      : (statusMaps.affectedExports.has(exportId) ? 'affected' : dependencyMetadata.status);
+
+    dependencyNodes.push({
+      id: exportId,
       type,
       packageName: dependencyMetadata.packageName,
       navigationTarget: dependencyMetadata.navigationTarget,
       name: dependencyMetadata.name,
-      context: skillImport.context || null,
+      context: primaryContext.get(exportId),
       description: dependencyMetadata.description,
       version: dependencyMetadata.version,
       status: dependencyStatus,
@@ -150,9 +185,9 @@ function buildModelFromSelection(repoRoot, selection) {
           : type === 'internal-skill'
         ? 'Internal sub-skill in the same package'
         : 'External package dependency',
-      depth: 1,
-    };
-  });
+      depth,
+    });
+  }
 
   const { selectedStatus } = statusMaps;
   const selectedNode = {
@@ -192,13 +227,7 @@ function buildModelFromSelection(repoRoot, selection) {
         kind: 'provenance',
       }));
     }),
-    ...dependencyNodes.map((node) => ({
-      source: selectedNode.id,
-      target: node.id,
-      kind: 'requires',
-      context: (selectedSkill.skillImports || []).find((entry) => entry.target === node.id)?.context || null,
-      targetType: node.type,
-    })),
+    ...requiresEdges,
   ];
 
   return {

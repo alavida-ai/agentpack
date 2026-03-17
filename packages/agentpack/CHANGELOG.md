@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- [#75](https://github.com/alavida-ai/agentpack/pull/75) [`ada3ac6`](https://github.com/alavida-ai/agentpack/commit/ada3ac6125d7d46dc08444b39522d64b900220f7) Thanks [@alexandergirardet](https://github.com/alexandergirardet)! - Refactor the compiler and dev runtime pipeline around package-partitioned compiled state and package-local runtime artifacts.
+
+  - compile authored skill packages into package-keyed `.agentpack/compiled.json` state without clobbering other packages
+  - emit package-local `dist/` runtime `SKILL.md` artifacts and materialize from built output instead of raw source
+  - move dev/workbench onto shared build, runtime selection, and materialization services
+  - improve dashboard graph behavior with internal vs external dependency typing, source provenance edges, and correct stale vs affected propagation
+  - support relative validate/build targeting from package directories and nested workspace dependency discovery in `skills list`
+
 ## 0.1.13
 
 ### Patch Changes

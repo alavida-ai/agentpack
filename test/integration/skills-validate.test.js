@@ -29,6 +29,72 @@ describe('agentpack skills validate', () => {
     }
   });
 
+  it('resolves relative sub-skill targets from the current working directory', () => {
+    const repo = createScenario({
+      name: 'skills-validate-relative-target',
+      sources: {
+        'domains/platform/knowledge/cross-domain-integration.md': '# Cross domain\n',
+      },
+      packages: [
+        {
+          relPath: 'domains/platform/skills/monorepo-architecture',
+          packageJson: {
+            name: '@alavida/monorepo-architecture',
+            version: '0.1.0',
+            files: ['SKILL.md', 'skills'],
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida-ai/knowledge-base.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            agentpack: {
+              root: 'skills',
+            },
+          },
+          files: {
+            'SKILL.md': `---
+name: monorepo-architecture
+description: Root.
+---
+
+\`\`\`agentpack
+import integration from skill "@alavida/monorepo-architecture:cross-domain-integration"
+\`\`\`
+
+Use [integration](skill:integration){context="package entrypoint"}.
+`,
+            'skills/cross-domain-integration/SKILL.md': `---
+name: monorepo-architecture:cross-domain-integration
+description: Cross-domain integration.
+---
+
+\`\`\`agentpack
+source integration = "domains/platform/knowledge/cross-domain-integration.md"
+\`\`\`
+
+Use [integration](source:integration){context="source material"}.
+`,
+          },
+        },
+      ],
+    });
+
+    try {
+      const result = runCLI(
+        ['publish', 'validate', 'skills/cross-domain-integration'],
+        { cwd: join(repo.root, 'domains', 'platform', 'skills', 'monorepo-architecture') }
+      );
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.match(result.stdout, /Skill: @alavida\/monorepo-architecture/);
+      assert.match(result.stdout, /Status: valid/);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
   it('returns structured release guidance for a valid packaged skill', () => {
     const repo = createValidateFixture();
 
@@ -669,6 +735,65 @@ Ground this in [our PRD principles](source:principles){context="primary source m
       assert.equal(result.json.skillFile, 'skills/prd-agent/SKILL.md');
       assert.equal(existsSync(join(repo.root, '.agentpack', 'compiled.json')), true);
       assert.equal(existsSync(join(repo.root, '.agentpack', 'build-state.json')), false);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('accepts a no-import named skill in a multi-skill package without an empty agentpack block', () => {
+    const repo = createScenario({
+      name: 'skills-validate-no-import-modern-skill',
+      packages: [
+        {
+          relPath: 'skills/planning-kit',
+          packageJson: {
+            name: '@alavida/planning-kit',
+            version: '1.0.0',
+            repository: {
+              type: 'git',
+              url: 'git+https://github.com/alavida-ai/agentpack.git',
+            },
+            publishConfig: {
+              registry: 'https://npm.pkg.github.com',
+            },
+            files: ['SKILL.md', 'skills'],
+            agentpack: {
+              root: 'skills',
+            },
+          },
+          files: {
+            'SKILL.md': `---
+name: planning-kit
+description: Planning kit.
+---
+
+\`\`\`agentpack
+import kickoff from skill "@alavida/planning-kit:kickoff"
+\`\`\`
+
+Use [kickoff](skill:kickoff){context="package entrypoint"}.
+`,
+            'skills/kickoff/SKILL.md': `---
+name: planning-kit:kickoff
+description: Kickoff workflow.
+---
+
+# Kickoff
+`,
+          },
+        },
+      ],
+    });
+
+    try {
+      const result = runCLIJson(['publish', 'validate', 'skills/planning-kit'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr || result.stdout);
+      assert.equal(result.json.valid, true);
+      assert.equal(
+        result.json.skills.find((skill) => skill.name === 'planning-kit:kickoff').valid,
+        true
+      );
     } finally {
       repo.cleanup();
     }

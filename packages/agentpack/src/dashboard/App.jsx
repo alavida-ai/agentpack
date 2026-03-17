@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react';
 import { fetchWorkbenchModel, runWorkbenchAction } from './lib/api.js';
+import { resolveWorkbenchNodeInteraction } from './lib/navigation.js';
 import { getSkillFromHash, setSkillHash, onHashChange } from './lib/router.js';
 import { SkillGraph } from './components/SkillGraph.jsx';
 import { InspectorPanel } from './components/InspectorPanel.jsx';
@@ -120,9 +121,14 @@ export function App() {
     setTooltipPos(null);
   }, []);
 
-  const handleGraphClick = useCallback((nodeId) => {
-    setSelectedId((prev) => prev === nodeId ? null : nodeId);
-  }, []);
+  const handleGraphClick = useCallback((node) => {
+    const interaction = resolveWorkbenchNodeInteraction(node, selectedId);
+    if (interaction.action === 'navigate') {
+      navigateToSkill(interaction.target);
+      return;
+    }
+    setSelectedId(interaction.target);
+  }, [selectedId]);
 
   return (
     <>
@@ -176,6 +182,8 @@ export function App() {
           <LegendItem color="var(--status-current)" label="Current" shape="dot" />
           <LegendItem color="var(--status-stale)" label="Stale" shape="dot" />
           <LegendItem color="var(--status-affected)" label="Affected" shape="ring" />
+          <LegendItem color="#b3c28d" label="Internal" shape="ring" />
+          <LegendItem color="#8d9fc2" label="External" shape="ring" />
           <LegendItem color="var(--edge-requires)" label="Requires" shape="line" />
           <LegendItem color="var(--edge-provenance)" label="Provenance" shape="dashed" />
         </div>
@@ -278,11 +286,11 @@ export function App() {
       <Tooltip node={tooltipNode} position={tooltipPos} />
 
       {/* Inspector Panel */}
-      <InspectorPanel
-        node={inspectedNode}
-        onClose={() => setSelectedId(null)}
-        onNavigate={navigateToSkill}
-      />
+        <InspectorPanel
+          node={inspectedNode}
+          onClose={() => setSelectedId(null)}
+          onNavigate={navigateToSkill}
+        />
 
       {/* Control Strip */}
       <ControlStrip

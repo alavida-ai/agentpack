@@ -24,16 +24,21 @@ const GLOW_COLORS = {
 
 function nodeRadius(node) {
   if (node.type === 'skill') return 14;
+  if (node.type === 'internal-skill') return 11;
   return 9;
 }
 
 function nodeColor(node) {
   if (node.type === 'source') return SOURCE_COLOR;
+  if (node.type === 'internal-skill') return '#b3c28d';
+  if (node.type === 'external-package') return '#8d9fc2';
   return STATUS_COLORS[node.status] || STATUS_COLORS.unknown;
 }
 
 function isFilled(node) {
   if (node.type === 'source') return true;
+  if (node.type === 'internal-skill') return false;
+  if (node.type === 'external-package') return false;
   return node.status === 'current' || node.status === 'unknown';
 }
 
@@ -306,6 +311,22 @@ export function SkillGraph({
       })
       .style('transition', 'opacity 200ms ease, stroke-width 200ms ease');
 
+    if (labelsVisible) {
+      g.append('g')
+        .attr('class', 'edge-labels')
+        .selectAll('text')
+        .data(hierarchy.links().filter((d) => d.target.data?.data?.context))
+        .join('text')
+        .attr('x', (d) => (d.source.x + d.target.x) / 2)
+        .attr('y', (d) => ((d.source.y + treeTopPad) + (d.target.y + treeTopPad)) / 2 - 8)
+        .attr('fill', theme.textDim)
+        .attr('font-size', 10)
+        .attr('font-family', 'var(--font-mono)')
+        .attr('text-anchor', 'middle')
+        .attr('opacity', 0.75)
+        .text((d) => d.target.data.data.context);
+    }
+
     // ─── CROSS-LINKS (shared deps — dashed green) ───
     const crossGroup = g.append('g').attr('class', 'cross-edges');
     crossGroup.selectAll('path')
@@ -340,7 +361,7 @@ export function SkillGraph({
           return `translate(${p.x},${p.y})`;
         })
         .style('cursor', 'pointer')
-        .on('click', (_, n) => onSelect(n.id))
+        .on('click', (_, n) => onSelect(n))
         .on('mouseenter', (event, n) => {
           highlightConnected(n, model, posMap, g);
           onHover(n, { x: event.clientX, y: event.clientY });
@@ -397,7 +418,7 @@ export function SkillGraph({
       .attr('data-node-status', (d) => d.data.data.status)
       .attr('transform', (d) => `translate(${d.x},${d.y + treeTopPad})`)
       .style('cursor', 'pointer')
-      .on('click', (_, d) => onSelect(d.data.data.id))
+      .on('click', (_, d) => onSelect(d.data.data))
       .on('mouseenter', (event, d) => {
         highlightConnected(d.data.data, model, posMap, g);
         onHover(d.data.data, { x: event.clientX, y: event.clientY });

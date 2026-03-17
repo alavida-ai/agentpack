@@ -154,13 +154,23 @@ export function InspectorPanel({ node, onClose, onNavigate }) {
           )}
 
           {/* Skill/Dependency fields */}
-          {(node.type === 'skill' || node.type === 'dependency') && (
+          {(node.type === 'skill' || node.type === 'dependency' || node.type === 'internal-skill' || node.type === 'external-package') && (
             <>
               {node.version && (
                 <MetaRow label="Version">
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
                     {node.version}
                   </span>
+                </MetaRow>
+              )}
+              {(node.type === 'internal-skill' || node.type === 'external-package') && (
+                <MetaRow label="Dependency Type">
+                  {node.type === 'internal-skill' ? 'Internal sub-skill' : 'External package'}
+                </MetaRow>
+              )}
+              {node.type === 'skill' && (
+                <MetaRow label="Source Material">
+                  {node.sourceSummary || 'No bound source material in this graph'}
                 </MetaRow>
               )}
               <MetaRow label="Explanation">
@@ -170,11 +180,11 @@ export function InspectorPanel({ node, onClose, onNavigate }) {
           )}
 
           {/* Navigate into dependency */}
-          {node.type === 'dependency' && onNavigate && (
+          {(node.type === 'dependency' || node.type === 'external-package' || node.type === 'internal-skill') && onNavigate && (
             <button
               data-testid="inspector-navigate"
               type="button"
-              onClick={() => onNavigate(node.packageName)}
+              onClick={() => onNavigate(node.navigationTarget || node.packageName)}
               style={{
                 marginTop: 24,
                 width: '100%',

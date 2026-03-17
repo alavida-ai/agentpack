@@ -34,12 +34,20 @@ export function buildSkillWorkbenchModel({
   }));
 
   const dependencyNodes = dependencyRecords.map((dependency) => ({
-    id: dependency.packageName,
-    type: 'dependency',
+    id: dependency.exportId || dependency.packageName,
+    type: dependency.type || 'dependency',
     packageName: dependency.packageName,
+    name: dependency.name || dependency.packageName,
+    context: dependency.context || null,
+    version: dependency.version || null,
     status: dependency.status || 'unknown',
     explanation: explainNodeStatus(dependency.status || 'unknown'),
   }));
+
+  const dependencyNodeByTarget = new Map(
+    dependencyNodes.map((dependency) => [dependency.id, dependency])
+  );
+  const selectedImports = selectedSkill.skillImports || [];
 
   return {
     selected: selectedNode,
@@ -50,11 +58,27 @@ export function buildSkillWorkbenchModel({
         target: selectedNode.id,
         kind: 'provenance',
       })),
-      ...dependencyNodes.map((node) => ({
-        source: selectedNode.id,
-        target: node.id,
-        kind: 'requires',
-      })),
+      ...selectedImports.map((skillImport) => {
+        const dependency = dependencyNodeByTarget.get(skillImport.target) || {
+          id: skillImport.target,
+          type: 'dependency',
+        };
+
+        return {
+          source: selectedNode.id,
+          target: dependency.id,
+          kind: 'requires',
+          context: skillImport.context || null,
+          targetType: dependency.type,
+        };
+      }),
+      ...dependencyNodes
+        .filter((node) => selectedImports.length === 0)
+        .map((node) => ({
+          source: selectedNode.id,
+          target: node.id,
+          kind: 'requires',
+        })),
     ],
   };
 }

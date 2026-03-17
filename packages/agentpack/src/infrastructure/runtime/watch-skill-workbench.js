@@ -1,15 +1,20 @@
-import { readFileSync, watch } from 'node:fs';
-import { join } from 'node:path';
-import { compileSkillDocument } from '../../domain/compiler/skill-compiler.js';
+import { existsSync, watch } from 'node:fs';
+import { join, relative } from 'node:path';
+import { watchDirectoryTree } from './watch-tree.js';
+import { isGeneratedPackagePath } from '../../domain/skills/generated-package-paths.js';
 
-export function watchSkillWorkbench(repoRoot, skillDir, onRefresh) {
-  const staticWatchers = [];
+export function watchSkillWorkbench(repoRoot, {
+  packageDir,
+  getSelection,
+  onRefresh,
+} = {}) {
   const sourceWatchers = new Map();
   let timer = null;
 
   const refresh = () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
+      syncSourceWatchers();
       onRefresh();
     }, 50);
   };
@@ -19,21 +24,16 @@ export function watchSkillWorkbench(repoRoot, skillDir, onRefresh) {
       const watcher = watch(pathValue, refresh);
       return watcher;
     } catch {
-      // Ignore paths that cannot be watched for now.
       return null;
     }
   };
 
   const syncSourceWatchers = () => {
-    let compiled;
-    try {
-      compiled = compileSkillDocument(readFileSync(skillFile, 'utf-8'));
-    } catch {
-      return;
-    }
-
+    const selection = getSelection?.() || { sources: [] };
     const nextSources = new Set(
-      Object.values(compiled.sourceBindings).map((source) => join(repoRoot, source.sourcePath))
+      (selection.sources || [])
+        .map((source) => join(repoRoot, source.path))
+        .filter((pathValue) => existsSync(pathValue))
     );
 
     for (const [pathValue, watcher] of sourceWatchers.entries()) {
@@ -49,22 +49,20 @@ export function watchSkillWorkbench(repoRoot, skillDir, onRefresh) {
     }
   };
 
-  const skillFile = join(skillDir, 'SKILL.md');
-  const packageJsonPath = join(skillDir, 'package.json');
-  const skillFileWatcher = watch(skillFile, () => {
-    syncSourceWatchers();
-    refresh();
+  const packageWatcher = watchDirectoryTree(packageDir, refresh, {
+    shouldIncludePath(pathValue) {
+      const relativePath = relative(packageDir, pathValue);
+      return !isGeneratedPackagePath(relativePath);
+    },
   });
-  staticWatchers.push(skillFileWatcher);
-  const packageWatcher = watchPath(packageJsonPath);
-  if (packageWatcher) staticWatchers.push(packageWatcher);
   syncSourceWatchers();
 
   return {
     close() {
       clearTimeout(timer);
-      for (const watcher of staticWatchers) watcher.close();
+      packageWatcher.close();
       for (const watcher of sourceWatchers.values()) watcher.close();
+      sourceWatchers.clear();
     },
   };
 }

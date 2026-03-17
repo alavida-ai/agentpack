@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, lstatSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createScenario, readMaterializationState, runCLIJson } from './fixtures.js';
 
@@ -24,9 +24,11 @@ description: Create strong PRDs.
 ---
 
 \`\`\`agentpack
+import prd from skill "@alavida/prd-development"
 source principles = "domains/product/knowledge/prd-principles.md"
 \`\`\`
 
+Use [the PRD method](skill:prd){context="for structuring and reviewing the PRD"}.
 Ground this in [our PRD principles](source:principles){context="primary source material"}.
 `,
       },
@@ -52,12 +54,25 @@ describe('agentpack skills materialize', () => {
       assert.equal(materializationState.adapters.claude.length, 1);
       assert.equal(materializationState.adapters.agents.length, 1);
 
+      const distSkillPath = join(repo.root, 'skills', 'prd-agent', 'dist', 'prd-agent', 'SKILL.md');
+      assert.equal(existsSync(distSkillPath), true);
+      const distSkill = readFileSync(distSkillPath, 'utf-8');
+      assert.doesNotMatch(distSkill, /```agentpack/);
+      assert.doesNotMatch(distSkill, /^---$/m);
+      assert.match(distSkill, /primary source material/i);
+      assert.match(distSkill, /Use \/prd-development for structuring and reviewing the PRD\./i);
+      assert.match(distSkill, /# Principles/);
+
       const claudePath = join(repo.root, '.claude', 'skills', 'prd-agent');
       const agentsPath = join(repo.root, '.agents', 'skills', 'prd-agent');
       assert.equal(existsSync(claudePath), true);
       assert.equal(existsSync(agentsPath), true);
       assert.equal(lstatSync(claudePath).isSymbolicLink(), true);
       assert.equal(lstatSync(agentsPath).isSymbolicLink(), true);
+      assert.equal(
+        readFileSync(join(claudePath, 'SKILL.md'), 'utf-8'),
+        distSkill
+      );
     } finally {
       repo.cleanup();
     }

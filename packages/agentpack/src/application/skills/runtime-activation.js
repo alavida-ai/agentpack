@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { findRepoRoot } from '../../lib/context.js';
-import { normalizeDisplayPath } from '../../domain/skills/skill-model.js';
+import { normalizeDisplayPath, readPackageMetadata } from '../../domain/skills/skill-model.js';
+import { findPackageDirByName } from '../../domain/skills/package-discovery.js';
 import {
   buildInstalledWorkspaceGraph,
   resolveInstalledSkillTarget,
@@ -8,13 +9,12 @@ import {
 import { readInstallState, writeInstallState } from '../../infrastructure/fs/install-state-repository.js';
 import {
   readMaterializationState,
-  writeMaterializationState,
 } from '../../infrastructure/fs/materialization-state-repository.js';
 import { inspectMaterializedSkills } from '../../infrastructure/runtime/inspect-materialized-skills.js';
 import {
-  ensureSkillLink,
   removePathIfExists,
 } from '../../infrastructure/runtime/materialize-skills.js';
+import { applyRuntimeMaterializationPlanUseCase } from './apply-runtime-materialization.js';
 import { ValidationError } from '../../utils/errors.js';
 
 const SUPPORTED_RUNTIMES = ['agents', 'claude'];
@@ -242,55 +242,6 @@ function buildDesiredMaterializations(repoRoot, directSelections) {
   };
 }
 
-function applyMaterializationPlan(repoRoot, adapters) {
-  const desiredTargets = new Set();
-  const previousState = readMaterializationState(repoRoot);
-  const previousTargets = new Set(
-    Object.values(previousState?.adapters || {})
-      .flatMap((entries) => entries || [])
-      .map((entry) => entry.target)
-      .filter(Boolean)
-  );
-
-  for (const runtime of SUPPORTED_RUNTIMES) {
-    for (const entry of adapters[runtime] || []) {
-      desiredTargets.add(entry.target);
-
-      ensureSkillLink(
-        repoRoot,
-        RUNTIME_DIRS[runtime],
-        entry.runtimeName,
-        entry.skillDirPath,
-        normalizeDisplayPath
-      );
-    }
-  }
-
-  for (const target of previousTargets) {
-    if (desiredTargets.has(target)) continue;
-    removePathIfExists(join(repoRoot, target));
-  }
-
-  writeMaterializationState(repoRoot, {
-    version: 1,
-    generated_at: new Date().toISOString(),
-    adapters: Object.fromEntries(
-      Object.entries(adapters).map(([runtime, entries]) => [
-        runtime,
-        (entries || []).map((entry) => ({
-          packageName: entry.packageName,
-          skillName: entry.skillName,
-          runtimeName: entry.runtimeName,
-          sourceSkillPath: entry.sourceSkillPath,
-          sourceSkillFile: entry.sourceSkillFile,
-          target: entry.target,
-          mode: entry.mode,
-        })),
-      ])
-    ),
-  });
-}
-
 function mutateSelections(currentSelections, targetKey, runtimes, mode) {
   const nextSelections = cloneSelections(currentSelections);
 
@@ -322,15 +273,54 @@ function sortPackages(packages) {
   return packages.sort((a, b) => a.packageName.localeCompare(b.packageName));
 }
 
+function parseSimpleSemver(version) {
+  const match = String(version).match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (!match) return null;
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
+  };
+}
+
+function compareSimpleSemver(left, right) {
+  const a = parseSimpleSemver(left);
+  const b = parseSimpleSemver(right);
+  if (!a || !b) return 0;
+  if (a.major !== b.major) return a.major - b.major;
+  if (a.minor !== b.minor) return a.minor - b.minor;
+  return a.patch - b.patch;
+}
+
+function classifyUpdateType(currentVersion, availableVersion) {
+  const current = parseSimpleSemver(currentVersion);
+  const next = parseSimpleSemver(availableVersion);
+  if (!current || !next) return 'unknown';
+  if (next.major !== current.major) return 'major';
+  if (next.minor !== current.minor) return 'minor';
+  if (next.patch !== current.patch) return 'patch';
+  return 'none';
+}
+
+function resolveAvailablePackageVersion(repoRoot, packageName, discoveryRoot = process.env.AGENTPACK_DISCOVERY_ROOT) {
+  const root = discoveryRoot || repoRoot;
+  const availableDir = findPackageDirByName(root, packageName);
+  if (!availableDir) return null;
+  return readPackageMetadata(availableDir).packageVersion;
+}
+
 export function listInstalledSkillsUseCase({ cwd = process.cwd() } = {}) {
   const repoRoot = findRepoRoot(cwd);
   const graph = buildInstalledWorkspaceGraph(repoRoot);
   const packages = sortPackages(
     Object.values(graph.packages).map((pkg) => ({
+      availableVersion: resolveAvailablePackageVersion(repoRoot, pkg.packageName),
       packageName: pkg.packageName,
       packageVersion: pkg.packageVersion,
       packagePath: pkg.packagePath,
       primaryExport: pkg.primaryExport,
+      updateAvailable: false,
+      updateType: null,
       exports: pkg.exports
         .map((id) => graph.exports[id])
         .filter(Boolean)
@@ -342,7 +332,21 @@ export function listInstalledSkillsUseCase({ cwd = process.cwd() } = {}) {
           enabled: entry.enabled,
           isPrimary: entry.isPrimary,
         })),
-    }))
+    })).map((pkg) => {
+      const updateAvailable = Boolean(
+        pkg.packageVersion
+        && pkg.availableVersion
+        && compareSimpleSemver(pkg.availableVersion, pkg.packageVersion) > 0
+      );
+
+      return {
+        ...pkg,
+        updateAvailable,
+        updateType: updateAvailable
+          ? classifyUpdateType(pkg.packageVersion, pkg.availableVersion)
+          : null,
+      };
+    })
   );
 
   return {
@@ -364,7 +368,7 @@ export function enableInstalledSkillsUseCase(target, {
   const nextSelections = mutateSelections(readDirectSelections(repoRoot), selectionKey, runtimeSelection, 'enable');
   const { adapters } = buildDesiredMaterializations(repoRoot, nextSelections);
 
-  applyMaterializationPlan(repoRoot, adapters);
+  applyRuntimeMaterializationPlanUseCase(repoRoot, adapters);
   writeDirectSelections(repoRoot, nextSelections);
 
   return {
@@ -387,7 +391,7 @@ export function disableInstalledSkillsUseCase(target, {
   const nextSelections = mutateSelections(readDirectSelections(repoRoot), selectionKey, runtimeSelection, 'disable');
   const { adapters } = buildDesiredMaterializations(repoRoot, nextSelections);
 
-  applyMaterializationPlan(repoRoot, adapters);
+  applyRuntimeMaterializationPlanUseCase(repoRoot, adapters);
   writeDirectSelections(repoRoot, nextSelections);
 
   return {

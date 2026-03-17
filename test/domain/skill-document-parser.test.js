@@ -69,17 +69,18 @@ describe('skill document parser', () => {
     ]);
   });
 
-  it('rejects a missing agentpack declarations block', () => {
-    assert.throws(
-      () => parseSkillDocument(`---
+  it('allows a missing agentpack declarations block when the skill has no declarations', () => {
+    const parsed = parseSkillDocument(`---
 name: prd-agent
 description: Create strong PRDs.
 ---
 
-Use [the PRD method](skill:prd){context="for structuring and reviewing the PRD"}.
-`),
-      /agentpack declarations block/i
-    );
+Use plain instructions with no imports or sources.
+`);
+
+    assert.deepEqual(parsed.imports, []);
+    assert.deepEqual(parsed.sources, []);
+    assert.deepEqual(parsed.references, []);
   });
 
   it('rejects duplicate aliases across imports and source bindings', () => {

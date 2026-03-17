@@ -64,4 +64,69 @@ describe('buildSkillWorkbenchModel', () => {
       'Changed since recorded build-state'
     );
   });
+
+  it('annotates dependency edges with context and distinguishes internal exports from external packages', () => {
+    const result = buildSkillWorkbenchModel({
+      repoRoot: '/repo',
+      selectedSkill: {
+        exportId: '@alavida/planning-kit',
+        name: 'planning-kit',
+        packageName: '@alavida/planning-kit',
+        skillFile: '/repo/skills/planning-kit/SKILL.md',
+        sources: [],
+        sourceBindings: [],
+        skillImports: [
+          {
+            target: '@alavida/planning-kit:kickoff',
+            context: 'package entrypoint',
+          },
+          {
+            target: '@alavida/research',
+            context: 'evidence-backed planning',
+          },
+        ],
+      },
+      dependencyRecords: [
+        {
+          packageName: '@alavida/planning-kit',
+          exportId: '@alavida/planning-kit:kickoff',
+          name: 'planning-kit:kickoff',
+          type: 'internal-skill',
+          status: 'current',
+        },
+        {
+          packageName: '@alavida/research',
+          exportId: '@alavida/research',
+          name: 'research',
+          type: 'external-package',
+          status: 'current',
+          version: '1.2.0',
+        },
+      ],
+      sourceStatuses: new Map(),
+      selectedStatus: 'current',
+    });
+
+    assert.equal(result.nodes.find((node) => node.id === '@alavida/planning-kit:kickoff').type, 'internal-skill');
+    assert.equal(result.nodes.find((node) => node.id === '@alavida/research').type, 'external-package');
+    assert.deepEqual(
+      result.edges.filter((edge) => edge.kind === 'requires'),
+      [
+        {
+          source: '@alavida/planning-kit',
+          target: '@alavida/planning-kit:kickoff',
+          kind: 'requires',
+          context: 'package entrypoint',
+          targetType: 'internal-skill',
+        },
+        {
+          source: '@alavida/planning-kit',
+          target: '@alavida/research',
+          kind: 'requires',
+          context: 'evidence-backed planning',
+          targetType: 'external-package',
+        },
+      ]
+    );
+  });
 });

@@ -59,6 +59,18 @@ export function Tooltip({ node, position }) {
       }}>
         {node.type}
       </div>
+      {node.type === 'internal-skill' || node.type === 'external-package' ? (
+        <div style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          color: 'var(--text-faint)',
+          marginBottom: truncated ? 10 : 0,
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+        }}>
+          {node.type === 'internal-skill' ? 'Internal Sub-skill' : 'External Package'}
+        </div>
+      ) : null}
       {truncated && (
         <div style={{
           fontFamily: 'var(--font-body)',

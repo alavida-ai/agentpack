@@ -63,6 +63,9 @@ function buildExportResolution(pkg, skillExport, source) {
 export function resolveSkillTarget(repoRoot, target, options = {}) {
   const context = loadSkillTargetContext(repoRoot, options);
   const { packages, authoredGraph } = context;
+  const targetBaseDir = options.cwd && isAbsolute(options.cwd)
+    ? options.cwd
+    : repoRoot;
 
   if (typeof target !== 'string' || target.length === 0) {
     throw new NotFoundError('skill not found', {
@@ -71,7 +74,7 @@ export function resolveSkillTarget(repoRoot, target, options = {}) {
     });
   }
 
-  const absoluteTarget = isAbsolute(target) ? target : resolve(repoRoot, target);
+  const absoluteTarget = isAbsolute(target) ? target : resolve(targetBaseDir, target);
 
   if (authoredGraph?.targets[target]) {
     const ref = authoredGraph.targets[target];

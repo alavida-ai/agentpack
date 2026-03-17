@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { addPackagedSkill, createAuthoredMultiSkillFixture, createTempRepo, runCLI, runCLIJson, startCLI } from './fixtures.js';
+import { addPackagedSkill, createAuthoredMultiSkillFixture, createTempRepo, readPathState, runCLI, runCLIJson, startCLI } from './fixtures.js';
 import { startSkillDev } from '../../packages/agentpack/src/lib/skills.js';
 
 async function waitUntil(predicate, timeoutMs = 1000) {
@@ -228,18 +228,46 @@ describe('agentpack skills dev', () => {
     }
   });
 
-  it('supports targeting one export inside an authored multi-skill package by skill directory', async () => {
+  it('supports targeting one export inside an authored multi-skill package by skill directory', () => {
     const repo = createAuthoredMultiSkillFixture('skills-dev-multi-skill-dir');
 
     try {
-      const session = startCLI(['author', 'dev', 'workbenches/planning-kit/skills/kickoff'], { cwd: repo.root });
-      await session.waitForOutput(/Linked Skill: planning-kit:kickoff/);
+      const session = startSkillDev('workbenches/planning-kit/skills/kickoff', {
+        cwd: repo.root,
+        dashboard: false,
+      });
 
       const claudePath = join(repo.root, '.claude', 'skills', 'planning-kit:kickoff');
       assert.ok(existsSync(claudePath));
+      assert.match(readPathState(claudePath).target || '', /workbenches\/planning-kit\/dist\/planning-kit:kickoff$/);
+      assert.equal(existsSync(join(repo.root, '.claude', 'skills', 'planning-kit:recap')), false);
 
-      await session.stop();
-      await waitUntil(() => !existsSync(claudePath));
+      session.close();
+      assert.equal(existsSync(claudePath), false);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('writes the same authored materialization state shape as author materialize for dev closure exposure', () => {
+    const repo = createAuthoredMultiSkillFixture('skills-dev-materialization-shape');
+
+    try {
+      const session = startSkillDev('workbenches/planning-kit/skills/kickoff', {
+        cwd: repo.root,
+        dashboard: false,
+      });
+
+      const state = JSON.parse(
+        readFileSync(join(repo.root, '.agentpack', 'materialization-state.json'), 'utf-8')
+      );
+
+      assert.equal(state.adapters.claude.length, 1);
+      assert.equal(state.adapters.agents.length, 1);
+      assert.equal(state.adapters.claude[0].runtimeName, 'planning-kit:kickoff');
+      assert.match(state.adapters.claude[0].source, /workbenches\/planning-kit\/dist\/planning-kit:kickoff/);
+
+      session.close();
     } finally {
       repo.cleanup();
     }
@@ -257,6 +285,33 @@ describe('agentpack skills dev', () => {
 
       await session.stop();
       await waitUntil(() => !existsSync(claudePath));
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('refuses to start dev when the owning multi-skill package has an invalid sibling export', () => {
+    const repo = createAuthoredMultiSkillFixture('skills-dev-invalid-sibling-package');
+
+    try {
+      writeFileSync(
+        join(repo.root, 'workbenches', 'planning-kit', 'skills', 'recap', 'SKILL.md'),
+        `---
+name: recap
+description: Invalid sibling.
+---
+
+# Recap
+`
+      );
+
+      const result = runCLIJson(['author', 'dev', '--no-dashboard', 'workbenches/planning-kit/skills/kickoff'], {
+        cwd: repo.root,
+      });
+
+      assert.equal(result.exitCode, 2);
+      assert.equal(result.json.error, 'package_invalid');
+      assert.match(result.json.message, /package is invalid/i);
     } finally {
       repo.cleanup();
     }

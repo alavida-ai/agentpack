@@ -80,23 +80,22 @@ source architecture from "workspace/active/architecture/agonda-monorepo/CONTINUE
 }
 
 describe('compiler-first authored workspace', () => {
-  it('inspects the package root as the primary export', () => {
+  it('surfaces package-invalid when inspecting a package root with an invalid sibling export', () => {
     const repo = createCompilerFirstRepo('compiler-first-package-root-inspect');
 
     try {
       const result = runCLIJson(['author', 'inspect', 'workspace/active/architecture/agonda-monorepo'], { cwd: repo.root });
 
-      assert.equal(result.exitCode, 0, result.stderr);
-      assert.equal(result.json.kind, 'export');
-      assert.equal(result.json.packageName, '@alavida/monorepo-architecture');
-      assert.equal(result.json.name, 'monorepo-architecture');
-      assert.equal(result.json.skillFile, 'workspace/active/architecture/agonda-monorepo/SKILL.md');
+      assert.equal(result.exitCode, 2, result.stderr);
+      assert.equal(result.json.error, 'package_invalid');
+      assert.equal(result.json.details.packageName, '@alavida/monorepo-architecture');
+      assert.match(JSON.stringify(result.json), /broken-skill/);
     } finally {
       repo.cleanup();
     }
   });
 
-  it('validates the entire package root and reports invalid named exports explicitly', () => {
+  it('validates the entire package root and reports package-invalid plus invalid exports explicitly', () => {
     const repo = createCompilerFirstRepo('compiler-first-package-root-validate');
 
     try {
@@ -104,23 +103,24 @@ describe('compiler-first authored workspace', () => {
 
       assert.equal(result.exitCode, 2, result.stderr || result.stdout);
       assert.equal(result.json.count, 4);
-      assert.equal(result.json.invalidCount, 1);
+      assert.equal(result.json.invalidCount, 4);
       assert.match(JSON.stringify(result.json), /broken-skill/);
+      assert.match(JSON.stringify(result.json), /package_invalid/);
       assert.match(JSON.stringify(result.json), /invalid_agentpack_declaration/);
     } finally {
       repo.cleanup();
     }
   });
 
-  it('resolves a named export by canonical id', () => {
+  it('surfaces package-invalid for canonical export inspection when the package has an invalid sibling export', () => {
     const repo = createCompilerFirstRepo('compiler-first-canonical-id');
 
     try {
       const result = runCLIJson(['author', 'inspect', '@alavida/monorepo-architecture:monorepo-overview'], { cwd: repo.root });
 
-      assert.equal(result.exitCode, 0, result.stderr);
-      assert.equal(result.json.kind, 'export');
-      assert.equal(result.json.name, 'monorepo-architecture:monorepo-overview');
+      assert.equal(result.exitCode, 2, result.stderr);
+      assert.equal(result.json.error, 'package_invalid');
+      assert.match(JSON.stringify(result.json), /broken-skill/);
     } finally {
       repo.cleanup();
     }

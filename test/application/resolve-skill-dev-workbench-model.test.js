@@ -264,6 +264,104 @@ Use [kickoff](skill:kickoff){context="entrypoint sub-skill"}.
     }
   });
 
+  it('includes transitive dependencies with correct depths and edges', () => {
+    const sourcePath = 'domains/knowledge/market-data.md';
+    const repo = createScenario({
+      name: 'resolve-skill-dev-workbench-model-transitive-deps',
+      sources: {
+        [sourcePath]: '# Market Data\n',
+      },
+      packages: [
+        {
+          relPath: 'skills/pipeline',
+          packageJson: {
+            name: '@alavida/pipeline',
+            version: '1.0.0',
+            files: ['SKILL.md', 'skills'],
+            agentpack: {
+              root: 'skills',
+            },
+          },
+          files: {
+            'SKILL.md': `---
+name: pipeline
+description: Root pipeline.
+---
+
+\`\`\`agentpack
+import orchestrate from skill "@alavida/pipeline:orchestrate"
+\`\`\`
+
+Use [orchestrate](skill:orchestrate){context="orchestration layer"}.
+`,
+            'skills/orchestrate/SKILL.md': `---
+name: pipeline:orchestrate
+description: Orchestration module.
+---
+
+\`\`\`agentpack
+import analyse from skill "@alavida/pipeline:analyse"
+\`\`\`
+
+Use [analyse](skill:analyse){context="analysis step"}.
+`,
+            'skills/analyse/SKILL.md': `---
+name: pipeline:analyse
+description: Analysis module.
+---
+
+\`\`\`agentpack
+source marketData = "${sourcePath}"
+\`\`\`
+
+Ground this in [market data](source:marketData){context="primary data source"}.
+`,
+          },
+        },
+      ],
+    });
+
+    try {
+      buildCompiledStateUseCase('skills/pipeline', { cwd: repo.root, persist: true });
+
+      const model = resolveSkillDevWorkbenchModel({
+        repoRoot: repo.root,
+        defaultTarget: 'skills/pipeline',
+      });
+
+      assert.equal(model.selected.id, '@alavida/pipeline');
+
+      // Transitive dependency at depth 2 must be visible
+      const orchestrateNode = model.nodes.find((n) => n.id === '@alavida/pipeline:orchestrate');
+      const analyseNode = model.nodes.find((n) => n.id === '@alavida/pipeline:analyse');
+      assert.ok(orchestrateNode, 'depth-1 dependency orchestrate must be in the model');
+      assert.ok(analyseNode, 'depth-2 transitive dependency analyse must be in the model');
+      assert.equal(orchestrateNode.depth, 1);
+      assert.equal(analyseNode.depth, 2);
+
+      // Requires edges must chain: pipeline → orchestrate → analyse
+      const requiresEdges = model.edges.filter((e) => e.kind === 'requires');
+      assert.ok(
+        requiresEdges.some((e) => e.source === '@alavida/pipeline' && e.target === '@alavida/pipeline:orchestrate'),
+        'edge from root to orchestrate must exist'
+      );
+      assert.ok(
+        requiresEdges.some((e) => e.source === '@alavida/pipeline:orchestrate' && e.target === '@alavida/pipeline:analyse'),
+        'edge from orchestrate to analyse must exist'
+      );
+
+      // Source at the leaf must be visible via provenance
+      const sourceNode = model.nodes.find((n) => n.path === sourcePath);
+      assert.ok(sourceNode, 'source file bound to transitive dependency must be in the model');
+      assert.ok(
+        model.edges.some((e) => e.kind === 'provenance' && e.source === `source:${sourcePath}` && e.target === '@alavida/pipeline:analyse'),
+        'provenance edge from source to transitive dependency must exist'
+      );
+    } finally {
+      repo.cleanup();
+    }
+  });
+
   it('marks directly impacted sub-skills stale and the selected root affected', () => {
     const sourcePath = 'domains/platform/knowledge/commercial-model.md';
     const repo = createScenario({

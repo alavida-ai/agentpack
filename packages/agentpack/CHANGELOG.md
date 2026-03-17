@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+### Patch Changes
+
+- [#78](https://github.com/alavida-ai/agentpack/pull/78) [`35d43fd`](https://github.com/alavida-ai/agentpack/commit/35d43fd64059c0348326ef743e4ebfdf5262cb71) Thanks [@alexandergirardet](https://github.com/alexandergirardet)! - Fix dashboard to visualize full transitive skill graph dependencies instead of only direct imports
+
 ## 0.2.0
 
 ### Minor Changes

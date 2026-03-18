@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+### Patch Changes
+
+- [#83](https://github.com/alavida-ai/agentpack/pull/83) [`ec5c133`](https://github.com/alavida-ai/agentpack/commit/ec5c1336e462b229efc8d562510b217c4e00b526) Thanks [@alexandergirardet](https://github.com/alexandergirardet)! - Preserve frontmatter in generated runtime `SKILL.md` files, materialize bound sources into runtime `references/` sidecars instead of inlining them, and clean up inline skill callsite rendering in bundled runtime output.
+
 ## 0.2.1
 
 ### Patch Changes

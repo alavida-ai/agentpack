@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3
+
+### Patch Changes
+
+- [#86](https://github.com/alavida-ai/agentpack/pull/86) [`9426f96`](https://github.com/alavida-ai/agentpack/commit/9426f96761b8ea5120bd74ac07fd3fb104935eb8) Thanks [@alexandergirardet](https://github.com/alexandergirardet)! - Fix external package navigation in the `author dev` workbench, replace authored package discovery config with the root-plus-`skills/` convention, and add top-level `agentpack materialize` for consumer runtime activation from installed workspace dependencies.
+
 ## 0.2.2
 
 ### Patch Changes

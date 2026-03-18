@@ -82,13 +82,13 @@ npm resolves the full dependency graph and places the package in `node_modules`.
 
 </Step>
 
-<Step title="Enable the skill for agent discovery">
+<Step title="Materialize installed skills for agent discovery">
 
 ```bash
-agentpack skills enable @acme/brand-copywriting
+agentpack materialize
 ```
 
-agentpack reads the installed package's skill exports from `node_modules` and materializes them into `.claude/skills/` and `.agents/skills/` where agents can discover them. The enabled-target state is recorded in `.agentpack/install.json`.
+agentpack reads the workspace package's dependencies, resolves installed skill packages from `node_modules`, and materializes their exported runtime skills into `.claude/skills/` and `.agents/skills/`. The selected direct-package state is recorded in `.agentpack/install.json`.
 
 </Step>
 
@@ -98,7 +98,7 @@ agentpack reads the installed package's skill exports from `node_modules` and ma
 agentpack skills list
 ```
 
-Shows installed packages, their exports, and which runtimes they are enabled for.
+Shows installed packages, their exports, and which runtimes they are currently materialized for.
 
 </Step>
 
@@ -132,10 +132,10 @@ Use npm to check for newer versions of installed skill packages.
 
 ```bash
 npm install @acme/brand-copywriting@latest
-agentpack skills enable @acme/brand-copywriting
+agentpack materialize
 ```
 
-Update the package with npm, then re-enable to refresh the materialized skills.
+Update the package with npm, then rerun materialization to refresh the runtime links.
 
 </Step>
 
@@ -160,7 +160,7 @@ Disable the skill first to clean up materialized links, then remove the package 
 | Publish | `npm publish` | Skill author |
 | Configure registry | Create `.npmrc` | Consumer team (once) |
 | Install | `npm install <package>` | Consumer |
-| Enable | `agentpack skills enable <package>` | Consumer |
+| Materialize | `agentpack materialize` | Consumer |
 | Check health | `agentpack skills status` | Consumer |
 | Check updates | `npm outdated` | Consumer |
 | Update | `npm install <package>@latest` | Consumer |
@@ -189,7 +189,7 @@ Your skill package's `package.json` needs a root `SKILL.md` as the primary expor
 }
 ```
 
-See [package.json Reference](/schema-package-json) for all fields including multi-skill packages with `agentpack.root`.
+See [package.json Reference](/schema-package-json) for all fields including multi-skill packages that expose named exports from a `skills/` subtree.
 
 ## CI publishing
 
@@ -203,15 +203,15 @@ For automated publishing in GitHub Actions:
     npm publish -w domains/brand/skills/copywriting
 ```
 
-For automated install and enable in CI:
+For automated install and materialization in CI:
 
 ```yaml .github/workflows/enable-skills.yml
-- name: Install and enable skills
+- name: Install and materialize skills
   env:
     NODE_AUTH_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
   run: |
     npm install @acme/brand-copywriting
-    agentpack skills enable @acme/brand-copywriting
+    agentpack materialize
 ```
 
 <Note>

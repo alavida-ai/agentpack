@@ -61,7 +61,7 @@ Default flow:
 
 Key idea:
 
-- root `SKILL.md` is the primary export; `agentpack.root` declares the directory for named exports
+- root `SKILL.md` is the primary export; `skills/**/SKILL.md` provides named exports
 - `import ... from skill "@scope/package"` is the source of truth for skill-to-skill edges
 - `package.json.dependencies` is the managed cross-package mirror
 - `publish validate` and `author dev` sync dependencies automatically
@@ -95,8 +95,8 @@ Use when the skill is already published and the user wants it available in anoth
 Default flow:
 
 - `npm install <package-name>`
+- `agentpack materialize`
 - `agentpack skills list`
-- `agentpack skills enable <package-name>`
 
 Do not prescribe `author dev` here unless the user is authoring locally.
 

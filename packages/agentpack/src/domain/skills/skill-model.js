@@ -198,7 +198,6 @@ export function readPackageMetadata(packageDir) {
     files: Array.isArray(pkg.files) ? pkg.files : null,
     repository: pkg.repository || null,
     publishConfigRegistry: pkg.publishConfig?.registry || null,
-    skillRoot: typeof pkg.agentpack?.root === 'string' ? pkg.agentpack.root : null,
     exportedSkills: pkg.agentpack?.skills || null,
   };
 }
@@ -250,6 +249,7 @@ function readCompilerSkillExport(skillFile) {
     description: compiled.metadata.description,
     sources: Object.values(compiled.sourceBindings).map((entry) => entry.sourcePath),
     requires: Object.values(compiled.skillImports).map((entry) => entry.target),
+    compiled,
     status: metadata.status,
     replacement: metadata.replacement,
     message: metadata.message,
@@ -287,9 +287,9 @@ function listNestedSkillFiles(rootDir) {
 }
 
 export function listPackageSkillEntries(packageDir) {
-  const packageMetadata = readPackageMetadata(packageDir);
   const entries = [];
   const rootSkillFile = join(packageDir, 'SKILL.md');
+  const skillRootDir = join(packageDir, 'skills');
 
   if (existsSync(rootSkillFile)) {
     entries.push({
@@ -300,29 +300,28 @@ export function listPackageSkillEntries(packageDir) {
     });
   }
 
-  if (packageMetadata.skillRoot) {
-    const skillRootDir = join(packageDir, packageMetadata.skillRoot);
-    for (const skillFile of listNestedSkillFiles(skillRootDir)) {
-      entries.push({
-        kind: 'named',
-        skillDir: dirname(skillFile),
-        skillFile,
-        relativeSkillFile: relative(packageDir, skillFile).split('\\').join('/'),
-      });
-    }
+  for (const skillFile of listNestedSkillFiles(skillRootDir)) {
+    entries.push({
+      kind: 'named',
+      skillDir: dirname(skillFile),
+      skillFile,
+      relativeSkillFile: relative(packageDir, skillFile).split('\\').join('/'),
+    });
   }
 
   return entries;
 }
 
-export function readInstalledSkillExports(packageDir) {
+export function readAuthoredSkillExports(packageDir) {
   const exports = [];
   const skillEntries = listPackageSkillEntries(packageDir);
   const packageMetadata = readPackageMetadata(packageDir);
 
   for (const entry of skillEntries) {
     const metadata = readCompilerSkillExport(entry.skillFile);
-    const moduleName = entry.kind === 'primary' ? inferPackageRuntimeNamespace(packageMetadata.packageName) : basename(entry.skillDir);
+    const moduleName = entry.kind === 'primary'
+      ? inferPackageRuntimeNamespace(packageMetadata.packageName)
+      : basename(entry.skillDir);
     exports.push({
       declaredName: metadata.name,
       name: moduleName,
@@ -339,6 +338,7 @@ export function readInstalledSkillExports(packageDir) {
       message: metadata.message,
       wraps: metadata.wraps,
       overrides: metadata.overrides,
+      compiled: metadata.compiled,
       skillDir: entry.skillDir,
       skillFile: entry.skillFile,
       relativeSkillFile: entry.relativeSkillFile,
@@ -347,4 +347,175 @@ export function readInstalledSkillExports(packageDir) {
   }
 
   return exports.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function buildInstalledExportId(packageName, runtimeName) {
+  const namespace = inferPackageRuntimeNamespace(packageName);
+  if (!packageName || !runtimeName || !namespace) return null;
+  if (runtimeName === namespace) return packageName;
+  if (runtimeName.startsWith(`${namespace}:`)) {
+    return `${packageName}:${runtimeName.slice(namespace.length + 1)}`;
+  }
+  return `${packageName}:${runtimeName}`;
+}
+
+function readInstalledSkillManifest(packageDir) {
+  const manifestPath = join(packageDir, 'dist', 'agentpack.json');
+  if (!existsSync(manifestPath)) return null;
+  return JSON.parse(readFileSync(manifestPath, 'utf-8'));
+}
+
+function resolveManifestRepoPath(repoRoot, packageDir, pathValue) {
+  if (!pathValue) return null;
+  return normalizeDisplayPath(repoRoot, join(packageDir, pathValue));
+}
+
+function mapManifestCompiled(repoRoot, packageDir, compiled) {
+  if (!compiled) return null;
+
+  const mapSourcePath = (pathValue) => resolveManifestRepoPath(repoRoot, packageDir, pathValue);
+
+  return {
+    skillImports: Object.fromEntries(
+      Object.entries(compiled.skillImports || {}).map(([key, value]) => [key, { ...value }])
+    ),
+    sourceBindings: Object.fromEntries(
+      Object.entries(compiled.sourceBindings || {}).map(([key, value]) => [key, {
+        ...value,
+        sourcePath: mapSourcePath(value.sourcePath),
+      }])
+    ),
+    occurrences: (compiled.occurrences || []).map((entry) => ({
+      ...entry,
+      target: entry.kind === 'source' ? mapSourcePath(entry.target) : entry.target,
+    })),
+    edges: (compiled.edges || []).map((edge) => ({
+      ...edge,
+      target: edge.kind === 'source_usage' ? mapSourcePath(edge.target) : edge.target,
+    })),
+  };
+}
+
+function readInstalledManifestExports(repoRoot, packageDir) {
+  const packageMetadata = readPackageMetadata(packageDir);
+  const manifest = readInstalledSkillManifest(packageDir);
+  if (!manifest?.exports || !packageMetadata.packageName) return [];
+
+  return manifest.exports.map((entry) => {
+    const runtimeDir = entry.runtimeDir || `dist/${entry.runtimeName}`;
+    const runtimeFile = entry.runtimeFile || `${runtimeDir}/SKILL.md`;
+    const exportId = entry.id || buildInstalledExportId(packageMetadata.packageName, entry.runtimeName);
+    const skillDir = join(packageDir, runtimeDir);
+    const skillFile = join(packageDir, runtimeFile);
+
+    return {
+      declaredName: entry.declaredName || entry.runtimeName,
+      name: entry.moduleName || (entry.isPrimary ? inferPackageRuntimeNamespace(packageMetadata.packageName) : entry.runtimeName),
+      moduleName: entry.moduleName || null,
+      runtimeName: entry.runtimeName,
+      description: entry.description || null,
+      sources: (entry.compiled?.sourceBindings ? Object.values(entry.compiled.sourceBindings) : []).map((source) =>
+        resolveManifestRepoPath(repoRoot, packageDir, source.sourcePath)
+      ),
+      requires: (entry.compiled?.skillImports ? Object.values(entry.compiled.skillImports) : []).map((skillImport) => skillImport.target),
+      status: entry.status || null,
+      replacement: entry.replacement || null,
+      message: entry.message || null,
+      wraps: entry.wraps || null,
+      overrides: entry.overrides || [],
+      compiled: mapManifestCompiled(repoRoot, packageDir, entry.compiled),
+      skillDir,
+      skillFile,
+      relativeSkillFile: runtimeFile,
+      isPrimary: Boolean(entry.isPrimary),
+      id: exportId,
+    };
+  }).sort((a, b) => a.runtimeName.localeCompare(b.runtimeName));
+}
+
+function hasDistSkillDirectories(packageDir) {
+  const distDir = join(packageDir, 'dist');
+  if (!existsSync(distDir)) return false;
+
+  let entries = [];
+  try {
+    entries = readdirSync(distDir, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+
+  return entries.some((entry) => {
+    if (!entry.isDirectory()) return false;
+    return existsSync(join(distDir, entry.name, 'SKILL.md'));
+  });
+}
+
+function readInstalledDistDirectoryExports(packageDir) {
+  const packageMetadata = readPackageMetadata(packageDir);
+  const namespace = inferPackageRuntimeNamespace(packageMetadata.packageName);
+  const distDir = join(packageDir, 'dist');
+  if (!packageMetadata.packageName || !namespace || !existsSync(distDir)) return [];
+
+  let entries = [];
+  try {
+    entries = readdirSync(distDir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  return entries
+    .filter((entry) => entry.isDirectory() && existsSync(join(distDir, entry.name, 'SKILL.md')))
+    .map((entry) => {
+      const runtimeName = entry.name;
+      const skillDir = join(distDir, runtimeName);
+      const skillFile = join(skillDir, 'SKILL.md');
+      const metadata = parseSkillFrontmatterFile(skillFile);
+      const isPrimary = runtimeName === namespace;
+      const moduleName = isPrimary && namespace
+        ? namespace
+        : (runtimeName.startsWith(`${namespace}:`) ? runtimeName.slice(namespace.length + 1) : runtimeName);
+
+      return {
+        declaredName: metadata.name,
+        name: moduleName,
+        moduleName,
+        runtimeName,
+        description: metadata.description,
+        sources: [],
+        requires: [],
+        status: metadata.status,
+        replacement: metadata.replacement,
+        message: metadata.message,
+        wraps: metadata.wraps,
+        overrides: metadata.overrides,
+        compiled: null,
+        skillDir,
+        skillFile,
+        relativeSkillFile: relative(packageDir, skillFile).split('\\').join('/'),
+        isPrimary,
+        id: buildInstalledExportId(packageMetadata.packageName, runtimeName),
+      };
+    })
+    .sort((a, b) => a.runtimeName.localeCompare(b.runtimeName));
+}
+
+export function hasInstalledSkillArtifacts(packageDir) {
+  return Boolean(readInstalledSkillManifest(packageDir))
+    || hasDistSkillDirectories(packageDir)
+    || listPackageSkillEntries(packageDir).length > 0;
+}
+
+export function readInstalledSkillExports(repoRoot, packageDir) {
+  const fromManifest = readInstalledManifestExports(repoRoot, packageDir);
+  if (fromManifest.length > 0) return fromManifest;
+
+  const fromDistDirectories = readInstalledDistDirectoryExports(packageDir);
+  if (fromDistDirectories.length > 0) return fromDistDirectories;
+
+  return readAuthoredSkillExports(packageDir).map((entry) => ({
+    ...entry,
+    id: entry.isPrimary
+      ? readPackageMetadata(packageDir).packageName
+      : buildCanonicalSkillRequirement(readPackageMetadata(packageDir).packageName, entry.moduleName),
+  }));
 }

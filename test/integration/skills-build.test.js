@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createScenario, readCompiledState, runCLIJson } from './fixtures.js';
 
@@ -57,6 +58,15 @@ Ground this in [our PRD principles](source:principles){context="primary source m
       assert.equal(compiled.packages['@alavida/prd-agent'].edges.length, 2);
       assert.equal(compiled.packages['@alavida/prd-agent'].occurrences.length, 2);
       assert.equal(compiled.packages['@alavida/prd-agent'].skills[0].skillFile, 'skills/prd-agent/SKILL.md');
+      const runtimeManifestPath = join(repo.root, 'skills', 'prd-agent', 'dist', 'agentpack.json');
+      assert.equal(existsSync(runtimeManifestPath), true);
+      const runtimeManifest = JSON.parse(readFileSync(runtimeManifestPath, 'utf-8'));
+      assert.equal(runtimeManifest.packageName, '@alavida/prd-agent');
+      assert.equal(runtimeManifest.exports[0].runtimeName, 'prd-agent');
+      assert.equal(
+        runtimeManifest.exports[0].compiled.sourceBindings.principles.sourcePath,
+        'dist/prd-agent/references/prd-principles.md'
+      );
       assert.equal(compiledPath(repo.root), join(repo.root, '.agentpack', 'compiled.json'));
     } finally {
       repo.cleanup();

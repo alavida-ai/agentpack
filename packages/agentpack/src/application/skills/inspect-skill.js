@@ -68,8 +68,8 @@ function assertNoLegacyAuthoredTarget(target, { cwd = process.cwd() } = {}) {
 }
 
 export function inspectSkillUseCase(target, options = {}) {
+  assertNoLegacyAuthoredTarget(target, options);
   const compiled = inspectCompiledSkillUseCase(target, options);
   if (compiled) return compiled;
-  assertNoLegacyAuthoredTarget(target, options);
   return inspectAuthoredSkillUseCase(target, options);
 }

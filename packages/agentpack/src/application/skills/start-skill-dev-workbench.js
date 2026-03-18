@@ -1,12 +1,14 @@
 import { join } from 'node:path';
 import { hashFile } from '../../domain/compiler/source-hash.js';
 import { readCompiledState } from '../../infrastructure/fs/compiled-state-repository.js';
+import { writeCompiledPackageState } from '../../infrastructure/fs/compiled-state-repository.js';
 import { startSkillDevWorkbenchServer } from '../../infrastructure/runtime/skill-dev-workbench-server.js';
 import { openBrowser } from '../../infrastructure/runtime/open-browser.js';
 import { watchSkillWorkbench } from '../../infrastructure/runtime/watch-skill-workbench.js';
 import { runSkillWorkbenchAction } from './run-skill-workbench-action.js';
 import { resolveSingleSkillTarget } from '../../domain/skills/skill-target-resolution.js';
 import { computeRuntimeSelectionUseCase } from './compute-runtime-selection.js';
+import { buildCompiledPackageArtifact } from './build-compiled-state.js';
 
 function explainCompiledSourceStatus(status) {
   if (status === 'changed') return 'Changed since compiled state was built';
@@ -76,7 +78,7 @@ function resolveDependencyMetadata(repoRoot, skillImport, selection) {
   }
 
   try {
-    const resolved = resolveSingleSkillTarget(repoRoot, skillImport.target, { includeInstalled: false });
+    const resolved = resolveSingleSkillTarget(repoRoot, skillImport.target, { includeInstalled: true });
     return {
       packageName: resolved.package.packageName,
       name: resolved.export.runtimeName || resolved.export.declaredName || resolved.export.name,
@@ -237,8 +239,18 @@ function buildModelFromSelection(repoRoot, selection) {
   };
 }
 
+function ensureWorkbenchPackageCompiled(repoRoot, target) {
+  const resolved = resolveSingleSkillTarget(repoRoot, target, { includeInstalled: true, cwd: repoRoot });
+  const compiledState = readCompiledState(repoRoot);
+  if (!compiledState?.packages?.[resolved.package.packageName]) {
+    const artifact = buildCompiledPackageArtifact(repoRoot, resolved, { emitRuntime: false });
+    writeCompiledPackageState(repoRoot, artifact);
+  }
+  return resolved;
+}
+
 function resolveWorkbenchSelection(repoRoot, target) {
-  const resolved = resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false, cwd: repoRoot });
+  const resolved = ensureWorkbenchPackageCompiled(repoRoot, target);
   return computeRuntimeSelectionUseCase({
     cwd: repoRoot,
     mode: 'closure',

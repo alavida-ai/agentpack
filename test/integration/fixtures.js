@@ -184,7 +184,7 @@ description: Foundation primer.
     packageJson: {
       name: '@alavida-ai/foundation-primer',
       version: '1.0.0',
-      files: ['SKILL.md'],
+      files: ['dist'],
     },
   });
 
@@ -192,13 +192,7 @@ description: Foundation primer.
     packageJson: {
       name: '@alavida-ai/prd-development',
       version: '0.1.1',
-      files: ['SKILL.md', 'skills'],
-      agentpack: {
-        skills: {
-          'proto-persona': { path: 'skills/proto-persona/SKILL.md' },
-          'problem-statement': { path: 'skills/problem-statement/SKILL.md' },
-        },
-      },
+      files: ['dist'],
       dependencies: {
         '@alavida-ai/foundation-primer': 'file:../foundation-primer',
       },
@@ -219,7 +213,7 @@ Use [proto persona](skill:protoPersona){context="subskill dependency for definin
       {
         path: 'skills/proto-persona',
         skillMd: `---
-name: proto-persona
+name: prd-development:proto-persona
 description: Proto persona.
 ---
 
@@ -233,7 +227,7 @@ Use [foundation primer](skill:foundationPrimer){context="supporting methodology 
       {
         path: 'skills/problem-statement',
         skillMd: `---
-name: problem-statement
+name: prd-development:problem-statement
 description: Problem statement.
 ---
 
@@ -246,6 +240,16 @@ Use [proto persona](skill:protoPersona){context="subskill dependency for refinin
       },
     ],
   });
+
+  const foundationBuild = runCLIJson(['author', 'build', 'packages/foundation-primer'], { cwd: source.root });
+  if (foundationBuild.exitCode !== 0) {
+    throw new Error(`Failed to build fixture package foundation-primer: ${foundationBuild.stderr || foundationBuild.stdout}`);
+  }
+
+  const prdBuild = runCLIJson(['author', 'build', 'packages/prd-development'], { cwd: source.root });
+  if (prdBuild.exitCode !== 0) {
+    throw new Error(`Failed to build fixture package prd-development: ${prdBuild.stderr || prdBuild.stdout}`);
+  }
 
   return {
     source,

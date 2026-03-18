@@ -1,6 +1,6 @@
 ---
 name: multi-skill-packages
-description: Use when deciding how to structure multi-skill packages, configure agentpack.root for named export discovery, and manage dependency edges between exported skills in agentpack.
+description: Use when deciding how to structure multi-skill packages, use the root-plus-skills convention for named export discovery, and manage dependency edges between exported skills in agentpack.
 type: core
 library: agentpack
 library_version: "0.1.10"
@@ -14,7 +14,7 @@ sources:
 
 ## Setup
 
-A multi-skill package exports more than one skill from a single npm package. The root `SKILL.md` is the primary export. Additional named exports each have their own `SKILL.md` in a separate directory under the path declared in `agentpack.root`. Named exports are discovered from the filesystem automatically -- there is no explicit export table.
+A multi-skill package exports more than one skill from a single npm package. The root `SKILL.md` is the primary export. Additional named exports each have their own `SKILL.md` under `skills/`. Named exports are discovered from the filesystem automatically -- there is no explicit export table.
 
 ### Minimal multi-skill package layout
 
@@ -39,9 +39,6 @@ A multi-skill package exports more than one skill from a single npm package. The
   "version": "1.0.0",
   "description": "Brand copywriting and editorial skill package.",
   "files": ["SKILL.md", "skills/"],
-  "agentpack": {
-    "root": "skills"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/acme-corp/knowledge-base.git"
@@ -52,7 +49,7 @@ A multi-skill package exports more than one skill from a single npm package. The
 }
 ```
 
-The `agentpack.root` tells the toolchain where to discover named exports. Each subdirectory containing a `SKILL.md` becomes a named export. The `name` field in each `SKILL.md` frontmatter determines the export name.
+The `skills/` subtree tells the toolchain where to discover named exports. Each subdirectory containing a `SKILL.md` becomes a named export. The `name` field in each `SKILL.md` frontmatter determines the export name.
 
 ### SKILL.md structure for an exported skill
 
@@ -92,15 +89,9 @@ Split into separate packages when:
 
 The heuristic: if you would put the code in the same npm library, put the skills in the same package. If you would publish separate libraries, publish separate skill packages.
 
-### The `agentpack.root` export discovery
+### The `skills/` export discovery
 
-The `agentpack.root` field in `package.json` tells the toolchain which directory to scan for named exports. Every subdirectory under that path that contains a `SKILL.md` becomes a named export automatically.
-
-```json
-"agentpack": {
-  "root": "skills"
-}
-```
+The toolchain scans `skills/**/SKILL.md` for named exports automatically.
 
 Rules:
 
@@ -267,7 +258,7 @@ Correct: split by domain boundary.
 
 A mega-package forces every consumer to install every skill even when they only need one domain. Version bumps in unrelated skills force unnecessary upgrades across all consumers.
 
-### CRITICAL Missing `agentpack.root` for named exports
+### CRITICAL Missing `skills/` exports for named modules
 
 Wrong:
 
@@ -292,7 +283,7 @@ Correct:
 }
 ```
 
-Without `agentpack.root`, the toolchain only discovers the root `SKILL.md` as the primary export. Named exports under subdirectories are invisible unless `agentpack.root` points to the directory that contains them.
+Without `skills/**/SKILL.md`, the toolchain only discovers the root `SKILL.md` as the primary export. Named exports under other subdirectories are invisible unless they live under `skills/`.
 
 Source: docs/schema-package-json.mdx
 
@@ -324,7 +315,7 @@ Source: docs/schema-package-json.mdx
 
 ### HIGH Mismatched directory name and SKILL.md name
 
-The directory name under `agentpack.root` is cosmetic -- the export name comes from the `name` field in `SKILL.md` frontmatter. But keeping them aligned avoids confusion:
+The directory name under `skills/` is cosmetic -- the export name comes from the `name` field in `SKILL.md` frontmatter. But keeping them aligned avoids confusion:
 
 Wrong:
 

@@ -132,7 +132,7 @@ export function buildInstallRecord(repoRoot, packageDir, directTargetMap, {
 } = {}) {
   const packageMetadata = readPackageMetadata(packageDir);
   if (!packageMetadata.packageName) return null;
-  const exportedSkills = readInstalledSkillExports(packageDir);
+  const exportedSkills = readInstalledSkillExports(repoRoot, packageDir);
   if (exportedSkills.length === 0) return null;
   const materializations = [];
   const skills = [];

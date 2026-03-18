@@ -37,7 +37,7 @@ function dedupeSourceFiles(sourceFiles) {
   return [...byPath.values()].sort((a, b) => a.path.localeCompare(b.path));
 }
 
-function buildPackageArtifact(repoRoot, resolved, { emitRuntime = false } = {}) {
+export function buildCompiledPackageArtifact(repoRoot, resolved, { emitRuntime = false } = {}) {
   const pkg = resolved.package;
   if (!pkg || pkg.status === 'invalid') {
     throw buildInvalidPackageError(pkg);
@@ -114,7 +114,7 @@ function countPackageEntries(packageArtifact) {
 export function buildCompiledStateUseCase(target, { cwd = process.cwd(), persist = true } = {}) {
   const repoRoot = findRepoRoot(cwd);
   const resolved = resolveSkillTarget(repoRoot, target, { includeInstalled: false, cwd });
-  const artifact = buildPackageArtifact(repoRoot, resolved, { emitRuntime: persist });
+  const artifact = buildCompiledPackageArtifact(repoRoot, resolved, { emitRuntime: persist });
 
   if (persist) {
     writeCompiledPackageState(repoRoot, artifact);

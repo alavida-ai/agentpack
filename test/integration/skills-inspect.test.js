@@ -125,7 +125,7 @@ sources:
           packageJson: {
             name: '@alavida-ai/planning-kit',
             version: '0.1.0',
-            files: ['skills'],
+            files: ['SKILL.md', 'skills'],
             repository: {
               type: 'git',
               url: 'git+https://github.com/alavida-ai/agentpack.git',
@@ -133,11 +133,19 @@ sources:
             publishConfig: {
               registry: 'https://npm.pkg.github.com',
             },
-            agentpack: {
-              root: 'skills',
-            },
           },
           files: {
+            'SKILL.md': `---
+name: planning-kit
+description: Planning root workflow.
+---
+
+\`\`\`agentpack
+import kickoff from skill "@alavida-ai/planning-kit:kickoff"
+\`\`\`
+
+Use [kickoff](skill:kickoff){context="primary entrypoint"}.
+`,
             'skills/kickoff/SKILL.md': `---
 name: planning-kit:kickoff
 description: Plan the kickoff.
@@ -177,7 +185,7 @@ Use [the recap checklist](source:checklist){context="source material for recap p
       assert.equal(result.json.kind, 'package');
       assert.deepEqual(
         result.json.exports.map((entry) => entry.name).sort(),
-        ['planning-kit:kickoff', 'planning-kit:recap']
+        ['planning-kit', 'planning-kit:kickoff', 'planning-kit:recap']
       );
     } finally {
       repo.cleanup();
@@ -193,7 +201,7 @@ Use [the recap checklist](source:checklist){context="source material for recap p
           packageJson: {
             name: '@alavida-ai/planning-kit',
             version: '0.1.0',
-            files: ['skills'],
+            files: ['SKILL.md', 'skills'],
             repository: {
               type: 'git',
               url: 'git+https://github.com/alavida-ai/agentpack.git',
@@ -201,11 +209,19 @@ Use [the recap checklist](source:checklist){context="source material for recap p
             publishConfig: {
               registry: 'https://npm.pkg.github.com',
             },
-            agentpack: {
-              root: 'skills',
-            },
           },
           files: {
+            'SKILL.md': `---
+name: planning-kit
+description: Planning root workflow.
+---
+
+\`\`\`agentpack
+import kickoff from skill "@alavida-ai/planning-kit:kickoff"
+\`\`\`
+
+Use [kickoff](skill:kickoff){context="primary entrypoint"}.
+`,
             'skills/kickoff/SKILL.md': `---
 name: planning-kit:kickoff
 description: Plan the kickoff.

@@ -62,7 +62,7 @@ function buildNextSteps(error, displayPath) {
     return [{
       action: 'edit_file',
       path: displayPath,
-      reason: 'Replace `agentpack.skills` with `agentpack.root`, then discover named exports from the filesystem.',
+      reason: 'Replace legacy export tables with a root `SKILL.md` and optional `skills/**/SKILL.md` exports.',
     }];
   }
 
@@ -221,32 +221,32 @@ function buildPackageNode(repoRoot, packageDir) {
   };
 
   const skillEntries = listPackageSkillEntries(packageDir);
-  if (skillEntries.length === 0 && packageMetadata.exportedSkills) {
-    packageNode.status = 'invalid';
-    packageNode.diagnostics = [
+  const packageDiagnostics = [];
+
+  const exportNodes = skillEntries.map((entry) => compileExportNode(repoRoot, packageNode, entry));
+  const hasPrimaryExport = skillEntries.some((entry) => entry.kind === 'primary');
+  if (!hasPrimaryExport && exportNodes.length > 0) {
+    packageDiagnostics.push(
       buildDiagnostic(
         repoRoot,
         'package',
         join(packageDir, 'package.json'),
         new AgentpackError(
-          'package.json agentpack.skills export tables are no longer supported. Use agentpack.root and discover skills from the package filesystem.',
-          { code: 'legacy_export_table_not_supported' }
+          'skill packages with named exports must define a root SKILL.md primary export at the package root.',
+          { code: 'missing_root_skill_file' }
         ),
         { packageName: packageNode.packageName }
-      ),
-    ];
-    return {
-      packageNode,
-      exportNodes: [],
-    };
+      )
+    );
   }
 
-  const exportNodes = skillEntries.map((entry) => compileExportNode(repoRoot, packageNode, entry));
   const primaryExport = exportNodes.find((entry) => entry.isPrimary) || null;
   packageNode.primaryExport = primaryExport?.id || null;
   packageNode.exports = exportNodes.map((entry) => entry.id).sort((a, b) => a.localeCompare(b));
-  packageNode.status = exportNodes.some((entry) => entry.status === 'invalid') ? 'invalid' : 'valid';
-  packageNode.diagnostics = exportNodes.flatMap((entry) => entry.diagnostics);
+  packageNode.status = exportNodes.some((entry) => entry.status === 'invalid') || packageDiagnostics.length > 0
+    ? 'invalid'
+    : 'valid';
+  packageNode.diagnostics = [...packageDiagnostics, ...exportNodes.flatMap((entry) => entry.diagnostics)];
 
   return {
     packageNode,

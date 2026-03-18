@@ -732,7 +732,6 @@ export function validatePackagedSkillExport(repoRoot, pkg, skillExport, options 
   const packageMetadata = readPackageMetadata(pkg.packageDir);
   const issues = [];
   const metadataStatus = skillExport.lifecycleStatus || null;
-  const rootSkillFilePath = join(pkg.packageDir, 'SKILL.md');
 
   if (!packageMetadata.packageName) {
     issues.push({
@@ -752,18 +751,6 @@ export function validatePackagedSkillExport(repoRoot, pkg, skillExport, options 
     issues.push({
       code: 'skill_not_published',
       message: `package.json files does not include ${skillExport.relativeSkillFile}`,
-    });
-  }
-
-  if (
-    packageMetadata.skillRoot
-    && packageMetadata.files?.some((entry) => normalizeFilesFieldEntry(entry) === 'SKILL.md')
-    && !existsSync(rootSkillFilePath)
-  ) {
-    issues.push({
-      code: 'missing_root_skill_file',
-      message: 'package.json files includes SKILL.md but the root SKILL.md is missing',
-      path: normalizeDisplayPath(repoRoot, rootSkillFilePath),
     });
   }
 

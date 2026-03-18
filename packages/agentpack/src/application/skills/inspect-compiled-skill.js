@@ -7,10 +7,6 @@ import { buildInvalidPackageError } from '../../domain/skills/workspace-graph.js
 import { buildCompiledStateUseCase } from './build-compiled-state.js';
 import { ValidationError } from '../../utils/errors.js';
 
-function isCompilerModeDocument(content) {
-  return content.includes('```agentpack');
-}
-
 function matchesCompiledSkill(repoRoot, target, compiledSkill) {
   let resolved;
 
@@ -53,7 +49,7 @@ export function inspectCompiledSkillUseCase(target, { cwd = process.cwd() } = {}
   }
 
   const content = readFileSync(resolved.export.skillFilePath, 'utf-8');
-  if (!isCompilerModeDocument(content)) {
+  if (!content.includes('```agentpack')) {
     throw new ValidationError(
       'Legacy SKILL.md authoring is not supported. Use an `agentpack` declaration block and explicit body references.',
       {

@@ -47,12 +47,6 @@ describe('agentpack skills list', () => {
             name: '@alavida-ai/prd-development',
             version: '0.2.0',
             files: ['SKILL.md', 'skills'],
-            agentpack: {
-              skills: {
-                'proto-persona': { path: 'skills/proto-persona/SKILL.md' },
-                'problem-statement': { path: 'skills/problem-statement/SKILL.md' },
-              },
-            },
             dependencies: {
               '@alavida-ai/foundation-primer': 'file:../foundation-primer',
             },

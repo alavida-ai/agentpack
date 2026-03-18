@@ -229,10 +229,7 @@ Wrong: one package with skills from unrelated domains.
 
 ```json
 {
-  "name": "@acme/everything",
-  "agentpack": {
-    "root": "skills"
-  }
+  "name": "@acme/everything"
 }
 ```
 
@@ -241,18 +238,12 @@ Correct: split by domain boundary.
 ```json
 // @acme/brand package
 {
-  "name": "@acme/brand",
-  "agentpack": {
-    "root": "skills"
-  }
+  "name": "@acme/brand"
 }
 
 // @acme/engineering package
 {
-  "name": "@acme/engineering",
-  "agentpack": {
-    "root": "skills"
-  }
+  "name": "@acme/engineering"
 }
 ```
 
@@ -276,14 +267,11 @@ Correct:
 {
   "name": "@acme/brand",
   "version": "1.0.0",
-  "files": ["SKILL.md", "skills/"],
-  "agentpack": {
-    "root": "skills"
-  }
+  "files": ["SKILL.md", "skills/"]
 }
 ```
 
-Without `skills/**/SKILL.md`, the toolchain only discovers the root `SKILL.md` as the primary export. Named exports under other subdirectories are invisible unless they live under `skills/`.
+Without `SKILL.md` and `skills/` in `files`, the toolchain only discovers the root `SKILL.md` as the primary export. Named exports under other subdirectories are invisible unless they live under `skills/`.
 
 Source: docs/schema-package-json.mdx
 
@@ -359,10 +347,7 @@ Wrong:
 
 ```json
 {
-  "files": ["README.md"],
-  "agentpack": {
-    "root": "skills"
-  }
+  "files": ["README.md"]
 }
 ```
 
@@ -370,10 +355,7 @@ Correct:
 
 ```json
 {
-  "files": ["SKILL.md", "skills/"],
-  "agentpack": {
-    "root": "skills"
-  }
+  "files": ["SKILL.md", "skills/"]
 }
 ```
 

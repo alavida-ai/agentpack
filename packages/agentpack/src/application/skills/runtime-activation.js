@@ -76,32 +76,12 @@ function cloneSelections(selections) {
   );
 }
 
-function inferLegacySelections(state) {
-  const selections = {};
-
-  for (const [packageName, install] of Object.entries(state?.installs || {})) {
-    if (!install?.direct) continue;
-    const runtimes = new Set();
-
-    for (const materialization of install.materializations || []) {
-      if (typeof materialization?.target !== 'string') continue;
-      if (materialization.target.startsWith('.claude/')) runtimes.add('claude');
-      if (materialization.target.startsWith('.agents/')) runtimes.add('agents');
-    }
-
-    selections[packageName] = [...(runtimes.size > 0 ? runtimes : new Set(SUPPORTED_RUNTIMES))]
-      .sort((a, b) => a.localeCompare(b));
-  }
-
-  return selections;
-}
-
 function readDirectSelections(repoRoot) {
   const state = readInstallState(repoRoot);
   if (state?.enabled_targets && typeof state.enabled_targets === 'object' && !Array.isArray(state.enabled_targets)) {
     return cloneSelections(state.enabled_targets);
   }
-  return inferLegacySelections(state);
+  return {};
 }
 
 function writeDirectSelections(repoRoot, selections) {

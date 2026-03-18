@@ -166,11 +166,6 @@ describe('compiler-first authored workspace', () => {
             name: '@alavida/monorepo-architecture',
             version: '0.1.0',
             files: ['skills'],
-            agentpack: {
-              skills: {
-                'monorepo-overview': { path: 'skills/monorepo-overview/SKILL.md' },
-              },
-            },
           },
           files: {
             'skills/monorepo-overview/SKILL.md': validNamedSkillDocument(

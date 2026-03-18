@@ -25,13 +25,6 @@ describe('scenario builder', () => {
           packageJson: {
             name: '@alavida/prd-development',
             version: '0.1.0',
-            agentpack: {
-              primarySkill: 'prd-development',
-              skills: {
-                'prd-development': { path: 'skills/prd-development/SKILL.md' },
-                'proto-persona': { path: 'skills/proto-persona/SKILL.md' },
-              },
-            },
           },
           skills: [
             {

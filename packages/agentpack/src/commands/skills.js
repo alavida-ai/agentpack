@@ -5,13 +5,7 @@ import {
   inspectInstalledSkillsStatusUseCase,
   listInstalledSkillsUseCase,
 } from '../application/skills/runtime-activation.js';
-import { ValidationError } from '../utils/errors.js';
 import { output } from '../utils/output.js';
-
-function hideCommand(command) {
-  command._hidden = true;
-  return command;
-}
 
 function renderListResult(result) {
   output.write('Installed skill packages:');
@@ -88,27 +82,6 @@ function renderStatusResult(result) {
   }
 }
 
-function removedPackageManagementError(command, npmCommand) {
-  return new ValidationError(`agentpack no longer manages package ${command}`, {
-    code: 'package_management_removed',
-    suggestion: `Use npm to ${command} packages, then rerun the relevant skills command.`,
-    nextSteps: [{
-      action: 'run_command',
-      reason: `Use npm for package ${command}.`,
-      example: {
-        command: npmCommand,
-      },
-    }],
-  });
-}
-
-function removedCommandError(command, replacement) {
-  return new ValidationError(`agentpack skills ${command} has been removed`, {
-    code: 'command_removed',
-    suggestion: replacement,
-  });
-}
-
 export function skillsCommand() {
   const cmd = new Command('skills')
     .description('List and activate installed skills from node_modules');
@@ -180,52 +153,6 @@ export function skillsCommand() {
 
       renderStatusResult(result);
     });
-
-  const installCmd = cmd
-    .command('install')
-    .argument('[target]', 'Deprecated package target')
-    .action((target) => {
-      const packageTarget = target || '<package>';
-      throw removedPackageManagementError('installation', `npm install ${packageTarget}`);
-    });
-  hideCommand(installCmd);
-
-  const uninstallCmd = cmd
-    .command('uninstall')
-    .argument('[target]', 'Deprecated package target')
-    .action((target) => {
-      const packageTarget = target || '<package>';
-      throw removedPackageManagementError('removal', `npm uninstall ${packageTarget}`);
-    });
-  hideCommand(uninstallCmd);
-
-  const registryCmd = cmd
-    .command('registry')
-    .action(() => {
-      throw removedCommandError('registry', 'Use npm config, .npmrc, or npm login for registry setup.');
-    });
-  hideCommand(registryCmd);
-
-  const envCmd = cmd
-    .command('env')
-    .action(() => {
-      throw removedCommandError('env', 'Use `agentpack skills list` for inventory and `agentpack skills status` for runtime health.');
-    });
-  hideCommand(envCmd);
-
-  const missingCmd = cmd
-    .command('missing')
-    .action(() => {
-      throw removedCommandError('missing', 'Use `agentpack skills status` for runtime health and drift.');
-    });
-  hideCommand(missingCmd);
-
-  const outdatedCmd = cmd
-    .command('outdated')
-    .action(() => {
-      throw removedCommandError('outdated', 'Use npm to inspect package versions and updates.');
-    });
-  hideCommand(outdatedCmd);
 
   return cmd;
 }

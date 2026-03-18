@@ -198,7 +198,7 @@ export function readPackageMetadata(packageDir) {
     files: Array.isArray(pkg.files) ? pkg.files : null,
     repository: pkg.repository || null,
     publishConfigRegistry: pkg.publishConfig?.registry || null,
-    exportedSkills: pkg.agentpack?.skills || null,
+    exportedSkills: null,
   };
 }
 

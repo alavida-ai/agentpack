@@ -138,15 +138,7 @@ export function addPackagedSkill(root, relPath, { skillMd, packageJson }) {
 export function addMultiSkillPackage(root, relPath, { packageJson, rootSkillMd = null, skills }) {
   const packageDir = join(root, relPath);
   mkdirSync(packageDir, { recursive: true });
-  const normalizedPackageJson = JSON.parse(JSON.stringify(packageJson));
-  if (normalizedPackageJson.agentpack?.skills && !normalizedPackageJson.agentpack.root) {
-    normalizedPackageJson.agentpack = {
-      ...normalizedPackageJson.agentpack,
-      root: 'skills',
-    };
-    delete normalizedPackageJson.agentpack.skills;
-  }
-  writeFileSync(join(packageDir, 'package.json'), JSON.stringify(normalizedPackageJson, null, 2) + '\n');
+  writeFileSync(join(packageDir, 'package.json'), JSON.stringify(packageJson, null, 2) + '\n');
   if (typeof rootSkillMd === 'string') {
     writeFileSync(join(packageDir, 'SKILL.md'), ensureAgentpackBlock(rootSkillMd));
   }

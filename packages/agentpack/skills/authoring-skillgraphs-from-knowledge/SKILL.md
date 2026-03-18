@@ -31,9 +31,6 @@ import provost from skill "@alavida/methodology:gary-provost"
   "name": "@alavida/value-copywriting",
   "version": "1.0.0",
   "files": ["SKILL.md", "skills"],
-  "agentpack": {
-    "root": "skills"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alavida-ai/knowledge-base.git"
@@ -135,9 +132,6 @@ Correct:
   "name": "@alavida/value-copywriting",
   "version": "1.0.0",
   "files": ["SKILL.md", "skills"],
-  "agentpack": {
-    "root": "skills"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alavida-ai/knowledge-base.git"

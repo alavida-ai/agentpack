@@ -42,7 +42,7 @@ function listAuthoredPackageDirs(repoRoot) {
 
     const packageMetadata = readPackageMetadata(current);
     if (!packageMetadata.packageName) continue;
-    if (listPackageSkillEntries(current).length === 0 && !packageMetadata.exportedSkills) continue;
+    if (listPackageSkillEntries(current).length === 0) continue;
     results.push(current);
   }
 

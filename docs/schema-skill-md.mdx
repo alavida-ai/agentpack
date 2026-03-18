@@ -123,6 +123,26 @@ Use [research](skill:research){context="required verification workflow before fa
 | Kind must match | A `source:` reference must point to a source binding, not a skill import (and vice versa). |
 | Context is required | Every reference must include `{context="..."}`. The compiler throws `missing_reference_context` without it. |
 
+Choose contexts for semantic clarity, not because they need to read as runtime prose. Skill references compile into slash-command callsites, while the full context remains part of the compiled graph and inspection metadata.
+
+Good:
+
+```markdown
+Use [research](skill:research){context="for factual verification before making claims"}.
+```
+
+Compiles roughly to:
+
+```markdown
+Use research (`/research`).
+```
+
+Keep contexts specific and decision-useful:
+
+```markdown
+Use [research](skill:research){context="factual verification workflow, evidence gathering, source triangulation, contradiction handling"}.
+```
+
 ## Complete example
 
 ````markdown SKILL.md

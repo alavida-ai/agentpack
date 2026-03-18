@@ -344,6 +344,26 @@ Use [Provost guidance](skill:provost){context="sentence rhythm and cadence guida
 
 The `{context="..."}` attribute tells the compiler why this reference matters at this point in the instructions. Without it, the edge exists but carries no semantic weight for staleness analysis or graph inspection.
 
+Keep contexts semantically useful. During materialization, skill references compile into slash-command callsites and source references compile into relative file links. The full `context` string remains useful in the compiled graph, workbench, and diagnostics even when it is not rendered verbatim into runtime prose.
+
+Good:
+
+```markdown
+Use [Provost guidance](skill:provost){context="for sentence rhythm and cadence in the final draft"}.
+```
+
+Compiles roughly to:
+
+```markdown
+Use Provost guidance (`/methodology-gary-provost`).
+```
+
+Still write contexts that carry real meaning:
+
+```markdown
+Use [Provost guidance](skill:provost){context="sentence rhythm, cadence, polish, readability, and tonal consistency guidance"}.
+```
+
 Source: docs/skill-graph.mdx
 
 ### MEDIUM Declaring sources without body references

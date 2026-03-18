@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createScenario, readMaterializationState, runCLIJson } from './fixtures.js';
+import { startSkillDev } from '../../packages/agentpack/src/lib/skills.js';
 
 function createCompilerModeRepo(name = 'skills-materialize') {
   return createScenario({
@@ -37,7 +38,7 @@ Ground this in [our PRD principles](source:principles){context="primary source m
 }
 
 describe('agentpack skills materialize', () => {
-  it('materializes compiled state into claude and agents runtimes', () => {
+  it('materializes compiled state into claude and agents runtimes with source references', () => {
     const repo = createCompilerModeRepo('skills-materialize-runtime');
 
     try {
@@ -55,13 +56,26 @@ describe('agentpack skills materialize', () => {
       assert.equal(materializationState.adapters.agents.length, 1);
 
       const distSkillPath = join(repo.root, 'skills', 'prd-agent', 'dist', 'prd-agent', 'SKILL.md');
+      const distReferencesDir = join(repo.root, 'skills', 'prd-agent', 'dist', 'prd-agent', 'references');
+      const distReferencePath = join(distReferencesDir, 'prd-principles.md');
       assert.equal(existsSync(distSkillPath), true);
+      assert.equal(existsSync(distReferencesDir), true);
+      assert.equal(existsSync(distReferencePath), true);
       const distSkill = readFileSync(distSkillPath, 'utf-8');
+      const distReference = readFileSync(distReferencePath, 'utf-8');
       assert.doesNotMatch(distSkill, /```agentpack/);
-      assert.doesNotMatch(distSkill, /^---$/m);
-      assert.match(distSkill, /primary source material/i);
-      assert.match(distSkill, /Use \/prd-development for structuring and reviewing the PRD\./i);
-      assert.match(distSkill, /# Principles/);
+      assert.match(distSkill, /^---\nname: prd-agent\ndescription: Create strong PRDs\.\n---/);
+      assert.match(
+        distSkill,
+        /Use the PRD method \(`\/prd-development`\)\./
+      );
+      assert.match(
+        distSkill,
+        /Ground this in \[our PRD principles\]\(references\/prd-principles\.md\)\{context="primary source material"\}\./
+      );
+      assert.doesNotMatch(distSkill, /## Source Material/);
+      assert.doesNotMatch(distSkill, /# Principles/);
+      assert.equal(distReference, '# Principles\n');
 
       const claudePath = join(repo.root, '.claude', 'skills', 'prd-agent');
       const agentsPath = join(repo.root, '.agents', 'skills', 'prd-agent');
@@ -74,6 +88,37 @@ describe('agentpack skills materialize', () => {
         distSkill
       );
     } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('keeps dev runtime links pointed at the same generated dist artifact shape', () => {
+    const repo = createCompilerModeRepo('skills-materialize-dev-runtime-shape');
+    let session = null;
+
+    try {
+      session = startSkillDev('skills/prd-agent', {
+        cwd: repo.root,
+        dashboard: false,
+      });
+      const readyResult = session.initialResult;
+      assert.equal(readyResult.name, 'prd-agent');
+
+      const claudeSkillPath = join(repo.root, '.claude', 'skills', 'prd-agent', 'SKILL.md');
+      const claudeReferencePath = join(repo.root, '.claude', 'skills', 'prd-agent', 'references', 'prd-principles.md');
+      const runtimeSkill = readFileSync(claudeSkillPath, 'utf-8');
+
+      assert.match(
+        runtimeSkill,
+        /Use the PRD method \(`\/prd-development`\)\./
+      );
+      assert.match(
+        runtimeSkill,
+        /Ground this in \[our PRD principles\]\(references\/prd-principles\.md\)\{context="primary source material"\}\./
+      );
+      assert.equal(readFileSync(claudeReferencePath, 'utf-8'), '# Principles\n');
+    } finally {
+      session?.close();
       repo.cleanup();
     }
   });

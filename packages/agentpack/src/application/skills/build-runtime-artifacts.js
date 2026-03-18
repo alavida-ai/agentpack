@@ -1,5 +1,5 @@
+import { basename, extname, join } from 'node:path';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { extractFrontmatter } from '../../domain/compiler/skill-document-parser.js';
 
 function inferRuntimeName(target) {
@@ -13,50 +13,45 @@ function replaceAllLiteral(input, searchValue, replacement) {
   return input.split(searchValue).join(replacement);
 }
 
-function buildUsagePhrase(runtimeName, context) {
-  const normalizedContext = (context || '').trim();
-  if (/^(for|to|as)\b/i.test(normalizedContext)) {
-    return `/${runtimeName} ${normalizedContext}`;
+function buildUsagePhrase(label, runtimeName) {
+  const command = `\`/${runtimeName}\``;
+  return `${label} (${command})`;
+}
+
+function buildReferenceFileName(sourcePath, usedNames) {
+  const extension = extname(sourcePath);
+  const stem = basename(sourcePath, extension);
+  const suffix = extension || '';
+  let candidate = `${stem}${suffix}`;
+  let index = 2;
+
+  while (usedNames.has(candidate)) {
+    candidate = `${stem}-${index}${suffix}`;
+    index += 1;
   }
-  return `/${runtimeName} for ${normalizedContext}`;
+
+  usedNames.add(candidate);
+  return candidate;
 }
 
-function normalizeSourceContent(content) {
-  return content.trim();
-}
-
-function buildSourceMaterialSection(repoRoot, occurrences) {
-  const sourceEntries = [];
-  const seen = new Set();
+function collectSourceReferenceFiles(occurrences) {
+  const references = new Map();
+  const usedNames = new Set();
 
   for (const occurrence of occurrences) {
     if (occurrence.kind !== 'source') continue;
-    const key = `${occurrence.target}::${occurrence.label}::${occurrence.context}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    if (references.has(occurrence.target)) continue;
 
-    const sourceContent = normalizeSourceContent(
-      readFileSync(join(repoRoot, occurrence.target), 'utf-8')
-    );
-
-    sourceEntries.push([
-      `### ${occurrence.label}`,
-      '',
-      `Use this for ${occurrence.context}.`,
-      '',
-      sourceContent,
-    ].join('\n'));
+    references.set(occurrence.target, {
+      sourcePath: occurrence.target,
+      fileName: buildReferenceFileName(occurrence.target, usedNames),
+    });
   }
 
-  if (sourceEntries.length === 0) return '';
-  return [
-    '## Source Material',
-    '',
-    ...sourceEntries,
-  ].join('\n\n');
+  return references;
 }
 
-function buildRuntimeBody(repoRoot, exportNode) {
+function buildRuntimeBody(exportNode, sourceReferences) {
   const sourceContent = readFileSync(exportNode.skillFilePath, 'utf-8');
   const { body } = extractFrontmatter(sourceContent);
   let runtimeBody = body.replace(/```agentpack[\s\S]*?```/g, '').trim();
@@ -64,24 +59,34 @@ function buildRuntimeBody(repoRoot, exportNode) {
   for (const occurrence of exportNode.compiled.occurrences) {
     if (occurrence.kind === 'skill') {
       const authored = `[${occurrence.label}](skill:${occurrence.alias}){context="${occurrence.context}"}`;
-      const runtimeText = buildUsagePhrase(inferRuntimeName(occurrence.target), occurrence.context);
+      const runtimeText = buildUsagePhrase(occurrence.label, inferRuntimeName(occurrence.target));
       runtimeBody = replaceAllLiteral(runtimeBody, authored, runtimeText);
       continue;
     }
 
     const authored = `[${occurrence.label}](source:${occurrence.alias}){context="${occurrence.context}"}`;
-    runtimeBody = replaceAllLiteral(runtimeBody, authored, occurrence.label);
+    const reference = sourceReferences.get(occurrence.target);
+    const runtimeText = `[${occurrence.label}](references/${reference.fileName}){context="${occurrence.context}"}`;
+    runtimeBody = replaceAllLiteral(runtimeBody, authored, runtimeText);
   }
 
-  const sourceSection = buildSourceMaterialSection(repoRoot, exportNode.compiled.occurrences);
+  return runtimeBody.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function buildRuntimeDocument(exportNode, runtimeBody) {
+  const sourceContent = readFileSync(exportNode.skillFilePath, 'utf-8');
+  const { frontmatterText } = extractFrontmatter(sourceContent);
+
   return [
+    '---',
+    frontmatterText.trim(),
+    '---',
+    '',
     runtimeBody,
-    sourceSection,
   ]
-    .filter(Boolean)
-    .join('\n\n')
+    .join('\n')
     .replace(/\n{3,}/g, '\n\n')
-    .trim();
+    .trimEnd();
 }
 
 export function buildRuntimeArtifacts(repoRoot, resolved) {
@@ -98,8 +103,21 @@ export function buildRuntimeArtifacts(repoRoot, resolved) {
   for (const exportNode of exportNodes) {
     const runtimeDir = join(distRoot, exportNode.runtimeName);
     const runtimeFile = join(runtimeDir, 'SKILL.md');
+    const referencesDir = join(runtimeDir, 'references');
+    const sourceReferences = collectSourceReferenceFiles(exportNode.compiled.occurrences);
     mkdirSync(runtimeDir, { recursive: true });
-    writeFileSync(runtimeFile, `${buildRuntimeBody(repoRoot, exportNode)}\n`);
+    if (sourceReferences.size > 0) {
+      mkdirSync(referencesDir, { recursive: true });
+      for (const reference of sourceReferences.values()) {
+        writeFileSync(
+          join(referencesDir, reference.fileName),
+          readFileSync(join(repoRoot, reference.sourcePath), 'utf-8')
+        );
+      }
+    }
+
+    const runtimeBody = buildRuntimeBody(exportNode, sourceReferences);
+    writeFileSync(runtimeFile, `${buildRuntimeDocument(exportNode, runtimeBody)}\n`);
 
     runtimeEntries.set(exportNode.id, {
       runtimeDirPath: runtimeDir,

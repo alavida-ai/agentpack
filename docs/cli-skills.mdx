@@ -7,7 +7,7 @@ description: "CLI reference for agentpack skills subcommands — runtime activat
 agentpack skills <command> [options]
 ```
 
-The `skills` command group manages runtime activation: listing installed skill packages from `node_modules`, enabling or disabling them for agent discovery, and inspecting runtime health.
+The `skills` command group manages installed-package inventory and runtime state inspection. The primary consumer materialization entrypoint is the top-level `agentpack materialize` command.
 
 Package installation and removal are handled by npm directly. See [Publishing & Consuming Skills](/publishing) for the full workflow.
 
@@ -53,6 +53,27 @@ agentpack skills list
 
 ---
 
+## `materialize`
+
+Materialize installed skill package dependencies for the current workspace package.
+
+```bash
+agentpack materialize
+```
+
+No arguments. Reads the nearest workspace `package.json`, selects installed dependencies that publish agentpack runtime skills, materializes them and their transitive skill requirements into `.claude/skills/` and `.agents/skills/`, and records the direct-package selection state in `.agentpack/install.json`.
+
+```bash
+agentpack materialize
+agentpack materialize --json
+```
+
+<Note>
+  Run this from the workspace package that owns the dependencies you want materialized. In nested workspaces, agentpack walks up to the nearest ancestor `package.json`.
+</Note>
+
+---
+
 ## `skills enable`
 
 Materialize one installed skill package or export into runtime directories.
@@ -69,7 +90,7 @@ agentpack skills enable <target>
 |---|---|
 | `-r, --runtime <runtime>` | Enable only for the selected runtime. Can be specified multiple times. Supported: `agents`, `claude`. |
 
-Resolves the target from `node_modules`, materializes the skill and its transitive dependencies into `.claude/skills/` and `.agents/skills/`, and records the enabled-target state in `.agentpack/install.json`.
+Compatibility command for targeted activation. Resolves the target from `node_modules`, materializes the skill and its transitive dependencies into `.claude/skills/` and `.agents/skills/`, and records the enabled-target state in `.agentpack/install.json`.
 
 ```bash
 # Enable for all runtimes

@@ -47,8 +47,8 @@ agentpack author dev domains/value/skills/copywriting
 ```bash
 cd consumer-repo
 npm install @alavida/value-copywriting
+agentpack materialize
 agentpack skills list
-agentpack skills enable @alavida/value-copywriting
 ```
 
 ## Common Mistakes

@@ -11,13 +11,13 @@ agentpack treats agent skills the same way a compiler toolchain treats source co
 |---|---|---|
 | Source files | `.ts` files | knowledge docs (`.md` files referenced as sources) |
 | Compiled output | `.js` files | `SKILL.md` (the authored skill artifact) |
-| Dependency manifest | `package.json` | `package.json` with root `SKILL.md` export and optional `agentpack.root` for named exports |
+| Dependency manifest | `package.json` | `package.json` with root `SKILL.md` export and optional `skills/` subtree for named exports |
 | Lint / type-check | `tsc --noEmit`, eslint | `agentpack publish validate` |
 | Build metadata | `.tsbuildinfo` | `.agentpack/compiled.json` (semantic graph) |
 | Stale detection | "source changed, rebuild" | `agentpack author stale` |
 | Publish | `npm publish` | `npm publish` |
 | Install + resolve | `npm install` | `npm install` |
-| Module resolution | Node resolves from `node_modules/` | `agentpack skills enable` materializes into `.claude/skills/` |
+| Module resolution | Node resolves from `node_modules/` | `agentpack materialize` materializes into `.claude/skills/` |
 
 The key difference: the "compiler" for skills is a human or an agent, not a deterministic transform. But the lifecycle around it -- dependency resolution, staleness tracking, validation, packaging, distribution -- follows the same pipeline every compiler needs.
 
@@ -30,10 +30,10 @@ You do not need to understand compilers to use agentpack. The analogy is here to
 A skill moves through five stages from authoring to agent discovery.
 
 ```
-  Author         Validate        Publish         Install+Enable    Discover
- ────────►     ────────►      ────────►       ────────►          ────────►
- knowledge →   structure →    npm package →   npm install →      agent sees
- SKILL.md      checks pass    on registry     skills enable      the skill
+  Author         Validate        Publish         Install+Materialize Discover
+ ────────►     ────────►      ────────►       ────────►            ────────►
+ knowledge →   structure →    npm package →   npm install →        agent sees
+ SKILL.md      checks pass    on registry     materialize          the skill
 ```
 
 <Steps>
@@ -44,10 +44,10 @@ A skill moves through five stages from authoring to agent discovery.
     Run `agentpack publish validate` to check that everything is structurally sound: discovered skill exports compile correctly, declared sources exist, imported skills align with package dependencies, and package metadata is complete. Validation produces compiled semantic state for future staleness detection.
   </Step>
   <Step title="Publish">
-    The package directory is already a publishable npm package. Run `npm publish` to push it to your registry. A package can export one skill (root `SKILL.md`) or many (via `agentpack.root` discovery). Packages are the distribution unit; exported skills are the runtime modules inside them.
+    The package directory is already a publishable npm package. Run `npm publish` to push it to your registry. A package can export one skill (root `SKILL.md`) or many (via `skills/**/SKILL.md`). Packages are the distribution unit; exported skills are the runtime modules inside them.
   </Step>
-  <Step title="Install and Enable">
-    In a consumer repo, run `npm install @scope/package-name` to resolve and install the package. Then run `agentpack skills enable @scope/package-name` to materialize every exported skill in the package into `.claude/skills/` and `.agents/skills/` where agents can discover them. The enabled-target state is recorded in `.agentpack/install.json`.
+  <Step title="Install and Materialize">
+    In a consumer repo, run `npm install @scope/package-name` to resolve and install the package. Then run `agentpack materialize` from the workspace package that declares the dependency. agentpack materializes the installed skill packages it finds for that workspace into `.claude/skills/` and `.agents/skills/`, and records the direct-package selection state in `.agentpack/install.json`.
   </Step>
   <Step title="Agent uses it">
     The agent reads skills from `.claude/skills/` at session start. It sees the SKILL.md, understands the capability, and applies it during work. The agent does not know or care how the skill was packaged -- it just reads the file.
@@ -66,7 +66,7 @@ In Node.js, `require('lodash')` works because Node resolves it from `node_module
 
 For agents, the equivalent is `.claude/skills/`. A skill sitting in an npm registry or in `node_modules/` is invisible to the agent. **Materialization** is the step that copies resolved skill packages into `.claude/skills/` and `.agents/skills/` where the agent can actually discover and read them. Each target directory (`.claude/skills/`, `.agents/skills/`) is called an **adapter** — it's the bridge between agentpack's package model and a specific agent runtime's discovery mechanism. agentpack tracks which adapters own which materialized files in `.agentpack/materialization-state.json`.
 
-This happens automatically during `agentpack skills enable` (for published packages) and `agentpack author dev` (for local authoring). You rarely need to think about it, but it explains why agentpack exists as a layer on top of plain npm -- npm handles resolution and install, agentpack handles the last mile of making skills visible to agents.
+This happens through `agentpack materialize` (for published packages) and `agentpack author dev` (for local authoring). You rarely need to think about it, but it explains why agentpack exists as a layer on top of plain npm -- npm handles resolution and install, agentpack handles the last mile of making skills visible to agents.
 
 ## Local Development
 
@@ -80,7 +80,7 @@ Skills depend on other exported skills, not directly on package names. A skill i
 
 - `import ... from skill` expresses skill-to-skill edges
 - `package.json.dependencies` expresses cross-package fetch/install edges
-- Root `SKILL.md` is the primary export; `agentpack.root` discovers named exports from the filesystem
+- Root `SKILL.md` is the primary export; `skills/**/SKILL.md` provides named exports from the filesystem
 
 Same-package requires do not need extra package dependencies. Cross-package requires must have a matching package dependency so npm can fetch the owning package. See [The Skill Graph](/skill-graph) for more on how these module edges form a directed graph.
 

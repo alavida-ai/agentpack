@@ -33,7 +33,7 @@ Use [knowledge](source:knowledge){context="source material for ${name}"}.
 }
 
 describe('authored workspace graph', () => {
-  it('discovers the root SKILL.md as the package primary export and named exports under agentpack.root', () => {
+  it('discovers the root SKILL.md as the package primary export and named exports under skills/', () => {
     const repo = createScenario({
       name: 'workspace-graph-primary-export',
       packages: [
@@ -43,9 +43,6 @@ describe('authored workspace graph', () => {
             name: '@alavida-ai/planning-kit',
             version: '0.1.0',
             files: ['SKILL.md', 'skills'],
-            agentpack: {
-              root: 'skills',
-            },
           },
           files: {
             'SKILL.md': validRootSkillDocument(),
@@ -89,9 +86,6 @@ describe('authored workspace graph', () => {
             name: '@alavida-ai/planning-kit',
             version: '0.1.0',
             files: ['SKILL.md', 'skills'],
-            agentpack: {
-              root: 'skills',
-            },
           },
           files: {
             'SKILL.md': validRootSkillDocument(),

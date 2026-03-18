@@ -51,8 +51,8 @@ export function buildInstalledWorkspaceGraph(repoRoot) {
     };
 
     for (const entry of pkg.exports) {
-      const id = entry.isPrimary ? pkg.packageName : `${pkg.packageName}:${entry.name}`;
-      const runtimeName = buildRuntimeName(pkg.packageName, entry);
+      const id = entry.id || (entry.isPrimary ? pkg.packageName : `${pkg.packageName}:${entry.name}`);
+      const runtimeName = entry.runtimeName || buildRuntimeName(pkg.packageName, entry);
       const exportNode = {
         ...entry,
         id,

@@ -1,6 +1,11 @@
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { findRepoRoot } from '../../lib/context.js';
-import { normalizeDisplayPath, readPackageMetadata } from '../../domain/skills/skill-model.js';
+import {
+  inferPackageRuntimeNamespace,
+  normalizeDisplayPath,
+  readPackageMetadata,
+} from '../../domain/skills/skill-model.js';
 import { findPackageDirByName } from '../../domain/skills/package-discovery.js';
 import {
   buildInstalledWorkspaceGraph,
@@ -22,6 +27,20 @@ const RUNTIME_DIRS = {
   agents: '.agents',
   claude: '.claude',
 };
+
+function resolveWorkspaceRoot(cwd) {
+  const normalizedCwd = typeof cwd === 'string' ? cwd : process.cwd();
+  let dir = resolve(normalizedCwd);
+
+  while (true) {
+    if (existsSync(join(dir, 'package.json'))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+
+  return findRepoRoot(normalizedCwd);
+}
 
 function normalizeRuntimeSelection(runtimes) {
   const values = runtimes == null
@@ -113,6 +132,19 @@ function listInitialExportIds(graph, selectionKey) {
 function resolveRequirementExportId(graph, requirement) {
   if (!requirement) return null;
   if (graph.exports[requirement]) return requirement;
+
+  if (requirement.includes(':')) {
+    const separatorIndex = requirement.indexOf(':');
+    const packageName = requirement.slice(0, separatorIndex);
+    const explicitExport = requirement.slice(separatorIndex + 1);
+    const runtimeNamespace = inferPackageRuntimeNamespace(packageName);
+    const pkgByAlias = graph.packages[packageName];
+
+    if (pkgByAlias && runtimeNamespace && explicitExport === runtimeNamespace) {
+      if (pkgByAlias.primaryExport) return pkgByAlias.primaryExport;
+      if (pkgByAlias.exports.length === 1) return pkgByAlias.exports[0];
+    }
+  }
 
   const pkg = graph.packages[requirement];
   if (!pkg) return null;
@@ -273,6 +305,21 @@ function sortPackages(packages) {
   return packages.sort((a, b) => a.packageName.localeCompare(b.packageName));
 }
 
+function readWorkspaceMaterializeSelections(repoRoot, runtimes) {
+  const workspacePackage = readPackageMetadata(repoRoot);
+  const graph = buildInstalledWorkspaceGraph(repoRoot);
+  const dependencyNames = Object.keys(workspacePackage.dependencies || {}).sort((a, b) => a.localeCompare(b));
+
+  return {
+    dependencyNames,
+    selections: Object.fromEntries(
+      dependencyNames
+        .filter((packageName) => graph.packages[packageName])
+        .map((packageName) => [packageName, [...runtimes]])
+    ),
+  };
+}
+
 function parseSimpleSemver(version) {
   const match = String(version).match(/^(\d+)\.(\d+)\.(\d+)$/);
   if (!match) return null;
@@ -310,7 +357,7 @@ function resolveAvailablePackageVersion(repoRoot, packageName, discoveryRoot = p
 }
 
 export function listInstalledSkillsUseCase({ cwd = process.cwd() } = {}) {
-  const repoRoot = findRepoRoot(cwd);
+  const repoRoot = resolveWorkspaceRoot(cwd);
   const graph = buildInstalledWorkspaceGraph(repoRoot);
   const packages = sortPackages(
     Object.values(graph.packages).map((pkg) => ({
@@ -361,7 +408,7 @@ export function enableInstalledSkillsUseCase(target, {
   cwd = process.cwd(),
   runtimes,
 } = {}) {
-  const repoRoot = findRepoRoot(cwd);
+  const repoRoot = resolveWorkspaceRoot(cwd);
   const resolved = resolveInstalledSkillTarget(repoRoot, target);
   const runtimeSelection = normalizeRuntimeSelection(runtimes);
   const selectionKey = selectionKeyForResolvedTarget(resolved);
@@ -384,7 +431,7 @@ export function disableInstalledSkillsUseCase(target, {
   cwd = process.cwd(),
   runtimes,
 } = {}) {
-  const repoRoot = findRepoRoot(cwd);
+  const repoRoot = resolveWorkspaceRoot(cwd);
   const resolved = resolveInstalledSkillTarget(repoRoot, target);
   const runtimeSelection = normalizeRuntimeSelection(runtimes);
   const selectionKey = selectionKeyForResolvedTarget(resolved);
@@ -404,7 +451,7 @@ export function disableInstalledSkillsUseCase(target, {
 }
 
 export function inspectInstalledSkillsStatusUseCase({ cwd = process.cwd() } = {}) {
-  const repoRoot = findRepoRoot(cwd);
+  const repoRoot = resolveWorkspaceRoot(cwd);
   const listing = listInstalledSkillsUseCase({ cwd });
   const graph = buildInstalledWorkspaceGraph(repoRoot);
   const selectionIssues = Object.entries(readDirectSelections(repoRoot))
@@ -442,5 +489,36 @@ export function inspectInstalledSkillsStatusUseCase({ cwd = process.cwd() } = {}
     orphanedMaterializations: runtimeInspection.orphanedMaterializations,
     packages: listing.packages,
     health,
+  };
+}
+
+export function materializeInstalledSkillsUseCase({
+  cwd = process.cwd(),
+  runtimes,
+} = {}) {
+  const repoRoot = resolveWorkspaceRoot(cwd);
+  const runtimeSelection = normalizeRuntimeSelection(runtimes);
+  const { dependencyNames, selections } = readWorkspaceMaterializeSelections(repoRoot, runtimeSelection);
+  const { adapters } = buildDesiredMaterializations(repoRoot, selections);
+
+  applyRuntimeMaterializationPlanUseCase(repoRoot, adapters);
+  writeDirectSelections(repoRoot, selections);
+
+  const materializedPackages = [...new Set(
+    Object.values(adapters).flatMap((entries) => (entries || []).map((entry) => entry.packageName))
+  )].sort((a, b) => a.localeCompare(b));
+  const materializedExports = [...new Set(
+    Object.values(adapters).flatMap((entries) => (entries || []).map((entry) => entry.exportId))
+  )].sort((a, b) => a.localeCompare(b));
+
+  return {
+    action: 'materialize',
+    runtimes: runtimeSelection,
+    dependencyCount: dependencyNames.length,
+    directPackages: Object.keys(selections).sort((a, b) => a.localeCompare(b)),
+    materializedPackageCount: materializedPackages.length,
+    materializedExportCount: materializedExports.length,
+    materializedPackages,
+    materializedExports,
   };
 }

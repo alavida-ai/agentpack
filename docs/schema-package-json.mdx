@@ -12,7 +12,6 @@ Every packaged skill module ships inside an npm package. The `package.json` prov
 | `name` | Yes | Scoped package name (e.g., `@acme/brand-copywriting`). |
 | `version` | Yes | Semver version (e.g., `1.2.0`). |
 | `description` | Recommended | Package-level summary. |
-| `agentpack.root` | For multi-skill packages | Discovery root for named skill exports. Points to a directory containing nested `SKILL.md` files. Not needed for single-skill packages with a root `SKILL.md`. |
 | `files` | Yes | Which files to include in the published package. Must include `SKILL.md` and the discovery root directory if applicable. |
 | `dependencies` | Managed | Required for cross-package skill references. Managed from exported skill imports. |
 | `publishConfig` | For managed scopes | Registry configuration for GitHub Packages. Required for `@alavida`/`@alavida-ai` scoped packages. |
@@ -23,7 +22,7 @@ Every packaged skill module ships inside an npm package. The `package.json` prov
 agentpack discovers skill exports from the package filesystem, not from an explicit export map:
 
 1. **Root `SKILL.md`** — a `SKILL.md` at the package root is the **primary export**. Its runtime name defaults to the package's unscoped name (e.g., `@acme/brand-copywriting` → `brand-copywriting`).
-2. **Named exports via `agentpack.root`** — if `agentpack.root` points to a directory, agentpack walks that directory tree for nested `SKILL.md` files. Each becomes a named export with its directory name as the export name.
+2. **Named exports via `skills/`** — if the package contains `skills/**/SKILL.md`, agentpack walks that subtree and exports each nested skill directory as a named export.
 
 ### Single-skill package (most common)
 
@@ -53,9 +52,6 @@ The root `SKILL.md` is the only export.
   "version": "1.2.0",
   "description": "Brand skill suite.",
   "files": ["SKILL.md", "skills/"],
-  "agentpack": {
-    "root": "skills"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/acme-corp/knowledge-base.git"
@@ -78,8 +74,8 @@ package.json is the source of truth for:
 - **Package version** — the semver version number. agentpack reads it but never writes it. You bump it yourself or with `npm version`.
 - **Publish configuration** — the registry URL and any access settings.
 - **Repository URL** — identifies where the source package lives.
-- **Discovery root** — `agentpack.root` tells the compiler where to find named skill exports beyond the root `SKILL.md`.
-- **Files list** — controls what gets published. Keep it tight: just the root `SKILL.md` and the discovery root directory.
+- **Export convention** — the root `SKILL.md` is the primary export and `skills/**/SKILL.md` provides named exports.
+- **Files list** — controls what gets published. Keep it tight: just the authored exports you need and the built `dist/` output you intend consumers to install.
 
 ## What package.json does NOT own
 
@@ -88,7 +84,7 @@ package.json is the source of truth for:
 | Skill identity and content | `SKILL.md` frontmatter + body |
 | Source provenance | `SKILL.md` `source` bindings |
 | Skill dependencies | `SKILL.md` `import` statements (compiled into cross-package `package.json.dependencies`) |
-| Export discovery paths | Filesystem layout (root `SKILL.md` + `agentpack.root` directory) |
+| Export discovery paths | Filesystem layout (root `SKILL.md` + optional `skills/**/SKILL.md`) |
 
 <Warning>
   Do not manually edit managed cross-package skill dependencies in `dependencies`. agentpack derives them from exported skill imports. Manual edits will be overwritten on the next `author dev` run.

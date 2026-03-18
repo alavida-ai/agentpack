@@ -1,8 +1,10 @@
 import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import {
   buildCanonicalSkillRequirement,
+  hasInstalledSkillArtifacts,
   normalizeDisplayPath,
+  readAuthoredSkillExports,
   readInstalledSkillExports,
   readPackageMetadata,
 } from './skill-model.js';
@@ -14,6 +16,16 @@ function isIgnoredEntry(name) {
 
 function listInstalledNodeModulesRoots(repoRoot) {
   const results = [];
+  let dir = resolve(repoRoot);
+
+  while (true) {
+    const nodeModulesDir = join(dir, 'node_modules');
+    if (existsSync(nodeModulesDir)) results.push(nodeModulesDir);
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+
   const stack = [repoRoot];
 
   while (stack.length > 0) {
@@ -64,7 +76,6 @@ function listSkillPackageDirs(repoRoot, { installed = false } = {}) {
       continue;
     }
 
-    let hasRootSkillFile = false;
     let packageMetadata = null;
 
     for (const entry of entries) {
@@ -74,7 +85,6 @@ function listSkillPackageDirs(repoRoot, { installed = false } = {}) {
         continue;
       }
 
-      if (entry.name === 'SKILL.md') hasRootSkillFile = true;
       if (entry.name !== 'package.json') continue;
 
       try {
@@ -85,7 +95,7 @@ function listSkillPackageDirs(repoRoot, { installed = false } = {}) {
     }
 
     if (!packageMetadata?.packageName) continue;
-    if (packageMetadata.skillRoot || hasRootSkillFile) {
+    if (hasInstalledSkillArtifacts(current)) {
       results.push(current);
     }
   }
@@ -114,7 +124,9 @@ export function readSkillPackage(repoRoot, packageDir, { origin = 'authored' } =
   const packageMetadata = readPackageMetadata(packageDir);
   if (!packageMetadata.packageName) return null;
 
-  const exportedSkills = readInstalledSkillExports(packageDir);
+  const exportedSkills = origin === 'installed'
+    ? readInstalledSkillExports(repoRoot, packageDir)
+    : readAuthoredSkillExports(packageDir);
   if (exportedSkills.length === 0) return null;
 
   return {

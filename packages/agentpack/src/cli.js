@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { formatError, AgentpackError, EXIT_CODES } from './utils/errors.js';
 import { output } from './utils/output.js';
 import { authorCommand } from './commands/author.js';
+import { materializeCommand } from './commands/materialize.js';
 import { publishCommand } from './commands/publish.js';
 import { skillsCommand } from './commands/skills.js';
 
@@ -22,6 +23,7 @@ export function createProgram() {
     .option('--workbench <path>', 'Override workbench context (name or path)');
 
   program.addCommand(authorCommand());
+  program.addCommand(materializeCommand());
   program.addCommand(publishCommand());
   program.addCommand(skillsCommand());
 

@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { findRepoRoot } from '../../lib/context.js';
 import { parseSkillFrontmatterFile } from '../../domain/skills/skill-model.js';
-import { ensureResolvedExportIsValid, resolveSingleSkillTarget } from '../../domain/skills/skill-target-resolution.js';
+import { ensureResolvedExportIsValid, resolveSingleSkillTarget, resolveSkillTarget } from '../../domain/skills/skill-target-resolution.js';
+import { buildInvalidPackageError } from '../../domain/skills/workspace-graph.js';
 import { buildCompiledStateUseCase } from './build-compiled-state.js';
 import { ValidationError } from '../../utils/errors.js';
 
@@ -25,7 +26,22 @@ function matchesCompiledSkill(repoRoot, target, compiledSkill) {
 
 export function inspectCompiledSkillUseCase(target, { cwd = process.cwd() } = {}) {
   const repoRoot = findRepoRoot(cwd);
+  let authoredTarget;
   let resolved;
+
+  try {
+    authoredTarget = resolveSkillTarget(repoRoot, target, { includeInstalled: false });
+  } catch (error) {
+    if (error.code === 'export_invalid' || error.code === 'package_invalid') throw error;
+    return null;
+  }
+
+  if (authoredTarget.kind === 'package') {
+    if (authoredTarget.package?.status === 'invalid') {
+      throw buildInvalidPackageError(authoredTarget.package);
+    }
+    if (authoredTarget.exports.length > 1) return null;
+  }
 
   try {
     resolved = ensureResolvedExportIsValid(

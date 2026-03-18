@@ -530,7 +530,8 @@ description: Overview workflow.
 
       assert.equal(result.exitCode, 2);
       assert.equal(result.json.valid, false);
-      assert.equal(result.json.issues[0].code, 'missing_root_skill_file');
+      assert.equal(result.json.issues[0].code, 'package_invalid');
+      assert.match(JSON.stringify(result.json), /missing_root_skill_file/);
     } finally {
       repo.cleanup();
     }

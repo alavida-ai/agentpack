@@ -9,7 +9,7 @@ A packaged skill is a reusable capability artifact.
 - source docs or knowledge files are the truth
 - `SKILL.md` is the authored agent artifact for one exported skill module
 - `package.json` is the package and distribution artifact
-- root `SKILL.md` is the primary export; `agentpack.root` declares the directory for named exports
+- root `SKILL.md` is the primary export; `skills/**/SKILL.md` provides named exports
 - `import ... from skill` declarations express direct skill dependencies using canonical ids like `@scope/package:skill-name`
 - `package.json.dependencies` is the managed cross-package mirror of skill import declarations
 
@@ -79,8 +79,8 @@ Consumption stage:
 
 - package name
 - installed from registry via npm
+- `materialize`
 - `skills list`
-- `skills enable`
 
 Do not substitute one for the other.
 

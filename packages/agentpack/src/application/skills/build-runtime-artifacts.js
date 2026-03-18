@@ -51,6 +51,50 @@ function collectSourceReferenceFiles(occurrences) {
   return references;
 }
 
+function buildManifestSourcePath(runtimeName, fileName) {
+  return `dist/${runtimeName}/references/${fileName}`;
+}
+
+function mapCompiledForRuntime(exportNode, runtimeName, sourceReferences) {
+  const sourcePathByAuthoredPath = new Map(
+    [...sourceReferences.values()].map((reference) => [
+      reference.sourcePath,
+      buildManifestSourcePath(runtimeName, reference.fileName),
+    ])
+  );
+
+  const mapSourceTarget = (target) => sourcePathByAuthoredPath.get(target) || target;
+
+  return {
+    skillImports: Object.fromEntries(
+      Object.entries(exportNode.compiled.skillImports || {}).map(([key, value]) => [key, { ...value }])
+    ),
+    sourceBindings: Object.fromEntries(
+      Object.entries(exportNode.compiled.sourceBindings || {}).map(([key, value]) => [key, {
+        ...value,
+        sourcePath: mapSourceTarget(value.sourcePath),
+      }])
+    ),
+    occurrences: (exportNode.compiled.occurrences || []).map((entry) => ({
+      ...entry,
+      target: entry.kind === 'source' ? mapSourceTarget(entry.target) : entry.target,
+    })),
+    edges: (exportNode.compiled.edges || []).map((edge) => ({
+      ...edge,
+      target: edge.kind === 'source_usage' ? mapSourceTarget(edge.target) : edge.target,
+    })),
+  };
+}
+
+function buildRuntimeManifest(packageNode, manifestExports) {
+  return {
+    version: 1,
+    packageName: packageNode.packageName,
+    packageVersion: packageNode.packageVersion,
+    exports: manifestExports.sort((a, b) => a.runtimeName.localeCompare(b.runtimeName)),
+  };
+}
+
 function buildRuntimeBody(exportNode, sourceReferences) {
   const sourceContent = readFileSync(exportNode.skillFilePath, 'utf-8');
   const { body } = extractFrontmatter(sourceContent);
@@ -97,8 +141,10 @@ export function buildRuntimeArtifacts(repoRoot, resolved) {
 
   const distRoot = join(packageDir, 'dist');
   rmSync(distRoot, { recursive: true, force: true });
+  mkdirSync(distRoot, { recursive: true });
 
   const runtimeEntries = new Map();
+  const manifestExports = [];
 
   for (const exportNode of exportNodes) {
     const runtimeDir = join(distRoot, exportNode.runtimeName);
@@ -119,6 +165,23 @@ export function buildRuntimeArtifacts(repoRoot, resolved) {
     const runtimeBody = buildRuntimeBody(exportNode, sourceReferences);
     writeFileSync(runtimeFile, `${buildRuntimeDocument(exportNode, runtimeBody)}\n`);
 
+    manifestExports.push({
+      id: exportNode.id,
+      declaredName: exportNode.declaredName,
+      moduleName: exportNode.moduleName,
+      runtimeName: exportNode.runtimeName,
+      description: exportNode.description,
+      status: exportNode.lifecycleStatus || null,
+      replacement: exportNode.replacement || null,
+      message: exportNode.message || null,
+      wraps: exportNode.wraps || null,
+      overrides: exportNode.overrides || [],
+      isPrimary: Boolean(exportNode.isPrimary),
+      runtimeDir: `dist/${exportNode.runtimeName}`,
+      runtimeFile: `dist/${exportNode.runtimeName}/SKILL.md`,
+      compiled: mapCompiledForRuntime(exportNode, exportNode.runtimeName, sourceReferences),
+    });
+
     runtimeEntries.set(exportNode.id, {
       runtimeDirPath: runtimeDir,
       runtimePath: `${packagePath}/dist/${exportNode.runtimeName}`.replace(/\/+/g, '/'),
@@ -126,6 +189,11 @@ export function buildRuntimeArtifacts(repoRoot, resolved) {
       runtimeFile: `${packagePath}/dist/${exportNode.runtimeName}/SKILL.md`.replace(/\/+/g, '/'),
     });
   }
+
+  writeFileSync(
+    join(distRoot, 'agentpack.json'),
+    `${JSON.stringify(buildRuntimeManifest(resolved.package, manifestExports), null, 2)}\n`
+  );
 
   return runtimeEntries;
 }

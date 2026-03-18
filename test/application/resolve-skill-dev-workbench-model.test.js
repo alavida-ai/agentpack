@@ -115,8 +115,6 @@ Ground this in [interview notes](source:interviews){context="primary research so
         [rootSourcePath]
       );
 
-      buildCompiledStateUseCase('skills/research', { cwd: repo.root, persist: true });
-
       const externalModel = resolveSkillDevWorkbenchModel({
         repoRoot: repo.root,
         defaultTarget: 'skills/copywriting',
@@ -181,6 +179,224 @@ description: Design the architecture.
       } finally {
         noSourcesRepo.cleanup();
       }
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('navigates into an installed external dependency graph when the package exists in node_modules', () => {
+    const rootSourcePath = 'domains/value/knowledge/tone-of-voice.md';
+    const installedSourcePath = 'domains/research/knowledge/interview-notes.md';
+    const repo = createScenario({
+      name: 'resolve-skill-dev-workbench-model-installed-external',
+      sources: {
+        [rootSourcePath]: '# Voice\n',
+        [installedSourcePath]: '# Interview Notes\n',
+      },
+      files: {
+        'node_modules/@alavida/research/package.json': JSON.stringify({
+          name: '@alavida/research',
+          version: '2.3.0',
+          files: ['SKILL.md'],
+        }, null, 2) + '\n',
+        'node_modules/@alavida/research/SKILL.md': `---
+name: research
+description: Gather supporting evidence.
+---
+
+\`\`\`agentpack
+source interviews = "${installedSourcePath}"
+\`\`\`
+
+Ground this in [interview notes](source:interviews){context="primary research source"}.
+`,
+      },
+      packages: [
+        {
+          relPath: 'skills/copywriting',
+          packageJson: {
+            name: '@alavida/value-copywriting',
+            version: '1.0.0',
+            files: ['SKILL.md'],
+          },
+          skillMd: `---
+name: value-copywriting
+description: Root workflow.
+---
+
+\`\`\`agentpack
+import research from skill "@alavida/research"
+\`\`\`
+
+Use [research](skill:research){context="external dependency"}.
+`,
+        },
+      ],
+    });
+
+    try {
+      buildCompiledStateUseCase('skills/copywriting', { cwd: repo.root, persist: true });
+
+      const externalModel = resolveSkillDevWorkbenchModel({
+        repoRoot: repo.root,
+        defaultTarget: 'skills/copywriting',
+        requestedTarget: '@alavida/research',
+      });
+
+      assert.equal(externalModel.selected.id, '@alavida/research');
+      assert.deepEqual(
+        externalModel.nodes.filter((node) => node.type === 'source').map((node) => node.path),
+        [installedSourcePath]
+      );
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('navigates into an installed external named export graph by canonical export id', () => {
+    const installedSourcePath = 'domains/research/knowledge/interview-notes.md';
+    const repo = createScenario({
+      name: 'resolve-skill-dev-workbench-model-installed-named-external',
+      sources: {
+        [installedSourcePath]: '# Interview Notes\n',
+      },
+      files: {
+        'node_modules/@alavida/research/package.json': JSON.stringify({
+          name: '@alavida/research',
+          version: '2.3.0',
+          files: ['SKILL.md', 'skills'],
+          agentpack: {
+            root: 'skills',
+          },
+        }, null, 2) + '\n',
+        'node_modules/@alavida/research/SKILL.md': `---
+name: research
+description: Research root.
+---
+
+\`\`\`agentpack
+import interviewAnalysis from skill "@alavida/research:interview-analysis"
+\`\`\`
+
+Use [interview analysis](skill:interviewAnalysis){context="installed named export"}.
+`,
+        'node_modules/@alavida/research/skills/interview-analysis/SKILL.md': `---
+name: research:interview-analysis
+description: Analyze interviews.
+---
+
+\`\`\`agentpack
+source interviews = "${installedSourcePath}"
+\`\`\`
+
+Ground this in [interview notes](source:interviews){context="primary research source"}.
+`,
+      },
+      packages: [
+        {
+          relPath: 'skills/copywriting',
+          packageJson: {
+            name: '@alavida/value-copywriting',
+            version: '1.0.0',
+            files: ['SKILL.md'],
+          },
+          skillMd: `---
+name: value-copywriting
+description: Root workflow.
+---
+
+\`\`\`agentpack
+import research from skill "@alavida/research:interview-analysis"
+\`\`\`
+
+Use [research](skill:research){context="external dependency"}.
+`,
+        },
+      ],
+    });
+
+    try {
+      buildCompiledStateUseCase('skills/copywriting', { cwd: repo.root, persist: true });
+
+      const externalModel = resolveSkillDevWorkbenchModel({
+        repoRoot: repo.root,
+        defaultTarget: 'skills/copywriting',
+        requestedTarget: '@alavida/research:interview-analysis',
+      });
+
+      assert.equal(externalModel.selected.id, '@alavida/research:interview-analysis');
+      assert.deepEqual(
+        externalModel.nodes.filter((node) => node.type === 'source').map((node) => node.path),
+        [installedSourcePath]
+      );
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('navigates into a single-skill external package referenced by an explicit primary export id', () => {
+    const externalSourcePath = 'domains/research/knowledge/interview-notes.md';
+    const repo = createScenario({
+      name: 'resolve-skill-dev-workbench-model-explicit-primary-export-id',
+      sources: {
+        [externalSourcePath]: '# Interview Notes\n',
+      },
+      packages: [
+        {
+          relPath: 'skills/copywriting',
+          packageJson: {
+            name: '@alavida/value-copywriting',
+            version: '1.0.0',
+            files: ['SKILL.md'],
+          },
+          skillMd: `---
+name: value-copywriting
+description: Root workflow.
+---
+
+\`\`\`agentpack
+import research from skill "@alavida/research:research"
+\`\`\`
+
+Use [research](skill:research){context="external dependency"}.
+`,
+        },
+        {
+          relPath: 'skills/research',
+          packageJson: {
+            name: '@alavida/research',
+            version: '2.3.0',
+            files: ['SKILL.md'],
+          },
+          skillMd: `---
+name: research
+description: Gather supporting evidence.
+---
+
+\`\`\`agentpack
+source interviews = "${externalSourcePath}"
+\`\`\`
+
+Ground this in [interview notes](source:interviews){context="primary research source"}.
+`,
+        },
+      ],
+    });
+
+    try {
+      buildCompiledStateUseCase('skills/copywriting', { cwd: repo.root, persist: true });
+
+      const externalModel = resolveSkillDevWorkbenchModel({
+        repoRoot: repo.root,
+        defaultTarget: 'skills/copywriting',
+        requestedTarget: '@alavida/research:research',
+      });
+
+      assert.equal(externalModel.selected.id, '@alavida/research');
+      assert.deepEqual(
+        externalModel.nodes.filter((node) => node.type === 'source').map((node) => node.path),
+        [externalSourcePath]
+      );
     } finally {
       repo.cleanup();
     }

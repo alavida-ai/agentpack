@@ -156,7 +156,7 @@ describe('compiler-first authored workspace', () => {
     }
   });
 
-  it('surfaces a package-invalid error for unsupported agentpack.skills export tables', () => {
+  it('surfaces a package-invalid error when named exports exist without a root primary export', () => {
     const repo = createScenario({
       name: 'compiler-first-legacy-export-table',
       packages: [
@@ -174,7 +174,7 @@ describe('compiler-first authored workspace', () => {
           },
           files: {
             'skills/monorepo-overview/SKILL.md': validNamedSkillDocument(
-              'monorepo-overview',
+              'monorepo-architecture:monorepo-overview',
               'workspace/active/architecture/agonda-monorepo/CONTINUE.md'
             ),
           },
@@ -189,12 +189,12 @@ describe('compiler-first authored workspace', () => {
       const inspect = runCLIJson(['author', 'inspect', 'workspace/active/architecture/agonda-monorepo'], { cwd: repo.root });
       assert.equal(inspect.exitCode, 2, inspect.stderr || inspect.stdout);
       assert.equal(inspect.json.error, 'package_invalid');
-      assert.match(JSON.stringify(inspect.json), /legacy_export_table_not_supported/);
+      assert.match(JSON.stringify(inspect.json), /missing_root_skill_file/);
 
       const validate = runCLIJson(['publish', 'validate', 'workspace/active/architecture/agonda-monorepo'], { cwd: repo.root });
       assert.equal(validate.exitCode, 2, validate.stderr || validate.stdout);
       assert.equal(validate.json.valid, false);
-      assert.match(JSON.stringify(validate.json), /legacy_export_table_not_supported/);
+      assert.match(JSON.stringify(validate.json), /missing_root_skill_file/);
     } finally {
       repo.cleanup();
     }

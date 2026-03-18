@@ -105,11 +105,11 @@ Pass `--no-dashboard` if you want the original CLI-only linking workflow without
 
 If your agent session was already running, start a fresh session after linking so the runtime can pick up the newly materialized skill.
 
-### Install and enable a published skill in another repo
+### Install and materialize a published skill in another repo
 
 ```bash
 npm install @scope/skill-package
-agentpack skills enable @scope/skill-package
+agentpack materialize
 ```
 
 ### Build and materialize a compiled skill
@@ -142,12 +142,12 @@ Typical authoring flow:
 
 ### Consumer repos (runtime activation)
 
-Consumer repos do not author the skill. They install the published package with npm and enable it for agent discovery.
+Consumer repos do not author the skill. They install the published package with npm and materialize it for agent discovery.
 
 Typical consumer flow:
 
 - `npm install @scope/skill-package`
-- `agentpack skills enable @scope/skill-package`
+- `agentpack materialize`
 - `agentpack skills list`
 
 ## What Agentpack Refuses To Blur
@@ -157,9 +157,9 @@ These are deliberate boundaries:
 - Knowledge is the source of truth.
 - Skills are derived artifacts.
 - npm owns package install, uninstall, auth, and registry.
-- agentpack owns authoring, publish validation, and runtime enable/disable.
-- Runtime adapters materialize enabled skills.
-- Enabled state is repo-local runtime state.
+- agentpack owns authoring, publish validation, and runtime materialization.
+- Runtime adapters materialize installed skills.
+- Materialization state is repo-local runtime state.
 
 If you blur those together, you get the exact problems this tool exists to stop:
 
@@ -207,12 +207,16 @@ from that knowledge-base repo root, not from the `agentpack` repo.
 
 - `agentpack publish validate [target]`
 
-### Runtime activation (`agentpack skills`)
+### Runtime activation
 
+- `agentpack materialize`
 - `agentpack skills list`
-- `agentpack skills enable <target>`
 - `agentpack skills disable <target>`
 - `agentpack skills status`
+
+### Compatibility commands (`agentpack skills`)
+
+- `agentpack skills enable <target>`
 
 ## Docs
 

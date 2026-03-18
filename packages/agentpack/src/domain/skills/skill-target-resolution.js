@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
 import { listAuthoredSkillPackages, listInstalledSkillPackages } from './skill-catalog.js';
+import { inferPackageRuntimeNamespace } from './skill-model.js';
 import { NotFoundError, ValidationError } from '../../utils/errors.js';
 import {
   buildAuthoredWorkspaceGraph,
@@ -112,6 +113,31 @@ export function resolveSkillTarget(repoRoot, target, options = {}) {
     }
   }
 
+  for (const pkg of packages) {
+    for (const skillExport of pkg.exports) {
+      if (skillExport.id === target || skillExport.key === target) {
+        return buildExportResolution(pkg, skillExport, 'canonical_export_id');
+      }
+    }
+  }
+
+  if (typeof target === 'string' && target.includes(':')) {
+    const separatorIndex = target.indexOf(':');
+    const packageName = target.slice(0, separatorIndex);
+    const explicitExport = target.slice(separatorIndex + 1);
+    const pkg = packages.find((entry) => entry.packageName === packageName);
+    const runtimeNamespace = inferPackageRuntimeNamespace(packageName);
+
+    if (pkg && runtimeNamespace && explicitExport === runtimeNamespace) {
+      const primaryExport = pkg.exports.find((entry) => entry.isPrimary)
+        || (pkg.primaryExport ? pkg.exports.find((entry) => entry.id === pkg.primaryExport) : null)
+        || null;
+      if (primaryExport) {
+        return buildExportResolution(pkg, primaryExport, 'canonical_export_id');
+      }
+    }
+  }
+
   const pkg = packages.find((entry) => entry.packageName === target);
   if (pkg) {
     return buildPackageResolution(pkg, 'package_name');
@@ -127,7 +153,7 @@ export function resolveSingleSkillTarget(repoRoot, target, options = {}) {
   const resolved = resolveSkillTarget(repoRoot, target, options);
 
   if (resolved.kind === 'export') return resolved;
-  if (resolved.exports.length === 0 && resolved.package?.diagnostics?.length > 0) {
+  if (resolved.package?.status === 'invalid' || resolved.package?.diagnostics?.length > 0) {
     throw buildInvalidPackageError(resolved.package);
   }
   if (resolved.package.primaryExport) {

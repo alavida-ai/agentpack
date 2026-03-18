@@ -93,12 +93,12 @@ Most agent workflows still look like this:
 Run these commands from the repo that owns the source files bound in the skill's `agentpack` block:
 
 ```bash
-agentpack skills inspect domains/operations/skills/agonda-prioritisation
-agentpack skills validate domains/operations/skills/agonda-prioritisation
-agentpack skills dev domains/operations/skills/agonda-prioritisation
+agentpack author inspect domains/operations/skills/agonda-prioritisation
+agentpack publish validate domains/operations/skills/agonda-prioritisation
+agentpack author dev domains/operations/skills/agonda-prioritisation
 ```
 
-Use `skills dev` when you want the skill linked into `.claude/skills/` and `.agents/skills/` for local runtime testing. It now also starts a localhost development workbench by default for one selected skill, showing immediate provenance sources, direct required skills, lifecycle state, and workbench actions such as validation and stale checks.
+Use `author dev` when you want the skill linked into `.claude/skills/` and `.agents/skills/` for local runtime testing. It now also starts a localhost development workbench by default for one selected skill, showing immediate provenance sources, direct required skills, lifecycle state, and workbench actions such as validation and stale checks.
 
 Pass `--no-dashboard` if you want the original CLI-only linking workflow without the local dashboard.
 
@@ -107,18 +107,18 @@ If your agent session was already running, start a fresh session after linking s
 ### Install a published skill in another repo
 
 ```bash
-agentpack skills install @scope/skill-package
-agentpack skills env
+npm install @scope/skill-package
+agentpack materialize
 ```
 
 ### Build and materialize a compiled skill
 
 ```bash
-agentpack skills build path/to/skill
-agentpack skills materialize
+agentpack author build path/to/skill
+agentpack author materialize
 ```
 
-`skills build` produces `.agentpack/compiled.json`. `skills materialize` records adapter output ownership in `.agentpack/materialization-state.json`.
+`author build` produces `.agentpack/compiled.json`. `author materialize` records adapter output ownership in `.agentpack/materialization-state.json`.
 
 ## The Model
 
@@ -135,9 +135,9 @@ A packaged skill is a reusable capability artifact.
 
 Typical local flow:
 
-- `skills inspect`
-- `skills validate`
-- `skills dev`
+- `author inspect`
+- `publish validate`
+- `author dev`
 
 ### Consumer installs
 
@@ -145,8 +145,9 @@ Consumer repos do not author the skill. They install the published package and m
 
 Typical consumer flow:
 
-- `skills install`
-- `skills env`
+- `npm install @scope/skill-package`
+- `agentpack materialize`
+- `agentpack skills list`
 
 ## What Agentpack Refuses To Blur
 
@@ -191,18 +192,18 @@ from that knowledge-base repo root, not from the `agentpack` repo.
 
 Implemented today:
 
-- `agentpack skills inspect`
-- `agentpack skills validate`
-- `agentpack skills dev`
-- `agentpack skills unlink`
-- `agentpack skills stale`
-- `agentpack skills install`
-- `agentpack skills env`
-- `agentpack skills uninstall`
-- `agentpack skills outdated`
-- `agentpack skills registry`
+- `agentpack author inspect`
+- `agentpack author dev`
+- `agentpack author unlink`
+- `agentpack author stale`
+- `agentpack author build`
+- `agentpack author materialize`
+- `agentpack publish validate`
+- `agentpack materialize`
+- `agentpack skills list`
+- `agentpack skills enable`
+- `agentpack skills disable`
 - `agentpack skills status`
-- `agentpack skills missing`
 
 ## Docs
 

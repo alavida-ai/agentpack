@@ -19,7 +19,7 @@ import {
 import {
   normalizeDisplayPath,
   normalizeRepoPath,
-  readInstalledSkillExports,
+  readAuthoredSkillExports,
   readPackageMetadata,
 } from '../domain/skills/skill-model.js';
 import { isGeneratedPackagePath } from '../domain/skills/generated-package-paths.js';
@@ -272,7 +272,7 @@ export function syncSkillDependencies(skillDir) {
   const { packageJsonPath, packageJson } = readPackageJson(skillDir);
   const currentPackageName = packageJson.name || null;
   const required = [...new Set(
-    readInstalledSkillExports(skillDir).flatMap((entry) => {
+    readAuthoredSkillExports(skillDir).flatMap((entry) => {
       const compiled = readCompilerSkillDocument(entry.skillFile);
       return listCompilerPackageDependencies(compiled)
         .map((dependency) => packageNameForRequirement(dependency))

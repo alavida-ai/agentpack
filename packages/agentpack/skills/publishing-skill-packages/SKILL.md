@@ -75,11 +75,9 @@ A publishable `package.json` requires these fields:
   "files": [
     "SKILL.md",
     "skills/",
-    "!skills/_artifacts"
+    "!skills/_artifacts",
+    "dist/"
   ],
-  "agentpack": {
-    "root": "skills"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/acme-corp/knowledge-base.git"
@@ -98,7 +96,6 @@ Field-by-field:
 | `version` | Yes | Semver version. Bump with `npm version patch/minor/major`. |
 | `description` | Recommended | Package-level summary for registry listing. |
 | `files` | Yes | Controls what gets published. Must include the root `SKILL.md` and skill directories. Must exclude `_artifacts`. |
-| `agentpack.root` | If named exports | Directory for named export discovery. Omit for single-skill packages that only use the root `SKILL.md`. |
 | `repository` | Yes | Source repo URL. Required for scoped packages. |
 | `publishConfig` | Yes | Registry URL. Determines where `npm publish` sends the tarball. |
 | `dependencies` | Managed | Cross-package package requirements derived from exported skill imports. Do not edit manually. |
@@ -201,7 +198,7 @@ Or `minor` / `major` depending on the change. If the repo uses Changesets, follo
 agentpack publishes normal npm packages. The contract agentpack owns is:
 
 - compiled skill exports
-- package discovery via root `SKILL.md` and optional `agentpack.root`
+- package discovery via root `SKILL.md` and optional `skills/**/SKILL.md`
 - npm publish/install behavior
 
 If the user also wants their package to participate in TanStack Intent's package ecosystem, treat that as upstream metadata, not an agentpack feature contract. agentpack does not currently validate or consume TanStack Intent-specific `package.json` fields.

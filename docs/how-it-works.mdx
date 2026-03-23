@@ -66,7 +66,7 @@ In Node.js, `require('lodash')` works because Node resolves it from `node_module
 
 For agents, the equivalent is `.claude/skills/`. A skill sitting in an npm registry or in `node_modules/` is invisible to the agent. **Materialization** is the step that copies resolved skill packages into `.claude/skills/` and `.agents/skills/` where the agent can actually discover and read them. Each target directory (`.claude/skills/`, `.agents/skills/`) is called an **adapter** — it's the bridge between agentpack's package model and a specific agent runtime's discovery mechanism. agentpack tracks which adapters own which materialized files in `.agentpack/materialization-state.json`.
 
-This happens through `agentpack materialize` (for published packages) and `agentpack author dev` (for local authoring). You rarely need to think about it, but it explains why agentpack exists as a layer on top of plain npm -- npm handles resolution and install, agentpack handles the last mile of making skills visible to agents.
+This happens through `agentpack materialize` (for published packages) and `agentpack author dev` / `agentpack author materialize` (for local authoring). For authored packages, `agentpack author build <target>` now emits a closure bundle into the target package's `dist/` so plugin systems can point `"skills": "./dist/"` at one self-contained folder. Installed-package discovery still stays manifest-first through `dist/agentpack.json`; the authored-only `dist/.agentpack-bundle.json` exists only to drive local/plugin closure materialization.
 
 ## Local Development
 

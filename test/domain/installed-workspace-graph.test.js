@@ -255,4 +255,44 @@ describe('installed workspace graph', () => {
       repo.cleanup();
     }
   });
+
+  it('ignores foreign bundled runtime directories when falling back to dist-only discovery', () => {
+    const repo = createScenario({
+      name: 'installed-workspace-graph-dist-bundle-guard',
+      packages: [
+        {
+          relPath: 'node_modules/@alavida-ai/dashboard-creator',
+          packageJson: {
+            name: '@alavida-ai/dashboard-creator',
+            version: '0.2.0',
+            files: ['dist'],
+          },
+          files: {
+            'dist/dashboard-creator/SKILL.md': runtimeSkillDocument('dashboard-creator', 'Primary package skill.'),
+            'dist/dashboard-creator:dashboard-scaffolding/SKILL.md': runtimeSkillDocument('dashboard-creator:dashboard-scaffolding', 'Dashboard scaffolding skill.'),
+            'dist/foundation-primer/SKILL.md': runtimeSkillDocument('foundation-primer', 'Foreign bundled dependency skill.'),
+          },
+        },
+      ],
+    });
+
+    try {
+      const graph = buildInstalledWorkspaceGraph(repo.root);
+      const pkg = graph.packages['@alavida-ai/dashboard-creator'];
+
+      assert.equal(pkg.primaryExport, '@alavida-ai/dashboard-creator');
+      assert.deepEqual(
+        pkg.exports,
+        [
+          '@alavida-ai/dashboard-creator',
+          '@alavida-ai/dashboard-creator:dashboard-scaffolding',
+        ]
+      );
+      assert.equal(graph.exports['@alavida-ai/dashboard-creator'].runtimeName, 'dashboard-creator');
+      assert.equal(graph.exports['@alavida-ai/dashboard-creator:dashboard-scaffolding'].runtimeName, 'dashboard-creator:dashboard-scaffolding');
+      assert.equal(graph.exports['@alavida-ai/dashboard-creator:foundation-primer'], undefined);
+    } finally {
+      repo.cleanup();
+    }
+  });
 });

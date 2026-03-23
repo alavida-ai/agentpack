@@ -464,7 +464,12 @@ function readInstalledDistDirectoryExports(packageDir) {
   }
 
   return entries
-    .filter((entry) => entry.isDirectory() && existsSync(join(distDir, entry.name, 'SKILL.md')))
+    .filter((entry) => {
+      if (!entry.isDirectory()) return false;
+      if (!existsSync(join(distDir, entry.name, 'SKILL.md'))) return false;
+      if (!namespace) return false;
+      return entry.name === namespace || entry.name.startsWith(`${namespace}:`);
+    })
     .map((entry) => {
       const runtimeName = entry.name;
       const skillDir = join(distDir, runtimeName);

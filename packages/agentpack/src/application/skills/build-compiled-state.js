@@ -1,12 +1,15 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { findRepoRoot } from '../../lib/context.js';
-import { resolveSkillTarget } from '../../domain/skills/skill-target-resolution.js';
-import { writeCompiledPackageState } from '../../infrastructure/fs/compiled-state-repository.js';
+import { ensureResolvedExportIsValid, resolveSingleSkillTarget, resolveSkillTarget } from '../../domain/skills/skill-target-resolution.js';
+import { readCompiledState, writeCompiledPackageState } from '../../infrastructure/fs/compiled-state-repository.js';
 import { hashFile } from '../../domain/compiler/source-hash.js';
 import { ValidationError } from '../../utils/errors.js';
 import { buildInvalidExportError, buildInvalidPackageError } from '../../domain/skills/workspace-graph.js';
 import { buildRuntimeArtifacts } from './build-runtime-artifacts.js';
+import { collectAuthoredDependencyPackageDirs } from './collect-authored-dependency-package-dirs.js';
+import { computeRuntimeSelectionFromCompiledState } from './compute-runtime-selection.js';
+import { buildAuthoredRuntimeBundle } from './build-authored-runtime-bundle.js';
 
 function buildSourceFileRecord(repoRoot, entry) {
   const absolutePath = join(repoRoot, entry.sourcePath);
@@ -61,6 +64,7 @@ export function buildCompiledPackageArtifact(repoRoot, resolved, { emitRuntime =
     exportId: exportNode.id,
     name: exportNode.runtimeName || exportNode.declaredName || exportNode.name,
     declaredName: exportNode.declaredName,
+    moduleName: exportNode.moduleName,
     description: exportNode.description,
     packageName: pkg.packageName,
     packageVersion: pkg.packageVersion,
@@ -69,6 +73,12 @@ export function buildCompiledPackageArtifact(repoRoot, resolved, { emitRuntime =
     skillFile: exportNode.skillFile,
     runtimePath: runtimeArtifacts.get(exportNode.id)?.runtimePath || null,
     runtimeFile: runtimeArtifacts.get(exportNode.id)?.runtimeFile || null,
+    isPrimary: Boolean(exportNode.isPrimary),
+    status: exportNode.lifecycleStatus || null,
+    replacement: exportNode.replacement || null,
+    message: exportNode.message || null,
+    wraps: exportNode.wraps || null,
+    overrides: exportNode.overrides || [],
     skillImports: Object.values(exportNode.compiled.skillImports),
     sourceBindings: Object.values(exportNode.compiled.sourceBindings),
   }));
@@ -111,13 +121,34 @@ function countPackageEntries(packageArtifact) {
   };
 }
 
-export function buildCompiledStateUseCase(target, { cwd = process.cwd(), persist = true } = {}) {
+export function buildCompiledStateUseCase(target, {
+  cwd = process.cwd(),
+  persist = true,
+  includeDependencies = true,
+} = {}) {
   const repoRoot = findRepoRoot(cwd);
   const resolved = resolveSkillTarget(repoRoot, target, { includeInstalled: false, cwd });
+  const resolvedExport = ensureResolvedExportIsValid(
+    resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false, cwd })
+  );
+
+  if (persist && includeDependencies) {
+    for (const packageDir of collectAuthoredDependencyPackageDirs(repoRoot, resolvedExport, { cwd })) {
+      buildCompiledStateUseCase(packageDir, { cwd, persist: true, includeDependencies: false });
+    }
+  }
+
   const artifact = buildCompiledPackageArtifact(repoRoot, resolved, { emitRuntime: persist });
 
   if (persist) {
     writeCompiledPackageState(repoRoot, artifact);
+    const compiledState = readCompiledState(repoRoot);
+    const selection = computeRuntimeSelectionFromCompiledState(compiledState, {
+      mode: 'closure',
+      packageName: artifact.packageName,
+      exportId: artifact.root_export,
+    });
+    buildAuthoredRuntimeBundle(repoRoot, selection);
   }
 
   const counts = countPackageEntries(artifact);

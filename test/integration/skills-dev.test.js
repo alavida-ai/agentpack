@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { addPackagedSkill, createAuthoredMultiSkillFixture, createTempRepo, readPathState, runCLI, runCLIJson, startCLI } from './fixtures.js';
+import { addPackagedSkill, createAuthoredMultiSkillFixture, createAuthoredPluginBundleFixture, createTempRepo, readPathState, runCLI, runCLIJson, startCLI } from './fixtures.js';
 import { startSkillDev } from '../../packages/agentpack/src/lib/skills.js';
 
 async function waitUntil(predicate, timeoutMs = 1000) {
@@ -312,6 +312,32 @@ description: Invalid sibling.
       assert.equal(result.exitCode, 2);
       assert.equal(result.json.error, 'package_invalid');
       assert.match(result.json.message, /package is invalid/i);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('materializes authored dependency closure from the selected target dist bundle during dev', () => {
+    const repo = createAuthoredPluginBundleFixture('skills-dev-authored-plugin-bundle');
+
+    try {
+      const session = startSkillDev('workbenches/dashboard-creator', {
+        cwd: repo.root,
+        dashboard: false,
+      });
+
+      assert.deepEqual(
+        session.initialResult.linkedSkills.map((entry) => entry.name).sort(),
+        ['dashboard-creator', 'foundation-primer']
+      );
+
+      const state = JSON.parse(
+        readFileSync(join(repo.root, '.agentpack', 'materialization-state.json'), 'utf-8')
+      );
+      assert.ok(state.adapters.claude.every((entry) => entry.source.includes('workbenches/dashboard-creator/dist/')));
+      assert.ok(state.adapters.claude.every((entry) => !entry.source.includes('skills/foundation-primer/dist/')));
+
+      session.close();
     } finally {
       repo.cleanup();
     }

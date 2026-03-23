@@ -35,7 +35,9 @@ import { compileSkillDocument } from '../domain/compiler/skill-compiler.js';
 import { hashFile } from '../domain/compiler/source-hash.js';
 import { startSkillDevWorkbench } from '../application/skills/start-skill-dev-workbench.js';
 import { computeRuntimeSelectionUseCase } from '../application/skills/compute-runtime-selection.js';
+import { buildAuthoredRuntimeBundle } from '../application/skills/build-authored-runtime-bundle.js';
 import { materializeRuntimeSelectionUseCase } from '../application/skills/materialize-runtime-selection.js';
+import { readAuthoredRuntimeBundleUseCase } from '../application/skills/read-authored-runtime-bundle.js';
 import { AgentpackError, EXIT_CODES, NotFoundError, ValidationError } from '../utils/errors.js';
 
 const MANAGED_PACKAGE_SCOPES = ['@alavida', '@alavida-ai'];
@@ -110,41 +112,6 @@ function resolveLocalPackagedSkillDir(repoRoot, target) {
     packageName: resolved.package.packageName,
     skillName: resolved.export.name,
   };
-}
-
-function buildLocalDependencyPackages(repoRoot, rootResolved, { cwd }) {
-  const context = loadSkillTargetContext(repoRoot, { includeInstalled: false });
-  const authoredGraph = context.authoredGraph;
-  if (!authoredGraph || !rootResolved?.export) return;
-
-  const queue = [rootResolved.export.id];
-  const seenExports = new Set();
-  const builtPackages = new Set([rootResolved.package.packageName]);
-
-  while (queue.length > 0) {
-    const exportId = queue.shift();
-    if (seenExports.has(exportId)) continue;
-    seenExports.add(exportId);
-
-    const exportNode = authoredGraph.exports?.[exportId];
-    if (!exportNode?.compiled) continue;
-
-    for (const skillImport of Object.values(exportNode.compiled.skillImports || {})) {
-      let dependency;
-      try {
-        dependency = ensureResolvedExportIsValid(
-          resolveSingleSkillTarget(repoRoot, skillImport.target, { includeInstalled: false, cwd })
-        );
-      } catch {
-        continue;
-      }
-
-      queue.push(dependency.export.id);
-      if (builtPackages.has(dependency.package.packageName)) continue;
-      buildCompiledStateUseCase(dependency.package.packageDir, { cwd });
-      builtPackages.add(dependency.package.packageName);
-    }
-  }
 }
 
 function resolveSkillFileTarget(repoRoot, target) {
@@ -325,14 +292,18 @@ export function devSkill(target, {
       resolveSingleSkillTarget(repoRoot, target, { includeInstalled: false, cwd })
     );
     const buildResult = buildCompiledStateUseCase(target, { cwd });
-    buildLocalDependencyPackages(repoRoot, resolved, { cwd });
     const selection = computeRuntimeSelectionUseCase({
       cwd,
       mode: 'closure',
       packageName: buildResult.packageName,
       exportId: resolved.export.id,
     });
-    const materialization = materializeRuntimeSelectionUseCase(repoRoot, selection);
+    const bundle = buildAuthoredRuntimeBundle(repoRoot, selection);
+    const bundledSelection = readAuthoredRuntimeBundleUseCase({
+      cwd,
+      packagePath: bundle.targetPackagePath,
+    });
+    const materialization = materializeRuntimeSelectionUseCase(repoRoot, bundledSelection);
     const synced = sync
       ? syncSkillDependencies(packageDir)
       : {
@@ -342,7 +313,7 @@ export function devSkill(target, {
         removed: [],
         unchanged: true,
       };
-    const linkedSkills = selection.exports.map((entry) => ({
+    const linkedSkills = bundledSelection.exports.map((entry) => ({
       name: entry.name,
       path: entry.runtimePath || entry.skillPath,
       packageName: entry.packageName,

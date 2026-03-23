@@ -84,10 +84,15 @@ Ground this in [interview notes](source:interviews){context="primary research so
         defaultTarget: 'skills/copywriting',
       });
       assert.equal(rootModel.selected.id, '@alavida/value-copywriting');
-      assert.equal(rootModel.selected.sourceCount, 1);
+      assert.equal(rootModel.selected.sourceCount, 2);
       assert.deepEqual(
         rootModel.edges.filter((edge) => edge.kind === 'provenance'),
         [
+          {
+            source: `source:${externalSourcePath}`,
+            target: '@alavida/research',
+            kind: 'provenance',
+          },
           {
             source: `source:${rootSourcePath}`,
             target: '@alavida/value-copywriting:kickoff',

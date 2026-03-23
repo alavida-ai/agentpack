@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4
+
+### Patch Changes
+
+- [#91](https://github.com/alavida-ai/agentpack/pull/91) [`45d6622`](https://github.com/alavida-ai/agentpack/commit/45d6622d74818f6b284628fa196383c5a8286af4) Thanks [@alexandergirardet](https://github.com/alexandergirardet)! - Bundle authored workbench dependency closures into a single target `dist/` for plugin packaging.
+
 ## 0.2.3
 
 ### Patch Changes

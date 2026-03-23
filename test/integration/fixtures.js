@@ -324,6 +324,59 @@ Use [the recap source](source:recapSource){context="source material for recap pl
   return repo;
 }
 
+export function createAuthoredPluginBundleFixture(name = 'authored-plugin-bundle') {
+  const repo = createTempRepo(name);
+
+  mkdirSync(join(repo.root, 'domains', 'design', 'knowledge'), { recursive: true });
+  writeFileSync(join(repo.root, 'domains', 'design', 'knowledge', 'guidelines.md'), '# Guidelines\n');
+  writeFileSync(join(repo.root, 'domains', 'design', 'knowledge', 'dashboard.md'), '# Dashboard\n');
+
+  addPackagedSkill(repo.root, 'skills/foundation-primer', {
+    skillMd: `---
+name: foundation-primer
+description: Foundation primer.
+---
+
+\`\`\`agentpack
+source guidelines = "domains/design/knowledge/guidelines.md"
+\`\`\`
+
+Use [guidelines](source:guidelines){context="foundation guidance"}.
+`,
+    packageJson: {
+      name: '@alavida-ai/foundation-primer',
+      version: '1.0.0',
+      files: ['SKILL.md'],
+    },
+  });
+
+  addPackagedSkill(repo.root, 'workbenches/dashboard-creator', {
+    skillMd: `---
+name: dashboard-creator
+description: Dashboard creation workflow.
+---
+
+\`\`\`agentpack
+import foundationPrimer from skill "@alavida-ai/foundation-primer"
+source dashboard = "domains/design/knowledge/dashboard.md"
+\`\`\`
+
+Use [foundation primer](skill:foundationPrimer){context="shared design system guidance"}.
+Use [dashboard brief](source:dashboard){context="dashboard-specific source material"}.
+`,
+    packageJson: {
+      name: '@alavida-ai/dashboard-creator',
+      version: '1.0.0',
+      files: ['SKILL.md'],
+      dependencies: {
+        '@alavida-ai/foundation-primer': '*',
+      },
+    },
+  });
+
+  return repo;
+}
+
 export function readPathState(pathValue) {
   try {
     const stat = lstatSync(pathValue);

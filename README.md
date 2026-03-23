@@ -119,7 +119,7 @@ agentpack author build path/to/skill
 agentpack author materialize
 ```
 
-`author build` produces `.agentpack/compiled.json`. `author materialize` records adapter output ownership in `.agentpack/materialization-state.json`.
+`author build` produces `.agentpack/compiled.json` and a plugin-ready closure bundle in the target package's `dist/`, including `dist/.agentpack-bundle.json`. `author materialize` materializes that authored closure bundle into runtime adapters and records adapter output ownership in `.agentpack/materialization-state.json`.
 
 ## The Model
 

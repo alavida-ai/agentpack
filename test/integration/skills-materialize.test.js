@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createScenario, readMaterializationState, runCLIJson } from './fixtures.js';
+import { createAuthoredPluginBundleFixture, createScenario, readMaterializationState, runCLIJson } from './fixtures.js';
 import { startSkillDev } from '../../packages/agentpack/src/lib/skills.js';
 
 function createCompilerModeRepo(name = 'skills-materialize') {
@@ -133,6 +133,36 @@ describe('agentpack skills materialize', () => {
       assert.equal(result.json.error, 'compiled_state_not_found');
       assert.match(result.json.message, /compiled state not found/i);
       assert.equal(result.json.suggestion, 'Run `agentpack author build <target>` first.');
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('materializes the authored closure from the selected target bundle manifest', () => {
+    const repo = createAuthoredPluginBundleFixture('skills-materialize-authored-plugin-bundle');
+
+    try {
+      const buildResult = runCLIJson(['author', 'build', 'workbenches/dashboard-creator'], { cwd: repo.root });
+      assert.equal(buildResult.exitCode, 0, buildResult.stderr || buildResult.stdout);
+
+      const result = runCLIJson(['author', 'materialize'], { cwd: repo.root });
+      assert.equal(result.exitCode, 0, result.stderr || result.stdout);
+
+      const bundleManifestPath = join(repo.root, 'workbenches', 'dashboard-creator', 'dist', '.agentpack-bundle.json');
+      assert.equal(existsSync(bundleManifestPath), true);
+
+      const state = readMaterializationState(repo.root);
+      assert.deepEqual(
+        state.adapters.claude.map((entry) => entry.runtimeName).sort(),
+        ['dashboard-creator', 'foundation-primer']
+      );
+      assert.ok(state.adapters.claude.every((entry) => entry.source.includes('workbenches/dashboard-creator/dist/')));
+      assert.ok(state.adapters.claude.every((entry) => !entry.source.includes('skills/foundation-primer/dist/')));
+
+      const rootPath = join(repo.root, '.claude', 'skills', 'dashboard-creator');
+      const dependencyPath = join(repo.root, '.claude', 'skills', 'foundation-primer');
+      assert.equal(lstatSync(rootPath).isSymbolicLink(), true);
+      assert.equal(lstatSync(dependencyPath).isSymbolicLink(), true);
     } finally {
       repo.cleanup();
     }

@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createScenario, readCompiledState, runCLIJson } from './fixtures.js';
+import { createAuthoredPluginBundleFixture, createScenario, readCompiledState, runCLIJson } from './fixtures.js';
 
 describe('agentpack skills build', () => {
   it('builds compiled state for a compiler-mode packaged skill', () => {
@@ -229,6 +229,45 @@ Ground this in [principles](source:principles){context="primary source material"
       assert.equal(result.exitCode, 0, result.stderr || result.stdout);
       const compiled = readCompiledState(repo.root);
       assert.equal(compiled.active_package, '@alavida/agonda-architect');
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('bundles authored dependency closure into the selected target dist while keeping the package manifest scoped', () => {
+    const repo = createAuthoredPluginBundleFixture('skills-build-authored-plugin-bundle');
+
+    try {
+      const result = runCLIJson(['author', 'build', 'workbenches/dashboard-creator'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr || result.stdout);
+
+      const bundleManifestPath = join(repo.root, 'workbenches', 'dashboard-creator', 'dist', '.agentpack-bundle.json');
+      const runtimeManifestPath = join(repo.root, 'workbenches', 'dashboard-creator', 'dist', 'agentpack.json');
+      const rootRuntimePath = join(repo.root, 'workbenches', 'dashboard-creator', 'dist', 'dashboard-creator', 'SKILL.md');
+      const dependencyRuntimePath = join(repo.root, 'workbenches', 'dashboard-creator', 'dist', 'foundation-primer', 'SKILL.md');
+
+      assert.equal(existsSync(runtimeManifestPath), true);
+      assert.equal(existsSync(bundleManifestPath), true);
+      assert.equal(existsSync(rootRuntimePath), true);
+      assert.equal(existsSync(dependencyRuntimePath), true);
+
+      const runtimeManifest = JSON.parse(readFileSync(runtimeManifestPath, 'utf-8'));
+      assert.deepEqual(runtimeManifest.exports.map((entry) => entry.runtimeName), ['dashboard-creator']);
+
+      const bundleManifest = JSON.parse(readFileSync(bundleManifestPath, 'utf-8'));
+      assert.equal(bundleManifest.targetPackageName, '@alavida-ai/dashboard-creator');
+      assert.equal(bundleManifest.selectedExportId, '@alavida-ai/dashboard-creator');
+      assert.deepEqual(
+        bundleManifest.exports.map((entry) => entry.runtimeName).sort(),
+        ['dashboard-creator', 'foundation-primer']
+      );
+
+      const compiled = readCompiledState(repo.root);
+      assert.deepEqual(Object.keys(compiled.packages).sort(), [
+        '@alavida-ai/dashboard-creator',
+        '@alavida-ai/foundation-primer',
+      ]);
     } finally {
       repo.cleanup();
     }

@@ -1,0 +1,83 @@
+<h2>Implementation Approaches</h2>
+<p class="subtitle">Three ways to build the redesigned skill graph dashboard. Click the one you prefer.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Incremental Enhancement (Recommended)</h3>
+      <p>Evolve the existing React + D3 stack. Replace the hardcoded 3-column layout with a proper D3 tree layout engine. Add routing with simple hash-based URLs. Restyle everything in place.</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>No new dependencies beyond what's already installed</li>
+            <li>Reuses existing server, watcher, and bundling infrastructure</li>
+            <li>D3's tree layout handles the DAG positioning natively</li>
+            <li>Smallest diff — less risk of breaking the working watcher/action flow</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>D3's imperative style means more manual DOM management</li>
+            <li>Hash routing is basic (no proper history API)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>D3 Force-Directed + History API</h3>
+      <p>Same React + D3 stack, but use a force-directed layout instead of a tree layout. Nodes auto-arrange based on their connections. Add proper History API routing for clean URLs.</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Force layout handles complex graphs with cross-dependencies gracefully</li>
+            <li>Clean URL paths (/skill/name) instead of hash fragments</li>
+            <li>Looks more organic and dynamic</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Force layouts don't enforce top-down directionality well — conflicts with the DAG requirement</li>
+            <li>Needs server-side route handling for history API</li>
+            <li>Physics simulation can feel jittery with frequent model updates</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Canvas-Based with ELK Layout</h3>
+      <p>Replace D3 SVG rendering with HTML Canvas for performance. Use ELK.js (Eclipse Layout Kernel) for proper layered DAG positioning. New dependency but purpose-built for directed graphs.</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>ELK produces the cleanest layered DAG layouts — exactly what we want</li>
+            <li>Canvas scales to hundreds of nodes without SVG DOM overhead</li>
+            <li>Professional-grade graph rendering</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>New dependency (elkjs ~2MB)</li>
+            <li>Canvas hit-testing for clicks/hover is more work than SVG</li>
+            <li>Bigger rewrite — replaces the entire rendering layer</li>
+            <li>Over-engineered for the likely graph sizes (tens of nodes, not thousands)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

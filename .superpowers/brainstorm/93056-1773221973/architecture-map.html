@@ -1,0 +1,123 @@
+<h2>Current Architecture Map</h2>
+<p class="subtitle">How <code>agentpack</code> is currently organized in code</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">Runtime Shape</div>
+    <div class="mockup-body">
+      <div style="display:grid;grid-template-columns:1fr;gap:12px">
+        <div class="card">
+          <div class="card-body">
+            <div class="label">CLI Entry</div>
+            <h3><code>src/cli.js</code></h3>
+            <p>Global flags, top-level error handling, command registration.</p>
+          </div>
+        </div>
+        <div class="split">
+          <div class="card">
+            <div class="card-body">
+              <div class="label">Command Surface</div>
+              <h3><code>src/commands/skills.js</code></h3>
+              <p>Large commander adapter for inspect, validate, dev, install, stale, env, dependencies, status, missing, uninstall.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="label">Command Surface</div>
+              <h3><code>src/commands/plugin.js</code></h3>
+              <p>Commander adapter for inspect, validate, build, dev.</p>
+            </div>
+          </div>
+        </div>
+        <div class="split">
+          <div class="card" data-choice="skills-core" onclick="toggleSelect(this)">
+            <div class="card-body">
+              <div class="label">Core Domain Logic</div>
+              <h3><code>src/lib/skills.js</code></h3>
+              <p>Owns most of the system: parsing metadata, validation, dependency sync, install state, build-state, stale detection, env/status, linking.</p>
+            </div>
+          </div>
+          <div class="card" data-choice="plugin-core" onclick="toggleSelect(this)">
+            <div class="card-body">
+              <div class="label">Core Domain Logic</div>
+              <h3><code>src/lib/plugins.js</code></h3>
+              <p>Plugin-local bundle inspection, validation, build staging, vendoring, watch mode. Reuses skill parsing and dependency utilities.</p>
+            </div>
+          </div>
+        </div>
+        <div class="split">
+          <div class="card">
+            <div class="card-body">
+              <div class="label">Shared Infra</div>
+              <h3><code>src/lib/context.js</code></h3>
+              <p>Repo root and workbench discovery.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="label">Shared Infra</div>
+              <h3><code>src/utils/*</code></h3>
+              <p>Error taxonomy and output formatting.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Observed Structural Pattern</h3>
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>What is good</h4>
+      <ul>
+        <li>Very small surface area: only a few source files.</li>
+        <li>Commands map cleanly to user workflows.</li>
+        <li>Integration tests appear to drive behavior.</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Maintenance risk</h4>
+      <ul>
+        <li><code>src/lib/skills.js</code> is the dominant module and mixes multiple concerns.</li>
+        <li>Command adapters contain a lot of formatting logic.</li>
+        <li>Context, filesystem, lifecycle, and graph logic are not strongly separated yet.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Likely Responsibility Clusters Inside <code>skills.js</code></h3>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="authoring" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Authoring Lifecycle</h3>
+        <p>inspect, validate, stale, build-state, catalog</p>
+      </div>
+    </div>
+    <div class="option" data-choice="consumer" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Consumer Install Lifecycle</h3>
+        <p>install, uninstall, env, status, outdated, missing</p>
+      </div>
+    </div>
+    <div class="option" data-choice="runtime" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>Runtime Materialization</h3>
+        <p>linking, syncing, local discovery paths, install state reconciliation</p>
+      </div>
+    </div>
+    <div class="option" data-choice="graph" onclick="toggleSelect(this)">
+      <div class="letter">D</div>
+      <div class="content">
+        <h3>Dependency Graph</h3>
+        <p>requires parsing, reverse deps, affected/stale status propagation</p>
+      </div>
+    </div>
+  </div>
+</div>

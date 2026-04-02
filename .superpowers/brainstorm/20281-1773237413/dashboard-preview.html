@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Noto+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1a1916;
+    --surface: #252320;
+    --border: rgba(255, 255, 255, 0.06);
+    --border-bright: rgba(255, 255, 255, 0.12);
+    --text: #e8e4dc;
+    --text-dim: #9a9488;
+    --text-faint: #6b655c;
+    --status-current: #8fa67e;
+    --status-stale: #d4a45e;
+    --status-affected: #c4956e;
+    --status-unknown: #9a9488;
+    --edge-provenance: #7a9abb;
+    --edge-requires: #8fa67e;
+    --accent: #ffbf47;
+    --font-body: 'Crimson Pro', Georgia, serif;
+    --font-mono: 'Noto Sans Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @keyframes stale-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+  }
+
+  .header {
+    padding: 20px 40px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .brand {
+    font-family: var(--font-mono);
+    font-variant: small-caps;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .title {
+    font-family: var(--font-body);
+    font-size: 28px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--text);
+  }
+  .rule {
+    width: 36px;
+    height: 1px;
+    background: var(--status-current);
+    border: none;
+    margin-top: 10px;
+  }
+  .legend {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .legend-ring { width: 10px; height: 10px; border-radius: 50%; background: transparent; }
+  .legend-line { width: 20px; height: 2px; border-radius: 1px; opacity: 0.6; }
+
+  .breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--text-dim);
+    padding: 0 40px;
+    height: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .breadcrumbs .active { color: var(--text); }
+  .breadcrumbs .sep { color: var(--text-faint); }
+
+  .controls {
+    position: fixed;
+    bottom: 28px;
+    left: 40px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+  }
+  .ctrl-btn {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    color: var(--text-dim);
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 200ms ease;
+    letter-spacing: 0.04em;
+  }
+  .ctrl-btn:hover { color: var(--text); border-color: var(--status-current); }
+
+  /* Sidebar */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 340px;
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    padding: 28px 24px;
+    z-index: 20;
+    overflow-y: auto;
+  }
+  .sidebar-type {
+    font-family: var(--font-mono);
+    font-variant: small-caps;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .sidebar-name {
+    font-family: var(--font-body);
+    font-size: 24px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--text);
+    margin-bottom: 12px;
+    line-height: 1.3;
+  }
+  .status-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    display: inline-block;
+  }
+  .meta-label {
+    font-family: var(--font-mono);
+    font-variant: small-caps;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: 9px;
+    color: var(--text-faint);
+    margin-top: 16px;
+    margin-bottom: 6px;
+  }
+  .meta-value {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .nav-btn {
+    margin-top: 24px;
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: transparent;
+    border: 1px solid var(--border-bright);
+    color: var(--text-dim);
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: all 200ms ease;
+    letter-spacing: 0.04em;
+    text-align: left;
+  }
+  .nav-btn:hover { color: var(--text); border-color: var(--status-current); }
+  .close-btn {
+    position: absolute; top: 16px; right: 16px;
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; font-family: var(--font-mono); font-size: 16px;
+    padding: 4px; line-height: 1;
+  }
+  .close-btn:hover { color: var(--text); }
+
+  svg { cursor: grab; }
+  svg:active { cursor: grabbing; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="brand">Agentpack</div>
+    <div class="title">Skill Graph</div>
+    <hr class="rule">
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--edge-provenance)"></div> Source</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--status-current)"></div> Current</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--status-stale)"></div> Stale</div>
+    <div class="legend-item"><div class="legend-ring" style="border:1.5px solid var(--status-affected)"></div> Affected</div>
+    <div class="legend-item"><div class="legend-line" style="background:var(--edge-requires)"></div> Requires</div>
+    <div class="legend-item"><div class="legend-line" style="background:var(--edge-provenance)"></div> Provenance</div>
+  </div>
+</div>
+
+<div class="breadcrumbs">
+  <span style="cursor:pointer">value-copywriting</span>
+  <span class="sep">›</span>
+  <span class="active">research-engine</span>
+</div>
+
+<svg width="100%" height="calc(100vh - 110px)" viewBox="0 0 1200 700">
+  <!-- Glow filters -->
+  <defs>
+    <filter id="glow-green" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#8fa67e" flood-opacity="0.6"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-amber" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#d4a45e" flood-opacity="0.6"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-blue" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#7a9abb" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <g transform="translate(100, 20)">
+    <!-- SOURCE NODES (top tier) -->
+    <!-- source: tone-of-voice.md -->
+    <circle cx="350" cy="40" r="5" fill="#7a9abb" stroke="none"/>
+    <text x="350" y="26" text-anchor="middle" fill="#9a9488" font-family="Noto Sans Mono" font-size="9">tone-of-voice.md</text>
+
+    <!-- source: brand-guide.md -->
+    <circle cx="500" cy="40" r="5" fill="#7a9abb" stroke="none"/>
+    <text x="500" y="26" text-anchor="middle" fill="#9a9488" font-family="Noto Sans Mono" font-size="9">brand-guide.md</text>
+
+    <!-- source: writing-patterns.md (shared — used by 2 skills) -->
+    <circle cx="650" cy="40" r="5" fill="#7a9abb" stroke="none"/>
+    <text x="650" y="26" text-anchor="middle" fill="#9a9488" font-family="Noto Sans Mono" font-size="9">writing-patterns.md</text>
+
+    <!-- Provenance edges (source → skill) -->
+    <path d="M350,45 C350,100 500,100 500,160" fill="none" stroke="#7a9abb" stroke-width="1.5" opacity="0.4"/>
+    <path d="M500,45 C500,100 500,100 500,160" fill="none" stroke="#7a9abb" stroke-width="1.5" opacity="0.4"/>
+    <path d="M650,45 C650,100 500,100 500,160" fill="none" stroke="#7a9abb" stroke-width="1.5" opacity="0.4"/>
+    <!-- Shared source: writing-patterns also feeds seo-audit -->
+    <path d="M650,45 C650,120 700,200 700,310" fill="none" stroke="#7a9abb" stroke-width="1.5" opacity="0.25"/>
+
+    <!-- ROOT SKILL NODE (selected — golden ring) -->
+    <circle cx="500" cy="175" r="12" fill="#8fa67e" stroke="#ffbf47" stroke-width="2.5"/>
+    <text x="500" y="155" text-anchor="middle" fill="#e8e4dc" font-family="Noto Sans Mono" font-size="12" font-weight="600">research-engine</text>
+
+    <!-- Requires edges (skill → deps) -->
+    <path d="M500,187 C500,230 350,250 350,310" fill="none" stroke="#8fa67e" stroke-width="2" opacity="0.5"/>
+    <path d="M500,187 C500,230 700,250 700,310" fill="none" stroke="#8fa67e" stroke-width="2" opacity="0.5"/>
+
+    <!-- DIRECT DEPENDENCY: @alavida/data-extraction (current) -->
+    <circle cx="350" cy="320" r="8" fill="#8fa67e" stroke="none"/>
+    <text x="350" y="300" text-anchor="middle" fill="#9a9488" font-family="Noto Sans Mono" font-size="10">data-extraction</text>
+
+    <!-- DIRECT DEPENDENCY: @alavida/seo-audit (STALE — amber + pulse) -->
+    <circle cx="700" cy="320" r="14" fill="none" stroke="#d4a45e" stroke-width="1" style="animation: stale-pulse 2s ease-in-out infinite"/>
+    <circle cx="700" cy="320" r="8" fill="#d4a45e" stroke="none"/>
+    <text x="700" y="300" text-anchor="middle" fill="#d4a45e" font-family="Noto Sans Mono" font-size="10">seo-audit</text>
+
+    <!-- Deeper transitive edges (faded) -->
+    <path d="M350,328 C350,370 250,380 250,440" fill="none" stroke="#8fa67e" stroke-width="1.5" opacity="0.3"/>
+    <path d="M350,328 C350,370 450,380 450,440" fill="none" stroke="#8fa67e" stroke-width="1.5" opacity="0.3"/>
+    <path d="M700,328 C700,380 600,400 600,440" fill="none" stroke="#8fa67e" stroke-width="1.5" opacity="0.3"/>
+    <path d="M700,328 C700,380 800,400 800,440" fill="none" stroke="#8fa67e" stroke-width="1.5" opacity="0.3"/>
+
+    <!-- Cross-link (shared dep — dashed) -->
+    <path d="M450,448 C500,490 550,490 600,448" fill="none" stroke="#8fa67e" stroke-width="1" stroke-dasharray="6 4" opacity="0.25"/>
+
+    <!-- TRANSITIVE: parser-core (current) -->
+    <circle cx="250" cy="450" r="7" fill="#8fa67e" stroke="none" opacity="0.8"/>
+    <text x="250" y="474" text-anchor="middle" fill="#9a9488" font-family="Noto Sans Mono" font-size="9" opacity="0.7">parser-core</text>
+
+    <!-- TRANSITIVE: html-renderer (current) -->
+    <circle cx="450" cy="450" r="7" fill="#8fa67e" stroke="none" opacity="0.8"/>
+    <text x="450" y="474" text-anchor="middle" fill="#9a9488" font-family="Noto Sans Mono" font-size="9" opacity="0.7">html-renderer</text>
+
+    <!-- TRANSITIVE: scoring-engine (AFFECTED — hollow amber) -->
+    <circle cx="600" cy="450" r="7" fill="transparent" stroke="#c4956e" stroke-width="1.5" opacity="0.8"/>
+    <text x="600" y="474" text-anchor="middle" fill="#c4956e" font-family="Noto Sans Mono" font-size="9" opacity="0.7">scoring-engine</text>
+
+    <!-- TRANSITIVE: crawl-utils (current) -->
+    <circle cx="800" cy="450" r="7" fill="#8fa67e" stroke="none" opacity="0.8"/>
+    <text x="800" y="474" text-anchor="middle" fill="#9a9488" font-family="Noto Sans Mono" font-size="9" opacity="0.7">crawl-utils</text>
+
+    <!-- Deepest transitive -->
+    <path d="M250,457 C250,490 300,500 300,540" fill="none" stroke="#8fa67e" stroke-width="1" opacity="0.2"/>
+    <circle cx="300" cy="550" r="5" fill="#8fa67e" stroke="none" opacity="0.5"/>
+    <text x="300" y="570" text-anchor="middle" fill="#9a9488" font-family="Noto Sans Mono" font-size="8" opacity="0.5">tokenizer</text>
+  </g>
+</svg>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <button class="close-btn">×</button>
+  <div class="sidebar-type">dependency</div>
+  <div class="sidebar-name">seo-audit</div>
+  <span class="status-pill" style="background:rgba(212,164,94,0.12);color:#d4a45e">stale</span>
+
+  <div class="meta-label">Description</div>
+  <div class="meta-value">Audits web pages for SEO best practices, analyzing meta tags, heading structure, content quality, and technical signals.</div>
+
+  <div class="meta-label">Version</div>
+  <div class="meta-value" style="font-family:var(--font-mono);font-size:12px">1.3.2</div>
+
+  <div class="meta-label">Explanation</div>
+  <div class="meta-value">Stale against recorded build-state</div>
+
+  <button class="nav-btn">View skill graph →</button>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <button class="ctrl-btn">Reset</button>
+  <button class="ctrl-btn">Validate</button>
+  <button class="ctrl-btn">Refresh</button>
+  <button class="ctrl-btn">Hide labels</button>
+</div>
+
+</body>
+</html>

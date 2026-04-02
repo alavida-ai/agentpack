@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentpack Skill Dev Dashboard Mockup</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: rgba(14, 27, 45, 0.9);
+      --panel-strong: #0f2138;
+      --line: rgba(124, 163, 255, 0.35);
+      --text: #eaf1ff;
+      --muted: #98accb;
+      --blue: #4d8dff;
+      --green: #26c281;
+      --amber: #ffbf47;
+      --red: #ff5d73;
+      --source: #163a52;
+      --skill: #102c4f;
+      --dependency: #19351b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(77, 141, 255, 0.18), transparent 32rem),
+        radial-gradient(circle at right, rgba(38, 194, 129, 0.12), transparent 24rem),
+        linear-gradient(180deg, #050b15 0%, var(--bg) 100%);
+      min-height: 100vh;
+    }
+
+    .page {
+      width: min(1380px, calc(100vw - 48px));
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+
+    .header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.05;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 68ch;
+      line-height: 1.5;
+    }
+
+    .meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(760px, 1.6fr) minmax(320px, 0.8fr);
+      gap: 20px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 22px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+    }
+
+    .graph-panel {
+      padding: 18px 18px 10px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .canvas {
+      position: relative;
+      min-height: 760px;
+      overflow: hidden;
+      border-radius: 18px;
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(8, 18, 31, 0.95), rgba(10, 20, 34, 0.95));
+      background-size: 36px 36px, 36px 36px, auto;
+    }
+
+    .edge {
+      position: absolute;
+      height: 2px;
+      transform-origin: left center;
+      opacity: 0.9;
+    }
+
+    .edge span {
+      position: absolute;
+      top: -18px;
+      right: 8px;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(7, 17, 31, 0.88);
+      padding: 2px 6px;
+      border-radius: 999px;
+    }
+
+    .node {
+      position: absolute;
+      width: 210px;
+      border-radius: 18px;
+      padding: 14px 14px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.24);
+    }
+
+    .node small {
+      display: block;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      font-size: 11px;
+    }
+
+    .node strong {
+      display: block;
+      font-size: 16px;
+      line-height: 1.25;
+      margin-bottom: 8px;
+    }
+
+    .node p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .node ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .source {
+      background: linear-gradient(180deg, rgba(22, 58, 82, 0.95), rgba(14, 44, 63, 0.95));
+    }
+
+    .skill {
+      background: linear-gradient(180deg, rgba(16, 44, 79, 0.96), rgba(10, 30, 56, 0.96));
+      border-color: rgba(77, 141, 255, 0.45);
+    }
+
+    .dependency {
+      background: linear-gradient(180deg, rgba(25, 53, 27, 0.95), rgba(19, 40, 20, 0.95));
+    }
+
+    .selected {
+      outline: 2px solid rgba(255, 191, 71, 0.85);
+      box-shadow: 0 0 0 6px rgba(255, 191, 71, 0.12), 0 18px 36px rgba(0, 0, 0, 0.3);
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .inspector {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .inspector-card {
+      background: var(--panel-strong);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .inspector-card h2,
+    .inspector-card h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 8px 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .kv strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .list-item {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .list-item strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 1120px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="header">
+      <div>
+        <h1>`agentpack skills dev` Dashboard</h1>
+        <p class="subtitle">
+          Focused DAG for one skill under test. The graph mixes provenance edges and dependency edges so an author can
+          see what the skill is built from, what it requires, and where stale state will propagate.
+        </p>
+      </div>
+      <div class="meta">
+        <div class="pill">Skill: <strong>@alavida/value-copywriting</strong></div>
+        <div class="pill">Mode: <strong>dev-linked</strong></div>
+        <div class="pill">Watch: <strong>on</strong></div>
+      </div>
+    </section>
+
+    <section class="layout">
+      <div class="panel graph-panel">
+        <div class="panel-header">
+          <div class="panel-title">Skill Graph</div>
+          <div class="legend">
+            <span><i class="dot" style="background: var(--blue)"></i> selected skill</span>
+            <span><i class="dot" style="background: #356e96"></i> source file</span>
+            <span><i class="dot" style="background: var(--green)"></i> required skill</span>
+            <span><i class="dot" style="background: var(--amber)"></i> stale / affected</span>
+          </div>
+        </div>
+
+        <div class="canvas">
+          <div class="edge" style="left: 195px; top: 164px; width: 300px; background: var(--line); transform: rotate(28deg);">
+            <span>provenance</span>
+          </div>
+          <div class="edge" style="left: 208px; top: 402px; width: 292px; background: var(--line); transform: rotate(-30deg);">
+            <span>provenance</span>
+          </div>
+          <div class="edge" style="left: 671px; top: 286px; width: 244px; background: rgba(38, 194, 129, 0.55); transform: rotate(-26deg);">
+            <span>requires</span>
+          </div>
+          <div class="edge" style="left: 671px; top: 365px; width: 244px; background: rgba(38, 194, 129, 0.55); transform: rotate(24deg);">
+            <span>requires</span>
+          </div>
+          <div class="edge" style="left: 1028px; top: 204px; width: 186px; background: var(--line); transform: rotate(26deg);">
+            <span>provenance</span>
+          </div>
+          <div class="edge" style="left: 1028px; top: 468px; width: 186px; background: var(--line); transform: rotate(-24deg);">
+            <span>provenance</span>
+          </div>
+
+          <article class="node source" style="left: 56px; top: 86px;">
+            <small>source</small>
+            <strong>tone-of-voice.md</strong>
+            <p>Defines positioning, rhythm, and style guardrails.</p>
+            <div class="status"><i class="dot" style="background: var(--green)"></i> current</div>
+          </article>
+
+          <article class="node source" style="left: 56px; top: 430px;">
+            <small>source</small>
+            <strong>selling-points.md</strong>
+            <p>Product facts and differentiators for commercial copy.</p>
+            <div class="status"><i class="dot" style="background: var(--amber)"></i> changed since build</div>
+          </article>
+
+          <article class="node skill selected" style="left: 460px; top: 246px; width: 230px;">
+            <small>skill under test</small>
+            <strong>@alavida/value-copywriting</strong>
+            <p>Drafts persuasive copy using authored value framing and house voice.</p>
+            <ul>
+              <li>2 sources</li>
+              <li>2 required skills</li>
+              <li>1 downstream dependent</li>
+            </ul>
+            <div class="status"><i class="dot" style="background: var(--amber)"></i> stale</div>
+          </article>
+
+          <article class="node dependency" style="left: 908px; top: 140px;">
+            <small>required skill</small>
+            <strong>@alavida/research</strong>
+            <p>Research patterns and claim qualification helpers.</p>
+            <div class="status"><i class="dot" style="background: var(--green)"></i> current</div>
+          </article>
+
+          <article class="node dependency" style="left: 908px; top: 418px;">
+            <small>required skill</small>
+            <strong>@alavida/core-writing</strong>
+            <p>Reusable structure and editing primitives.</p>
+            <div class="status"><i class="dot" style="background: var(--amber)"></i> affected</div>
+          </article>
+
+          <article class="node source" style="left: 1230px; top: 94px;">
+            <small>source</small>
+            <strong>research-method.md</strong>
+            <p>Source for the research skill’s interview and evidence method.</p>
+            <div class="status"><i class="dot" style="background: var(--green)"></i> current</div>
+          </article>
+
+          <article class="node source" style="left: 1230px; top: 510px;">
+            <small>source</small>
+            <strong>writing-principles.md</strong>
+            <p>Canonical editorial principles shared by core writing skills.</p>
+            <div class="status"><i class="dot" style="background: var(--amber)"></i> changed since build</div>
+          </article>
+        </div>
+      </div>
+
+      <aside class="panel inspector">
+        <div class="inspector-card">
+          <h2>Inspector</h2>
+          <div class="kv">
+            <div>Node</div><strong>@alavida/value-copywriting</strong>
+            <div>Type</div><strong>skill</strong>
+            <div>Status</div><strong>stale</strong>
+            <div>Mode</div><strong>dev-linked</strong>
+            <div>Package</div><strong>@alavida/value-copywriting</strong>
+            <div>Resolved at</div><strong>domains/value/skills/copywriting</strong>
+          </div>
+        </div>
+
+        <div class="inspector-card">
+          <h3>Why stale</h3>
+          <div class="list">
+            <div class="list-item">
+              <strong>selling-points.md changed</strong>
+              Current source hash differs from recorded build-state for this skill.
+            </div>
+            <div class="list-item">
+              <strong>core-writing is affected</strong>
+              A required skill is downstream of a changed source and may need rebuild review.
+            </div>
+          </div>
+        </div>
+
+        <div class="inspector-card">
+          <h3>Sources</h3>
+          <div class="list">
+            <div class="list-item">
+              <strong>domains/value/knowledge/tone-of-voice.md</strong>
+              role: voice constraints
+            </div>
+            <div class="list-item">
+              <strong>domains/value/knowledge/selling-points.md</strong>
+              role: product truth
+            </div>
+          </div>
+        </div>
+
+        <div class="inspector-card">
+          <h3>Required skills</h3>
+          <div class="list">
+            <div class="list-item">
+              <strong>@alavida/research</strong>
+              current, packaged dependency
+            </div>
+            <div class="list-item">
+              <strong>@alavida/core-writing</strong>
+              affected, packaged dependency
+            </div>
+          </div>
+        </div>
+
+        <div class="inspector-card">
+          <h3>Expected dev actions</h3>
+          <div class="list">
+            <div class="list-item">
+              <strong>Rebuild this skill</strong>
+              Source provenance changed, so revalidate before trusting local runtime output.
+            </div>
+            <div class="list-item">
+              <strong>Inspect downstream dependents</strong>
+              One or more dependents may now be affected by this stale source chain.
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

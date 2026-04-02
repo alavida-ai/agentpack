@@ -1,0 +1,152 @@
+<h2>Graph Layout Direction</h2>
+<p class="subtitle">Your reference image uses left-to-right. But for a skill developer focused on one skill, which layout feels most natural?</p>
+
+<div class="cards">
+  <!-- Option A: Left to Right Tree -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 24px; background: #0a1520;">
+      <svg viewBox="0 0 500 300" style="width:100%;height:220px;">
+        <!-- Source files (left) -->
+        <circle cx="60" cy="80" r="8" fill="none" stroke="#58c4ff" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="60" cy="150" r="8" fill="none" stroke="#58c4ff" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="60" cy="220" r="8" fill="none" stroke="#58c4ff" stroke-width="1.5" opacity="0.7"/>
+        <text x="20" y="84" fill="#58c4ff" font-size="9" opacity="0.6">src</text>
+        <text x="20" y="154" fill="#58c4ff" font-size="9" opacity="0.6">src</text>
+        <text x="20" y="224" fill="#58c4ff" font-size="9" opacity="0.6">src</text>
+
+        <!-- Selected skill (center) -->
+        <circle cx="200" cy="150" r="18" fill="none" stroke="#ffbf47" stroke-width="2.5"/>
+        <text x="200" y="154" fill="#eef4ff" font-size="10" text-anchor="middle">my-skill</text>
+
+        <!-- Dependencies (right) -->
+        <circle cx="340" cy="90" r="12" fill="none" stroke="#2ed089" stroke-width="1.5"/>
+        <circle cx="340" cy="190" r="12" fill="none" stroke="#2ed089" stroke-width="1.5"/>
+        <text x="360" y="94" fill="#2ed089" font-size="9">dep-a</text>
+        <text x="360" y="194" fill="#2ed089" font-size="9">dep-b</text>
+
+        <!-- Dep's deps -->
+        <circle cx="450" cy="60" r="7" fill="none" stroke="#2ed089" stroke-width="1" opacity="0.5"/>
+        <circle cx="450" cy="120" r="7" fill="none" stroke="#2ed089" stroke-width="1" opacity="0.5"/>
+        <circle cx="450" cy="170" r="7" fill="none" stroke="#2ed089" stroke-width="1" opacity="0.5"/>
+        <circle cx="450" cy="220" r="7" fill="none" stroke="#2ed089" stroke-width="1" opacity="0.5"/>
+
+        <!-- Edges: sources → skill -->
+        <path d="M 68 80 C 130 80, 140 150, 182 150" fill="none" stroke="rgba(88,196,255,0.35)" stroke-width="1.5"/>
+        <path d="M 68 150 C 130 150, 140 150, 182 150" fill="none" stroke="rgba(88,196,255,0.35)" stroke-width="1.5"/>
+        <path d="M 68 220 C 130 220, 140 150, 182 150" fill="none" stroke="rgba(88,196,255,0.35)" stroke-width="1.5"/>
+
+        <!-- Edges: skill → deps -->
+        <path d="M 218 150 C 270 150, 280 90, 328 90" fill="none" stroke="rgba(46,208,137,0.35)" stroke-width="1.5"/>
+        <path d="M 218 150 C 270 150, 280 190, 328 190" fill="none" stroke="rgba(46,208,137,0.35)" stroke-width="1.5"/>
+
+        <!-- Edges: deps → deep deps -->
+        <path d="M 352 90 C 390 90, 400 60, 443 60" fill="none" stroke="rgba(46,208,137,0.2)" stroke-width="1"/>
+        <path d="M 352 90 C 390 90, 400 120, 443 120" fill="none" stroke="rgba(46,208,137,0.2)" stroke-width="1"/>
+        <path d="M 352 190 C 390 190, 400 170, 443 170" fill="none" stroke="rgba(46,208,137,0.2)" stroke-width="1"/>
+        <path d="M 352 190 C 390 190, 400 220, 443 220" fill="none" stroke="rgba(46,208,137,0.2)" stroke-width="1"/>
+
+        <!-- Labels -->
+        <text x="60" y="270" fill="#90a4c4" font-size="9" text-anchor="middle">Sources</text>
+        <text x="200" y="270" fill="#ffbf47" font-size="9" text-anchor="middle">Selected</text>
+        <text x="340" y="270" fill="#2ed089" font-size="9" text-anchor="middle">Direct Deps</text>
+        <text x="450" y="270" fill="#2ed089" font-size="9" text-anchor="middle" opacity="0.5">Transitive</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>A. Left-to-Right Tree</h3>
+      <p>Like your reference image. Sources flow left → selected skill → dependencies → transitive deps. Natural reading direction, matches your existing mental model.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Radial / Center-Out -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 24px; background: #0a1520;">
+      <svg viewBox="0 0 500 300" style="width:100%;height:220px;">
+        <!-- Selected skill (center) -->
+        <circle cx="250" cy="150" r="20" fill="none" stroke="#ffbf47" stroke-width="2.5"/>
+        <text x="250" y="154" fill="#eef4ff" font-size="10" text-anchor="middle">my-skill</text>
+
+        <!-- Sources (inner ring, top-left) -->
+        <circle cx="130" cy="70" r="8" fill="none" stroke="#58c4ff" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="100" cy="150" r="8" fill="none" stroke="#58c4ff" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="130" cy="230" r="8" fill="none" stroke="#58c4ff" stroke-width="1.5" opacity="0.7"/>
+        <text x="90" y="55" fill="#58c4ff" font-size="8" opacity="0.6">sources</text>
+
+        <!-- Dependencies (inner ring, right) -->
+        <circle cx="370" cy="80" r="12" fill="none" stroke="#2ed089" stroke-width="1.5"/>
+        <circle cx="400" cy="150" r="12" fill="none" stroke="#2ed089" stroke-width="1.5"/>
+        <circle cx="370" cy="220" r="12" fill="none" stroke="#2ed089" stroke-width="1.5"/>
+
+        <!-- Transitive (outer ring) -->
+        <circle cx="460" cy="50" r="6" fill="none" stroke="#2ed089" stroke-width="1" opacity="0.4"/>
+        <circle cx="475" cy="110" r="6" fill="none" stroke="#2ed089" stroke-width="1" opacity="0.4"/>
+        <circle cx="475" cy="190" r="6" fill="none" stroke="#2ed089" stroke-width="1" opacity="0.4"/>
+        <circle cx="460" cy="250" r="6" fill="none" stroke="#2ed089" stroke-width="1" opacity="0.4"/>
+
+        <!-- Edges -->
+        <path d="M 138 70 C 180 70, 220 130, 230 150" fill="none" stroke="rgba(88,196,255,0.3)" stroke-width="1.5"/>
+        <path d="M 108 150 C 160 150, 200 150, 230 150" fill="none" stroke="rgba(88,196,255,0.3)" stroke-width="1.5"/>
+        <path d="M 138 230 C 180 230, 220 170, 230 150" fill="none" stroke="rgba(88,196,255,0.3)" stroke-width="1.5"/>
+
+        <path d="M 270 150 C 310 130, 330 80, 358 80" fill="none" stroke="rgba(46,208,137,0.3)" stroke-width="1.5"/>
+        <path d="M 270 150 C 320 150, 360 150, 388 150" fill="none" stroke="rgba(46,208,137,0.3)" stroke-width="1.5"/>
+        <path d="M 270 150 C 310 170, 330 220, 358 220" fill="none" stroke="rgba(46,208,137,0.3)" stroke-width="1.5"/>
+
+        <path d="M 382 80 C 410 60, 430 50, 454 50" fill="none" stroke="rgba(46,208,137,0.15)" stroke-width="1"/>
+        <path d="M 412 150 C 435 130, 450 110, 469 110" fill="none" stroke="rgba(46,208,137,0.15)" stroke-width="1"/>
+        <path d="M 412 150 C 435 170, 450 190, 469 190" fill="none" stroke="rgba(46,208,137,0.15)" stroke-width="1"/>
+        <path d="M 382 220 C 410 240, 430 250, 454 250" fill="none" stroke="rgba(46,208,137,0.15)" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>B. Radial / Center-Out</h3>
+      <p>Selected skill at center, sources on one side, dependencies radiating outward. Emphasizes "this is my skill's world." Good for seeing the full picture at once, but can get cluttered with many nodes.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Top-Down DAG -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 24px; background: #0a1520;">
+      <svg viewBox="0 0 500 300" style="width:100%;height:220px;">
+        <!-- Sources (top) -->
+        <circle cx="150" cy="40" r="8" fill="none" stroke="#58c4ff" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="250" cy="40" r="8" fill="none" stroke="#58c4ff" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="350" cy="40" r="8" fill="none" stroke="#58c4ff" stroke-width="1.5" opacity="0.7"/>
+        <text x="250" y="20" fill="#58c4ff" font-size="9" text-anchor="middle" opacity="0.6">Sources</text>
+
+        <!-- Selected skill -->
+        <circle cx="250" cy="120" r="18" fill="none" stroke="#ffbf47" stroke-width="2.5"/>
+        <text x="250" y="124" fill="#eef4ff" font-size="10" text-anchor="middle">my-skill</text>
+
+        <!-- Direct deps -->
+        <circle cx="150" cy="200" r="12" fill="none" stroke="#2ed089" stroke-width="1.5"/>
+        <circle cx="350" cy="200" r="12" fill="none" stroke="#2ed089" stroke-width="1.5"/>
+        <text x="150" y="204" fill="#eef4ff" font-size="8" text-anchor="middle">dep-a</text>
+        <text x="350" y="204" fill="#eef4ff" font-size="8" text-anchor="middle">dep-b</text>
+
+        <!-- Transitive -->
+        <circle cx="80" cy="270" r="7" fill="none" stroke="#2ed089" stroke-width="1" opacity="0.5"/>
+        <circle cx="180" cy="270" r="7" fill="none" stroke="#2ed089" stroke-width="1" opacity="0.5"/>
+        <circle cx="320" cy="270" r="7" fill="none" stroke="#2ed089" stroke-width="1" opacity="0.5"/>
+        <circle cx="420" cy="270" r="7" fill="none" stroke="#2ed089" stroke-width="1" opacity="0.5"/>
+
+        <!-- Edges -->
+        <path d="M 150 48 C 150 80, 240 100, 250 102" fill="none" stroke="rgba(88,196,255,0.3)" stroke-width="1.5"/>
+        <path d="M 250 48 C 250 70, 250 90, 250 102" fill="none" stroke="rgba(88,196,255,0.3)" stroke-width="1.5"/>
+        <path d="M 350 48 C 350 80, 260 100, 250 102" fill="none" stroke="rgba(88,196,255,0.3)" stroke-width="1.5"/>
+
+        <path d="M 250 138 C 250 160, 150 180, 150 188" fill="none" stroke="rgba(46,208,137,0.3)" stroke-width="1.5"/>
+        <path d="M 250 138 C 250 160, 350 180, 350 188" fill="none" stroke="rgba(46,208,137,0.3)" stroke-width="1.5"/>
+
+        <path d="M 150 212 C 150 240, 80 250, 80 263" fill="none" stroke="rgba(46,208,137,0.15)" stroke-width="1"/>
+        <path d="M 150 212 C 150 240, 180 250, 180 263" fill="none" stroke="rgba(46,208,137,0.15)" stroke-width="1"/>
+        <path d="M 350 212 C 350 240, 320 250, 320 263" fill="none" stroke="rgba(46,208,137,0.15)" stroke-width="1"/>
+        <path d="M 350 212 C 350 240, 420 250, 420 263" fill="none" stroke="rgba(46,208,137,0.15)" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>C. Top-Down DAG</h3>
+      <p>Sources feed down into selected skill, which flows down to dependencies. Feels like a "waterfall" of data. Familiar from dependency diagrams, but horizontal space can get tight with many siblings.</p>
+    </div>
+  </div>
+</div>

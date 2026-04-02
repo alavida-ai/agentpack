@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentpack Skill Graph D3 Mockup</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    :root {
+      --bg: #06101a;
+      --panel: rgba(10, 20, 31, 0.88);
+      --panel-strong: rgba(14, 28, 44, 0.96);
+      --text: #edf5ff;
+      --muted: #8ea7c5;
+      --grid: rgba(255, 255, 255, 0.04);
+      --source: #58c4ff;
+      --skill: #5b8cff;
+      --dependency: #2ed089;
+      --stale: #ffbf47;
+      --affected: #ff8c5a;
+      --current: #36d399;
+      --edge-source: rgba(88, 196, 255, 0.45);
+      --edge-requires: rgba(46, 208, 137, 0.5);
+      --selection: rgba(255, 191, 71, 0.95);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(91, 140, 255, 0.14), transparent 34rem),
+        radial-gradient(circle at left, rgba(46, 208, 137, 0.10), transparent 26rem),
+        linear-gradient(180deg, #02070d 0%, var(--bg) 100%);
+      min-height: 100vh;
+    }
+
+    .page {
+      width: min(1480px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 24px 0 30px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.05;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: 72ch;
+      line-height: 1.5;
+    }
+
+    .meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(900px, 1.9fr) minmax(330px, 0.72fr);
+      gap: 18px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+    }
+
+    .graph-panel {
+      padding: 18px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .graph-stage {
+      position: relative;
+      min-height: 780px;
+      border-radius: 18px;
+      overflow: hidden;
+      background:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(6, 16, 26, 0.98), rgba(8, 20, 31, 0.98));
+      background-size: 40px 40px, 40px 40px, auto;
+    }
+
+    .layer {
+      position: absolute;
+      top: 16px;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .layer.left { left: 26px; }
+    .layer.center { left: 48%; transform: translateX(-50%); }
+    .layer.right { right: 28px; }
+
+    #graph {
+      display: block;
+      width: 100%;
+      height: 780px;
+    }
+
+    .inspector {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .card {
+      padding: 14px;
+      border-radius: 16px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .card h2, .card h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 8px 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .kv strong { color: var(--text); }
+
+    .stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .item {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .item strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    .node-label {
+      pointer-events: none;
+    }
+
+    @media (max-width: 1180px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="header">
+      <div>
+        <h1>Skill Dev Graph, D3 Mock</h1>
+        <p class="subtitle">
+          Actual D3-rendered SVG graph for a single `skills dev` session. This keeps the graph layout layered,
+          but uses real node rendering, edge paths, hover states, and click-to-inspect behavior instead of static boxes.
+        </p>
+      </div>
+      <div class="meta">
+        <div class="pill">Target: <strong>@alavida/value-copywriting</strong></div>
+        <div class="pill">View: <strong>provenance + requires</strong></div>
+        <div class="pill">Mode: <strong>dev-linked</strong></div>
+      </div>
+    </section>
+
+    <section class="layout">
+      <div class="panel graph-panel">
+        <div class="panel-header">
+          <div class="panel-title">Graph</div>
+          <div class="legend">
+            <span class="legend-item"><i class="dot" style="background: var(--source)"></i> source</span>
+            <span class="legend-item"><i class="dot" style="background: var(--skill)"></i> selected skill</span>
+            <span class="legend-item"><i class="dot" style="background: var(--dependency)"></i> required skill</span>
+            <span class="legend-item"><i class="dot" style="background: var(--stale)"></i> stale / changed</span>
+          </div>
+        </div>
+        <div class="graph-stage">
+          <div class="layer left">Sources</div>
+          <div class="layer center">Selected Skill</div>
+          <div class="layer right">Required Skills</div>
+          <svg id="graph" viewBox="0 0 1040 780" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+      </div>
+
+      <aside class="panel inspector">
+        <div class="card">
+          <h2>Inspector</h2>
+          <div class="kv" id="inspector-meta"></div>
+        </div>
+
+        <div class="card">
+          <h3>Lifecycle Notes</h3>
+          <div class="stack" id="inspector-notes"></div>
+        </div>
+
+        <div class="card">
+          <h3>Relationships</h3>
+          <div class="stack" id="inspector-links"></div>
+        </div>
+
+        <div class="card">
+          <h3>V1 Behavior</h3>
+          <p class="hint">
+            In the real product, `agentpack skills dev` would sync and materialize the skill, then open this local dashboard unless
+            `--no-dashboard` is passed. Watch mode would update graph state as source files, `SKILL.md`, or dependencies change.
+          </p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const nodes = [
+      {
+        id: "tone",
+        type: "source",
+        title: "tone-of-voice.md",
+        subtitle: "voice rules, rhythm, and positioning constraints",
+        status: "current",
+        x: 120,
+        y: 170,
+        width: 210,
+        height: 108,
+        notes: ["Source hash matches recorded build-state.", "Feeds authored voice constraints into the selected skill."],
+        links: ["provenance -> @alavida/value-copywriting"]
+      },
+      {
+        id: "selling",
+        type: "source",
+        title: "selling-points.md",
+        subtitle: "product truth and commercial differentiators",
+        status: "changed",
+        x: 120,
+        y: 560,
+        width: 210,
+        height: 108,
+        notes: ["Current source hash differs from recorded build-state.", "This is the direct reason the selected skill is stale."],
+        links: ["provenance -> @alavida/value-copywriting"]
+      },
+      {
+        id: "copywriting",
+        type: "skill",
+        title: "@alavida/value-copywriting",
+        subtitle: "builds persuasive copy from authored value framing and house voice",
+        status: "stale",
+        x: 520,
+        y: 360,
+        width: 240,
+        height: 132,
+        notes: ["Selected skill under test in dev mode.", "Marked stale because one attached source changed since last recorded build."],
+        links: ["requires -> @alavida/research", "requires -> @alavida/core-writing", "provenance <- tone-of-voice.md", "provenance <- selling-points.md"]
+      },
+      {
+        id: "research",
+        type: "dependency",
+        title: "@alavida/research",
+        subtitle: "research and evidence qualification helper",
+        status: "current",
+        x: 890,
+        y: 190,
+        width: 210,
+        height: 108,
+        notes: ["Packaged required skill.", "No stale signal present in this mockup."],
+        links: ["required by -> @alavida/value-copywriting"]
+      },
+      {
+        id: "core",
+        type: "dependency",
+        title: "@alavida/core-writing",
+        subtitle: "shared structure and editing primitives",
+        status: "affected",
+        x: 890,
+        y: 540,
+        width: 210,
+        height: 108,
+        notes: ["Required skill remains usable but sits in an affected chain.", "Would likely need follow-up inspection in the real tool."],
+        links: ["required by -> @alavida/value-copywriting"]
+      }
+    ];
+
+    const edges = [
+      { source: "tone", target: "copywriting", kind: "provenance", color: "var(--edge-source)" },
+      { source: "selling", target: "copywriting", kind: "provenance", color: "var(--edge-source)" },
+      { source: "copywriting", target: "research", kind: "requires", color: "var(--edge-requires)" },
+      { source: "copywriting", target: "core", kind: "requires", color: "var(--edge-requires)" }
+    ];
+
+    const svg = d3.select("#graph");
+    const defs = svg.append("defs");
+
+    defs.append("marker")
+      .attr("id", "arrow-source")
+      .attr("markerWidth", 10)
+      .attr("markerHeight", 10)
+      .attr("refX", 8)
+      .attr("refY", 5)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,0 L10,5 L0,10 z")
+      .attr("fill", "rgba(88, 196, 255, 0.6)");
+
+    defs.append("marker")
+      .attr("id", "arrow-requires")
+      .attr("markerWidth", 10)
+      .attr("markerHeight", 10)
+      .attr("refX", 8)
+      .attr("refY", 5)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,0 L10,5 L0,10 z")
+      .attr("fill", "rgba(46, 208, 137, 0.7)");
+
+    const nodeById = new Map(nodes.map((node) => [node.id, node]));
+
+    function edgePath(edge) {
+      const s = nodeById.get(edge.source);
+      const t = nodeById.get(edge.target);
+      const sx = s.type === "skill" ? s.x + s.width / 2 : s.x + s.width / 2;
+      const sy = s.y;
+      const tx = t.type === "skill" ? t.x - t.width / 2 : t.x - t.width / 2;
+      const ty = t.y;
+      const mx = (sx + tx) / 2;
+      return `M ${sx} ${sy} C ${mx} ${sy}, ${mx} ${ty}, ${tx} ${ty}`;
+    }
+
+    function edgeLabelPosition(edge) {
+      const s = nodeById.get(edge.source);
+      const t = nodeById.get(edge.target);
+      return {
+        x: (s.x + t.x) / 2,
+        y: (s.y + t.y) / 2 - 16
+      };
+    }
+
+    svg.append("g")
+      .selectAll("path")
+      .data(edges)
+      .join("path")
+      .attr("d", edgePath)
+      .attr("fill", "none")
+      .attr("stroke", (d) => d.color)
+      .attr("stroke-width", 3)
+      .attr("marker-end", (d) => d.kind === "provenance" ? "url(#arrow-source)" : "url(#arrow-requires)")
+      .attr("opacity", 0.95);
+
+    svg.append("g")
+      .selectAll("text")
+      .data(edges)
+      .join("text")
+      .attr("x", (d) => edgeLabelPosition(d).x)
+      .attr("y", (d) => edgeLabelPosition(d).y)
+      .attr("text-anchor", "middle")
+      .attr("fill", "var(--muted)")
+      .attr("font-size", 11)
+      .attr("letter-spacing", "0.08em")
+      .attr("text-transform", "uppercase")
+      .text((d) => d.kind);
+
+    const nodeGroup = svg.append("g")
+      .selectAll("g")
+      .data(nodes)
+      .join("g")
+      .attr("transform", (d) => `translate(${d.x - d.width / 2}, ${d.y - d.height / 2})`)
+      .style("cursor", "pointer");
+
+    function typeColor(type) {
+      if (type === "source") return "var(--source)";
+      if (type === "dependency") return "var(--dependency)";
+      return "var(--skill)";
+    }
+
+    function statusColor(status) {
+      if (status === "stale" || status === "changed") return "var(--stale)";
+      if (status === "affected") return "var(--affected)";
+      return "var(--current)";
+    }
+
+    nodeGroup.append("rect")
+      .attr("rx", 18)
+      .attr("width", (d) => d.width)
+      .attr("height", (d) => d.height)
+      .attr("fill", "rgba(9, 20, 31, 0.96)")
+      .attr("stroke", (d) => d.id === "copywriting" ? "rgba(91, 140, 255, 0.65)" : "rgba(255,255,255,0.12)")
+      .attr("stroke-width", (d) => d.id === "copywriting" ? 1.8 : 1.2)
+      .attr("class", "card-shape");
+
+    nodeGroup.append("circle")
+      .attr("cx", 18)
+      .attr("cy", 20)
+      .attr("r", 6)
+      .attr("fill", (d) => typeColor(d.type));
+
+    nodeGroup.append("text")
+      .attr("x", 32)
+      .attr("y", 24)
+      .attr("fill", "var(--muted)")
+      .attr("font-size", 11)
+      .attr("letter-spacing", "0.12em")
+      .style("text-transform", "uppercase")
+      .text((d) => d.type === "skill" ? "skill under test" : d.type);
+
+    nodeGroup.each(function(d) {
+      const g = d3.select(this);
+      const lines = d.title.length > 22 && d.type !== "skill"
+        ? [d.title.slice(0, 20), d.title.slice(20)]
+        : d.type === "skill"
+          ? ["@alavida/value-", "copywriting"]
+          : [d.title];
+
+      lines.forEach((line, index) => {
+        g.append("text")
+          .attr("x", 18)
+          .attr("y", 54 + index * 18)
+          .attr("fill", "var(--text)")
+          .attr("font-size", 16)
+          .attr("font-weight", 700)
+          .text(line);
+      });
+
+      g.append("text")
+        .attr("x", 18)
+        .attr("y", d.type === "skill" ? 96 : 78)
+        .attr("fill", "var(--muted)")
+        .attr("font-size", 12)
+        .text(d.subtitle.slice(0, 32));
+
+      if (d.subtitle.length > 32) {
+        g.append("text")
+          .attr("x", 18)
+          .attr("y", d.type === "skill" ? 112 : 94)
+          .attr("fill", "var(--muted)")
+          .attr("font-size", 12)
+          .text(d.subtitle.slice(32));
+      }
+
+      g.append("rect")
+        .attr("x", d.width - 82)
+        .attr("y", d.height - 28)
+        .attr("width", 64)
+        .attr("height", 18)
+        .attr("rx", 9)
+        .attr("fill", d3.color(statusColor(d.status)).copy({ opacity: 0.18 }));
+
+      g.append("text")
+        .attr("x", d.width - 50)
+        .attr("y", d.height - 15)
+        .attr("text-anchor", "middle")
+        .attr("fill", "var(--text)")
+        .attr("font-size", 11)
+        .attr("letter-spacing", "0.08em")
+        .style("text-transform", "uppercase")
+        .text(d.status);
+    });
+
+    const inspectorMeta = document.getElementById("inspector-meta");
+    const inspectorNotes = document.getElementById("inspector-notes");
+    const inspectorLinks = document.getElementById("inspector-links");
+
+    function renderInspector(node) {
+      inspectorMeta.innerHTML = `
+        <div>Node</div><strong>${node.title}</strong>
+        <div>Type</div><strong>${node.type}</strong>
+        <div>Status</div><strong>${node.status}</strong>
+        <div>Layer</div><strong>${node.type === "source" ? "provenance" : node.type === "skill" ? "selected" : "dependency"}</strong>
+      `;
+
+      inspectorNotes.innerHTML = node.notes
+        .map((note) => `<div class="item"><strong>${note.split(".")[0]}</strong>${note}</div>`)
+        .join("");
+
+      inspectorLinks.innerHTML = node.links
+        .map((link) => `<div class="item"><strong>${link}</strong>Visible relationship in the current graph.</div>`)
+        .join("");
+    }
+
+    function selectNode(selectedId) {
+      nodeGroup.selectAll(".card-shape")
+        .attr("stroke", (d) => d.id === selectedId ? "var(--selection)" : (d.id === "copywriting" ? "rgba(91, 140, 255, 0.65)" : "rgba(255,255,255,0.12)"))
+        .attr("stroke-width", (d) => d.id === selectedId ? 2.4 : (d.id === "copywriting" ? 1.8 : 1.2))
+        .attr("filter", (d) => d.id === selectedId ? "drop-shadow(0 0 10px rgba(255,191,71,0.22))" : null);
+
+      renderInspector(nodeById.get(selectedId));
+    }
+
+    nodeGroup.on("click", (_, d) => selectNode(d.id));
+    nodeGroup.on("mouseenter", function() {
+      d3.select(this).select(".card-shape").attr("opacity", 1);
+    });
+
+    renderInspector(nodeById.get("copywriting"));
+    selectNode("copywriting");
+  </script>
+</body>
+</html>

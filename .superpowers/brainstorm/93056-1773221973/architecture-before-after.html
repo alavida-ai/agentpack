@@ -1,0 +1,144 @@
+<h2>Architecture: Current vs Cleaner Target</h2>
+<p class="subtitle">A visual model for making <code>agentpack</code> easier to understand and maintain</p>
+
+<div class="section">
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">Current Shape</div>
+      <div class="mockup-body">
+        <div style="display:grid;gap:10px">
+          <div class="card">
+            <div class="card-body">
+              <div class="label">Commands</div>
+              <h3><code>skills</code></h3>
+              <p>Validate, stale, install, env, dependencies, dev, unlink, status.</p>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:28px;opacity:.5">↓</div>
+          <div class="card">
+            <div class="card-body">
+              <div class="label">Mixed Core</div>
+              <h3><code>src/lib/skills.js</code></h3>
+              <p>Authoring rules, dependency graph, install state, runtime linking, provenance, stale detection, env reporting.</p>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:28px;opacity:.5">↔</div>
+          <div class="card">
+            <div class="card-body">
+              <div class="label">Parallel Logic</div>
+              <h3><code>plugin</code> + <code>plugins.js</code></h3>
+              <p>Reuses some skill logic, but still owns its own traversal and workflow shape.</p>
+            </div>
+          </div>
+          <div class="placeholder">Result: the domain idea is simple, but the implementation feels blurry and brittle.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mockup">
+      <div class="mockup-header">Cleaner Target</div>
+      <div class="mockup-body">
+        <div style="display:grid;gap:10px">
+          <div class="card">
+            <div class="card-body">
+              <div class="label">Core Domain</div>
+              <h3>Packaged Skill Lifecycle</h3>
+              <p>The tool’s main truth: what a packaged skill is, what it depends on, where it came from, and where it is in its lifecycle.</p>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:28px;opacity:.5">↓</div>
+          <div class="split">
+            <div class="card">
+              <div class="card-body">
+                <div class="label">Thin Command Surface</div>
+                <h3><code>skills</code></h3>
+                <p>Calls lifecycle services for inspect, validate, stale, install, env.</p>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-body">
+                <div class="label">Composition Layer</div>
+                <h3><code>plugin</code></h3>
+                <p>Builds and vendors plugin artifacts using the same skill lifecycle and dependency rules.</p>
+              </div>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:28px;opacity:.5">↓</div>
+          <div class="split">
+            <div class="card">
+              <div class="card-body">
+                <div class="label">Shared Modules</div>
+                <h3>Metadata + Graph + Provenance</h3>
+                <p>Parse skill metadata once, resolve dependencies once, record build-state once.</p>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-body">
+                <div class="label">Separate Effects</div>
+                <h3>Install + Link + Bundle</h3>
+                <p>Filesystem and distribution actions are isolated from pure domain logic.</p>
+              </div>
+            </div>
+          </div>
+          <div class="placeholder">Result: one obvious center, smaller modules, less accidental duplication.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>What “Plugins Reuse The Skill Core” Actually Means</h3>
+  <div class="options">
+    <div class="option" data-choice="good" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Good Reuse</h3>
+        <p>Plugin code asks the skill core for parsed metadata, dependency closure, lifecycle status, and provenance records.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="bad" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Bad Reuse</h3>
+        <p>Plugin code imports a giant utility file and becomes coupled to unrelated install/dev/output logic.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Suggested Module Boundaries</h3>
+  <div class="cards">
+    <div class="card" data-choice="model" onclick="toggleSelect(this)">
+      <div class="card-body">
+        <h3>Skill Model</h3>
+        <p>Parse skill/package metadata and normalize paths.</p>
+      </div>
+    </div>
+    <div class="card" data-choice="graph" onclick="toggleSelect(this)">
+      <div class="card-body">
+        <h3>Skill Graph</h3>
+        <p>Resolve requires, reverse dependencies, closure, affected state.</p>
+      </div>
+    </div>
+    <div class="card" data-choice="provenance" onclick="toggleSelect(this)">
+      <div class="card-body">
+        <h3>Provenance</h3>
+        <p>Build-state records, source hashes, stale comparison.</p>
+      </div>
+    </div>
+    <div class="card" data-choice="runtime" onclick="toggleSelect(this)">
+      <div class="card-body">
+        <h3>Runtime Materialization</h3>
+        <p>Install state, local links, reconciliation into agent-visible directories.</p>
+      </div>
+    </div>
+    <div class="card" data-choice="pluginbuild" onclick="toggleSelect(this)">
+      <div class="card-body">
+        <h3>Plugin Packaging</h3>
+        <p>Stage, vendor, emit bundled plugin artifacts using the shared skill services.</p>
+      </div>
+    </div>
+  </div>
+</div>

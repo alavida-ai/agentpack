@@ -1,0 +1,145 @@
+<h2>State Over Time and Required Artifact Files</h2>
+<p class="subtitle">What changes across the lifecycle, and which files must exist to keep the system legible</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">Lifecycle Over Time</div>
+    <div class="mockup-body">
+      <div style="display:grid;gap:10px">
+        <div class="split">
+          <div class="card">
+            <div class="card-body">
+              <div class="label">1. Source Truth</div>
+              <h3>Knowledge + Authored Skill</h3>
+              <p>Humans update source files and the skill artifact that points at them.</p>
+              <p><strong>Key files:</strong> knowledge docs, <code>SKILL.md</code>, <code>package.json</code></p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="label">2. Validate</div>
+              <h3>Lifecycle Snapshot</h3>
+              <p>The CLI checks rules and records the source-hash snapshot for the validated skill.</p>
+              <p><strong>Key output:</strong> <code>.agentpack/build-state.json</code></p>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:center;font-size:24px;opacity:.55">↓</div>
+
+        <div class="split">
+          <div class="card">
+            <div class="card-body">
+              <div class="label">3. Drift Happens</div>
+              <h3>Sources Change</h3>
+              <p>A knowledge file changes after validation. The skill artifact may now be behind reality.</p>
+              <p><strong>Comparison:</strong> current source hashes vs recorded build-state</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="label">4. Stale Detection</div>
+              <h3>Lifecycle Warning</h3>
+              <p><code>skills stale</code> reports the skill as stale. Reverse dependents may become affected.</p>
+              <p><strong>Key owner:</strong> skill provenance + skill graph</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:center;font-size:24px;opacity:.55">↓</div>
+
+        <div class="split">
+          <div class="card">
+            <div class="card-body">
+              <div class="label">5. Install / Materialize</div>
+              <h3>Runtime State</h3>
+              <p>Consumer repos install packages and materialize agent-visible skill directories.</p>
+              <p><strong>Key output:</strong> <code>.agentpack/install.json</code></p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="label">6. Plugin Bundle</div>
+              <h3>Distribution Artifact</h3>
+              <p>Plugins vendor packaged skills into a self-contained runtime artifact.</p>
+              <p><strong>Key output:</strong> <code>.agentpack/dist/plugins/.../</code></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Minimal Required Artifact Files</h3>
+  <div class="cards">
+    <div class="card" data-choice="skillmd" onclick="toggleSelect(this)">
+      <div class="card-body">
+        <h3><code>SKILL.md</code></h3>
+        <p>The authored skill artifact. Owns instructions, <code>metadata.sources</code>, and <code>requires</code>.</p>
+      </div>
+    </div>
+    <div class="card" data-choice="packagejson" onclick="toggleSelect(this)">
+      <div class="card-body">
+        <h3><code>package.json</code></h3>
+        <p>The distribution contract. Owns package identity, version, dependencies, and publish settings.</p>
+      </div>
+    </div>
+    <div class="card" data-choice="catalog" onclick="toggleSelect(this)">
+      <div class="card-body">
+        <h3><code>.agentpack/catalog.json</code></h3>
+        <p>Generated authoring index for discovery and inspection across known packaged skills.</p>
+      </div>
+    </div>
+    <div class="card" data-choice="buildstate" onclick="toggleSelect(this)">
+      <div class="card-body">
+        <h3><code>.agentpack/build-state.json</code></h3>
+        <p>Generated provenance snapshot. Required for stale detection and explainable lifecycle state.</p>
+      </div>
+    </div>
+    <div class="card" data-choice="installstate" onclick="toggleSelect(this)">
+      <div class="card-body">
+        <h3><code>.agentpack/install.json</code></h3>
+        <p>Environment-local runtime state for direct/transitive installs and materialization targets.</p>
+      </div>
+    </div>
+    <div class="card" data-choice="pluginjson" onclick="toggleSelect(this)">
+      <div class="card-body">
+        <h3><code>.claude-plugin/plugin.json</code></h3>
+        <p>Plugin runtime contract. Separate from package versioning and skill lifecycle truth.</p>
+      </div>
+    </div>
+    <div class="card" data-choice="bundled" onclick="toggleSelect(this)">
+      <div class="card-body">
+        <h3><code>.claude-plugin/bundled-skills.json</code></h3>
+        <p>Generated plugin provenance for which packaged skills were vendored into the bundle.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>File Ownership Rules</h3>
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Must stay explicit</h4>
+      <ul>
+        <li><code>SKILL.md</code> owns authored dependency truth.</li>
+        <li><code>package.json</code> owns distributable package truth.</li>
+        <li><code>build-state.json</code> owns recorded source hashes.</li>
+        <li><code>install.json</code> owns environment-local install/materialization state.</li>
+        <li>Plugin files own plugin runtime packaging only.</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Must not blur together</h4>
+      <ul>
+        <li>Do not let plugin metadata become the source of skill dependency truth.</li>
+        <li>Do not let install state act like provenance state.</li>
+        <li>Do not let command handlers write state ad hoc.</li>
+        <li>Do not let build-state be owned by one command path only.</li>
+      </ul>
+    </div>
+  </div>
+</div>

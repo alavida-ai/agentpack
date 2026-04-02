@@ -1,0 +1,231 @@
+<h2>Option 3: Layered Internal Architecture</h2>
+<p class="subtitle">A broader redesign where packaged skills are the core domain and commands are just interfaces</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">Exact Shape</div>
+    <div class="mockup-body">
+      <div style="display:grid;gap:12px">
+        <div class="split">
+          <div class="card">
+            <div class="card-body">
+              <div class="label">Interface Layer</div>
+              <h3><code>src/commands/skills.js</code></h3>
+              <p>Commander wiring only. Parse args, call use-cases, format output.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="label">Interface Layer</div>
+              <h3><code>src/commands/plugin.js</code></h3>
+              <p>Commander wiring only. No domain traversal or graph logic.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:center;font-size:28px;opacity:.55">↓</div>
+
+        <div class="split">
+          <div class="card" data-choice="usecases-skills" onclick="toggleSelect(this)">
+            <div class="card-body">
+              <div class="label">Application Layer</div>
+              <h3>Skill Use Cases</h3>
+              <p><code>validate-skill</code>, <code>inspect-skill</code>, <code>list-stale-skills</code>, <code>install-skills</code>, <code>inspect-env</code>.</p>
+            </div>
+          </div>
+          <div class="card" data-choice="usecases-plugin" onclick="toggleSelect(this)">
+            <div class="card-body">
+              <div class="label">Application Layer</div>
+              <h3>Plugin Use Cases</h3>
+              <p><code>inspect-plugin-bundle</code>, <code>validate-plugin-bundle</code>, <code>build-plugin</code>.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:center;font-size:28px;opacity:.55">↓</div>
+
+        <div class="cards">
+          <div class="card" data-choice="domain-model" onclick="toggleSelect(this)">
+            <div class="card-body">
+              <div class="label">Domain Layer</div>
+              <h3>Skill Model</h3>
+              <p>Canonical representation of packaged skill metadata, package metadata, and normalized paths.</p>
+            </div>
+          </div>
+          <div class="card" data-choice="domain-graph" onclick="toggleSelect(this)">
+            <div class="card-body">
+              <div class="label">Domain Layer</div>
+              <h3>Skill Graph</h3>
+              <p>Dependency closure, reverse dependents, affected-state propagation.</p>
+            </div>
+          </div>
+          <div class="card" data-choice="domain-provenance" onclick="toggleSelect(this)">
+            <div class="card-body">
+              <div class="label">Domain Layer</div>
+              <h3>Provenance</h3>
+              <p>Source hashing, build-state records, stale comparison, recorded lifecycle state.</p>
+            </div>
+          </div>
+          <div class="card" data-choice="domain-rules" onclick="toggleSelect(this)">
+            <div class="card-body">
+              <div class="label">Domain Layer</div>
+              <h3>Lifecycle Rules</h3>
+              <p>Validation rules, dependency contract rules, publication-readiness rules.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:center;font-size:28px;opacity:.55">↓</div>
+
+        <div class="split">
+          <div class="card">
+            <div class="card-body">
+              <div class="label">Infrastructure Layer</div>
+              <h3>Filesystem + Package IO</h3>
+              <p>Read/write files, npm package lookup, link/copy operations, watch mode, build staging.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="label">Infrastructure Layer</div>
+              <h3>Environment Context</h3>
+              <p>Repo root, workbench lookup, output adapters, registry inspection.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>How Plugin Reuse Works In This Model</h3>
+  <div class="mockup">
+    <div class="mockup-header">Plugin Build Flow</div>
+    <div class="mockup-body">
+      <div style="display:grid;gap:8px">
+        <div class="card">
+          <div class="card-body">
+            <h3><code>plugin build</code></h3>
+            <p>Interface receives command and arguments.</p>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:24px;opacity:.55">↓</div>
+        <div class="card">
+          <div class="card-body">
+            <h3>Build Plugin Use Case</h3>
+            <p>Coordinates the workflow, but does not parse skills or walk dependency truth itself.</p>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:24px;opacity:.55">↓</div>
+        <div class="split">
+          <div class="card">
+            <div class="card-body">
+              <h3>Skill Graph</h3>
+              <p>What skills are required? What is the closure?</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <h3>Lifecycle Rules</h3>
+              <p>Are those skills valid? What constraints apply?</p>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:24px;opacity:.55">↓</div>
+        <div class="card">
+          <div class="card-body">
+            <h3>Infrastructure</h3>
+            <p>Vendor files into a staged plugin artifact and emit output.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Design Patterns In Plain English</h3>
+  <div class="options">
+    <div class="option" data-choice="hex" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Layered / Ports-and-Adapters style</h3>
+        <p>Commands and filesystem are outside; the domain logic sits in the center. This reduces accidental coupling.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="usecase" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Use-Case / Application Service pattern</h3>
+        <p>Each command calls a specific workflow object or function instead of reaching into random helpers.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="value" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>Value Objects / Normalized records</h3>
+        <p>Represent skills, packages, build-state entries, and dependency results in one canonical shape.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="repository" onclick="toggleSelect(this)">
+      <div class="letter">D</div>
+      <div class="content">
+        <h3>Repository-style access</h3>
+        <p>One place to load and persist skill/build/install state instead of open-coded file access everywhere.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="orchestrator" onclick="toggleSelect(this)">
+      <div class="letter">E</div>
+      <div class="content">
+        <h3>Orchestration, not god modules</h3>
+        <p>Use cases coordinate smaller modules. No single file should own every rule and every side effect.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>What This Would Probably Look Like On Disk</h3>
+  <div class="mockup">
+    <div class="mockup-header">Illustrative File Layout</div>
+    <div class="mockup-body">
+<pre style="margin:0;white-space:pre-wrap;font:13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace">src/
+  cli.js
+  commands/
+    skills.js
+    plugin.js
+  application/
+    skills/
+      validate-skills.js
+      inspect-skill.js
+      list-stale-skills.js
+      install-skills.js
+    plugins/
+      inspect-plugin-bundle.js
+      validate-plugin-bundle.js
+      build-plugin.js
+  domain/
+    skills/
+      skill-model.js
+      skill-graph.js
+      skill-provenance.js
+      skill-rules.js
+  infrastructure/
+    fs/
+      skill-repository.js
+      build-state-repository.js
+      install-state-repository.js
+      package-resolution.js
+    runtime/
+      materialize-skills.js
+      watch-tree.js
+    context/
+      repo-context.js
+      workbench-context.js
+  utils/
+    errors.js
+    output.js</pre>
+    </div>
+  </div>
+</div>

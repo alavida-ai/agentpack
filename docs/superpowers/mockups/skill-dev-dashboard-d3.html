@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentpack Skill Graph Mockup</title>
+  <style>
+    :root {
+      --bg: #071018;
+      --panel: rgba(9, 18, 29, 0.88);
+      --panel-2: rgba(14, 27, 42, 0.92);
+      --line: rgba(140, 173, 255, 0.35);
+      --line-req: rgba(52, 211, 153, 0.45);
+      --text: #edf4ff;
+      --muted: #93a7c4;
+      --skill: #5aa2ff;
+      --source: #69c2ff;
+      --dep: #45d483;
+      --warn: #ffbe55;
+      --danger: #ff6b7c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(90, 162, 255, 0.14), transparent 34rem),
+        radial-gradient(circle at left, rgba(69, 212, 131, 0.10), transparent 26rem),
+        linear-gradient(180deg, #02070d 0%, var(--bg) 100%);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+    }
+
+    .page {
+      width: min(1460px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 24px 0 28px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.05;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      max-width: 72ch;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(860px, 1.8fr) minmax(320px, 0.72fr);
+      gap: 18px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 18px 48px rgba(0,0,0,0.28);
+    }
+
+    .graph-wrap {
+      padding: 18px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .graph-stage {
+      position: relative;
+      overflow: hidden;
+      border-radius: 18px;
+      min-height: 760px;
+      background:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(7, 17, 28, 0.98), rgba(9, 20, 31, 0.98));
+      background-size: 42px 42px, 42px 42px, auto;
+    }
+
+    .layer-label {
+      position: absolute;
+      top: 16px;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .layer-left { left: 28px; }
+    .layer-center { left: 46%; transform: translateX(-50%); }
+    .layer-right { right: 30px; }
+
+    svg {
+      width: 100%;
+      height: 760px;
+      display: block;
+    }
+
+    .edge {
+      fill: none;
+      stroke-width: 2.5;
+      opacity: 0.95;
+    }
+
+    .edge-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      fill: var(--muted);
+    }
+
+    .node-group {
+      cursor: pointer;
+    }
+
+    .node-card {
+      fill: rgba(11, 24, 38, 0.96);
+      stroke: rgba(255,255,255,0.12);
+      stroke-width: 1.2;
+      rx: 18;
+    }
+
+    .node-group.selected .node-card {
+      stroke: var(--warn);
+      stroke-width: 2.2;
+      filter: drop-shadow(0 0 10px rgba(255, 190, 85, 0.24));
+    }
+
+    .node-type {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      fill: var(--muted);
+    }
+
+    .node-title {
+      font-size: 16px;
+      font-weight: 700;
+      fill: var(--text);
+    }
+
+    .node-body {
+      font-size: 12px;
+      fill: var(--muted);
+    }
+
+    .badge {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      fill: var(--text);
+    }
+
+    .inspector {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .card {
+      padding: 14px;
+      border-radius: 16px;
+      background: var(--panel-2);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .card h2, .card h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 8px 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .kv strong {
+      color: var(--text);
+    }
+
+    .stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .item {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.05);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .item strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1160px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="header">
+      <div>
+        <h1>Skill Dev Graph</h1>
+        <p class="subtitle">
+          D3-style DAG mockup for `agentpack skills dev`. The selected skill sits in the center, source provenance is on the left,
+          required skills are on the right, and the inspector explains exact lifecycle state instead of forcing users to decode labels.
+        </p>
+      </div>
+      <div class="meta">
+        <div class="pill">Target: <strong>@alavida/value-copywriting</strong></div>
+        <div class="pill">State: <strong>stale</strong></div>
+        <div class="pill">Mode: <strong>dev-linked</strong></div>
+      </div>
+    </section>
+
+    <section class="layout">
+      <div class="panel graph-wrap">
+        <div class="panel-header">
+          <div class="panel-title">Graph</div>
+          <div class="legend">
+            <span class="legend-item"><i class="dot" style="background: var(--source)"></i> source</span>
+            <span class="legend-item"><i class="dot" style="background: var(--skill)"></i> selected skill</span>
+            <span class="legend-item"><i class="dot" style="background: var(--dep)"></i> required skill</span>
+            <span class="legend-item"><i class="dot" style="background: var(--warn)"></i> stale / affected</span>
+          </div>
+        </div>
+        <div class="graph-stage">
+          <div class="layer-label layer-left">Sources</div>
+          <div class="layer-label layer-center">Selected Skill</div>
+          <div class="layer-label layer-right">Required Skills</div>
+          <svg viewBox="0 0 980 760" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <marker id="arrow-source" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 z" fill="rgba(140, 173, 255, 0.55)"></path>
+              </marker>
+              <marker id="arrow-req" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 z" fill="rgba(52, 211, 153, 0.65)"></path>
+              </marker>
+            </defs>
+
+            <path class="edge" stroke="var(--line)" marker-end="url(#arrow-source)"
+              d="M180 170 C 300 170, 355 250, 430 300"></path>
+            <text class="edge-label" x="270" y="165">provenance</text>
+
+            <path class="edge" stroke="var(--line)" marker-end="url(#arrow-source)"
+              d="M180 560 C 300 560, 355 470, 430 395"></path>
+            <text class="edge-label" x="272" y="590">provenance</text>
+
+            <path class="edge" stroke="var(--line-req)" marker-end="url(#arrow-req)"
+              d="M550 320 C 645 240, 690 210, 800 190"></path>
+            <text class="edge-label" x="634" y="235">requires</text>
+
+            <path class="edge" stroke="var(--line-req)" marker-end="url(#arrow-req)"
+              d="M550 385 C 650 435, 700 490, 800 540"></path>
+            <text class="edge-label" x="642" y="474">requires</text>
+
+            <g class="node-group" data-node="tone" transform="translate(44 102)">
+              <rect class="node-card" width="180" height="120" fill="rgba(105,194,255,0.10)" stroke="rgba(105,194,255,0.35)"></rect>
+              <circle cx="20" cy="21" r="6" fill="var(--source)"></circle>
+              <text class="node-type" x="34" y="25">source</text>
+              <text class="node-title" x="18" y="55">tone-of-voice.md</text>
+              <text class="node-body" x="18" y="79">voice rules, rhythm,</text>
+              <text class="node-body" x="18" y="96">and positioning constraints</text>
+              <rect x="18" y="102" width="70" height="20" rx="10" fill="rgba(69,212,131,0.16)"></rect>
+              <text class="badge" x="31" y="116">current</text>
+            </g>
+
+            <g class="node-group" data-node="selling" transform="translate(44 500)">
+              <rect class="node-card" width="180" height="120" fill="rgba(105,194,255,0.10)" stroke="rgba(255,190,85,0.35)"></rect>
+              <circle cx="20" cy="21" r="6" fill="var(--source)"></circle>
+              <text class="node-type" x="34" y="25">source</text>
+              <text class="node-title" x="18" y="55">selling-points.md</text>
+              <text class="node-body" x="18" y="79">product facts and</text>
+              <text class="node-body" x="18" y="96">commercial differentiators</text>
+              <rect x="18" y="102" width="96" height="20" rx="10" fill="rgba(255,190,85,0.18)"></rect>
+              <text class="badge" x="31" y="116">changed</text>
+            </g>
+
+            <g class="node-group selected" data-node="copywriting" transform="translate(390 265)">
+              <rect class="node-card" width="200" height="150" fill="rgba(90,162,255,0.14)" stroke="rgba(90,162,255,0.48)"></rect>
+              <circle cx="20" cy="21" r="6" fill="var(--skill)"></circle>
+              <text class="node-type" x="34" y="25">skill under test</text>
+              <text class="node-title" x="18" y="55">@alavida/value-</text>
+              <text class="node-title" x="18" y="74">copywriting</text>
+              <text class="node-body" x="18" y="100">2 sources</text>
+              <text class="node-body" x="18" y="117">2 required skills</text>
+              <text class="node-body" x="18" y="134">1 downstream dependent</text>
+              <rect x="128" y="116" width="56" height="20" rx="10" fill="rgba(255,190,85,0.18)"></rect>
+              <text class="badge" x="142" y="130">stale</text>
+            </g>
+
+            <g class="node-group" data-node="research" transform="translate(770 126)">
+              <rect class="node-card" width="170" height="120" fill="rgba(69,212,131,0.10)" stroke="rgba(69,212,131,0.36)"></rect>
+              <circle cx="20" cy="21" r="6" fill="var(--dep)"></circle>
+              <text class="node-type" x="34" y="25">required skill</text>
+              <text class="node-title" x="18" y="55">@alavida/</text>
+              <text class="node-title" x="18" y="74">research</text>
+              <text class="node-body" x="18" y="99">research and evidence</text>
+              <text class="node-body" x="18" y="116">qualification helper</text>
+            </g>
+
+            <g class="node-group" data-node="core" transform="translate(770 494)">
+              <rect class="node-card" width="170" height="120" fill="rgba(69,212,131,0.10)" stroke="rgba(255,190,85,0.35)"></rect>
+              <circle cx="20" cy="21" r="6" fill="var(--dep)"></circle>
+              <text class="node-type" x="34" y="25">required skill</text>
+              <text class="node-title" x="18" y="55">@alavida/</text>
+              <text class="node-title" x="18" y="74">core-writing</text>
+              <text class="node-body" x="18" y="99">shared structure and</text>
+              <text class="node-body" x="18" y="116">editing primitives</text>
+              <rect x="102" y="98" width="56" height="20" rx="10" fill="rgba(255,190,85,0.18)"></rect>
+              <text class="badge" x="111" y="112">affected</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <aside class="panel inspector">
+        <div class="card">
+          <h2>Inspector</h2>
+          <div class="kv">
+            <div>Node</div><strong>@alavida/value-copywriting</strong>
+            <div>Type</div><strong>skill</strong>
+            <div>Status</div><strong>stale</strong>
+            <div>Mode</div><strong>dev-linked</strong>
+            <div>Sources</div><strong>2</strong>
+            <div>Requires</div><strong>2</strong>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Why stale</h3>
+          <div class="stack">
+            <div class="item">
+              <strong>selling-points.md changed</strong>
+              The current source hash differs from the recorded build-state entry.
+            </div>
+            <div class="item">
+              <strong>Dependency impact remains visible</strong>
+              `core-writing` is not stale itself, but it is downstream of changed authored state and marked `affected`.
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>What the graph is telling you</h3>
+          <p class="hint">
+            Left means provenance, center is the selected skill, right means required reusable capabilities. This makes the trust chain visible:
+            authored source truth flows into the skill, and the skill composes other packaged skills.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>V1 interactions</h3>
+          <div class="stack">
+            <div class="item">
+              <strong>Click a node</strong>
+              Inspect exact file path, package name, status, and reverse/dependent relationships.
+            </div>
+            <div class="item">
+              <strong>Hover an edge</strong>
+              See why the relationship exists: `metadata.sources` or `requires`.
+            </div>
+            <div class="item">
+              <strong>Watch mode</strong>
+              Update the graph as `SKILL.md`, `package.json`, or source files change during `skills dev`.
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

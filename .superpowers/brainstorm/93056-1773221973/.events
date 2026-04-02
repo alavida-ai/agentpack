@@ -1,0 +1,10 @@
+{"type":"click","text":".agentpack/catalog.json\n        Generated authoring index for discovery and inspection across known packaged skills.","choice":"catalog","id":null,"timestamp":1773223068848}
+{"type":"click","text":"SKILL.md\n        The authored skill artifact. Owns instructions, metadata.sources, and requires.","choice":"skillmd","id":null,"timestamp":1773223099325}
+{"type":"click","text":"package.json\n        The distribution contract. Owns package identity, version, dependencies, and publish settings.","choice":"packagejson","id":null,"timestamp":1773223099708}
+{"type":"click","text":".agentpack/catalog.json\n        Generated authoring index for discovery and inspection across known packaged skills.","choice":"catalog","id":null,"timestamp":1773223100142}
+{"type":"click","text":".agentpack/build-state.json\n        Generated provenance snapshot. Required for stale detection and explainable lifecycle state.","choice":"buildstate","id":null,"timestamp":1773223100509}
+{"type":"click","text":".agentpack/install.json\n        Environment-local runtime state for direct/transitive installs and materialization targets.","choice":"installstate","id":null,"timestamp":1773223100926}
+{"type":"click","text":".claude-plugin/plugin.json\n        Plugin runtime contract. Separate from package versioning and skill lifecycle truth.","choice":"pluginjson","id":null,"timestamp":1773223101376}
+{"type":"click","text":".agentpack/install.json\n        Environment-local runtime state for direct/transitive installs and materialization targets.","choice":"installstate","id":null,"timestamp":1773223101976}
+{"type":"click","text":".agentpack/install.json\n        Environment-local runtime state for direct/transitive installs and materialization targets.","choice":"installstate","id":null,"timestamp":1773223102360}
+{"type":"click","text":".agentpack/catalog.json\n        Generated authoring index for discovery and inspection across known packaged skills.","choice":"catalog","id":null,"timestamp":1773223194822}

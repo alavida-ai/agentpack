@@ -3,7 +3,7 @@
  * Creates temp repos with the full agentpack directory structure.
  */
 
-import { lstatSync, mkdirSync, writeFileSync, rmSync, cpSync, readlinkSync } from 'node:fs';
+import { lstatSync, mkdirSync, writeFileSync, rmSync, cpSync, readlinkSync, symlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawn, spawnSync } from 'node:child_process';
@@ -330,6 +330,19 @@ export function createAuthoredPluginBundleFixture(name = 'authored-plugin-bundle
   mkdirSync(join(repo.root, 'domains', 'design', 'knowledge'), { recursive: true });
   writeFileSync(join(repo.root, 'domains', 'design', 'knowledge', 'guidelines.md'), '# Guidelines\n');
   writeFileSync(join(repo.root, 'domains', 'design', 'knowledge', 'dashboard.md'), '# Dashboard\n');
+  mkdirSync(join(repo.root, 'plugins', 'dashboard-plugin', '.claude-plugin'), { recursive: true });
+  writeFileSync(
+    join(repo.root, 'plugins', 'dashboard-plugin', '.claude-plugin', 'plugin.json'),
+    JSON.stringify(
+      {
+        name: 'dashboard-plugin',
+        version: '0.1.0',
+        skills: './skills',
+      },
+      null,
+      2
+    ) + '\n'
+  );
 
   addPackagedSkill(repo.root, 'skills/foundation-primer', {
     skillMd: `---
@@ -367,14 +380,41 @@ Use [dashboard brief](source:dashboard){context="dashboard-specific source mater
     packageJson: {
       name: '@alavida-ai/dashboard-creator',
       version: '1.0.0',
-      files: ['SKILL.md'],
+      files: ['SKILL.md', 'scripts', 'lib', 'data'],
       dependencies: {
         '@alavida-ai/foundation-primer': '*',
       },
     },
   });
+  mkdirSync(join(repo.root, 'workbenches', 'dashboard-creator', 'scripts'), { recursive: true });
+  mkdirSync(join(repo.root, 'workbenches', 'dashboard-creator', 'lib'), { recursive: true });
+  mkdirSync(join(repo.root, 'workbenches', 'dashboard-creator', 'data'), { recursive: true });
+  writeFileSync(
+    join(repo.root, 'workbenches', 'dashboard-creator', 'scripts', 'project.ts'),
+    'export function listProjects() { return ["demo"]; }\n'
+  );
+  writeFileSync(
+    join(repo.root, 'workbenches', 'dashboard-creator', 'lib', 'client.ts'),
+    'export const client = { name: "demo" };\n'
+  );
+  writeFileSync(
+    join(repo.root, 'workbenches', 'dashboard-creator', 'data', 'config.json'),
+    '{\n  "mode": "demo"\n}\n'
+  );
 
   return repo;
+}
+
+export function createAuthorPluginSyncFixture(name = 'author-plugin-sync') {
+  const repo = createAuthoredPluginBundleFixture(name);
+  return {
+    ...repo,
+    pluginDir: join(repo.root, 'plugins', 'dashboard-plugin'),
+    packageDir: join(repo.root, 'workbenches', 'dashboard-creator'),
+    makePluginSkillsSymlink() {
+      symlinkSync('../../workbenches/dashboard-creator/dist', join(repo.root, 'plugins', 'dashboard-plugin', 'skills'));
+    },
+  };
 }
 
 export function readPathState(pathValue) {

@@ -1,6 +1,7 @@
-import { basename, extname, join } from 'node:path';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, extname, join, normalize } from 'node:path';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { extractFrontmatter } from '../../domain/compiler/skill-document-parser.js';
+import { ValidationError } from '../../utils/errors.js';
 
 function inferRuntimeName(target) {
   const [packageName, exportName] = target.split(':');
@@ -133,6 +134,48 @@ function buildRuntimeDocument(skillFilePath, runtimeBody) {
     .trimEnd();
 }
 
+function normalizeDeclaredFilePath(entry) {
+  return String(entry || '')
+    .replace(/\\/g, '/')
+    .replace(/\/+$/g, '')
+    .replace(/^\.\//, '');
+}
+
+function collectBundlePayloadEntries(packageInfo) {
+  const declaredFiles = Array.isArray(packageInfo?.packageFiles) ? packageInfo.packageFiles : [];
+  const authoredRoot = normalizeDeclaredFilePath(packageInfo?.agentpackRoot || '');
+  const skipped = new Set(['', 'dist', 'SKILL.md']);
+  if (authoredRoot) skipped.add(authoredRoot);
+
+  return [...new Set(
+    declaredFiles
+      .map((entry) => normalizeDeclaredFilePath(entry))
+      .filter((entry) => !skipped.has(entry))
+  )].sort((a, b) => a.localeCompare(b));
+}
+
+function copyBundlePayload(repoRoot, distRoot, packageInfo) {
+  const packagePath = packageInfo?.packagePath;
+  if (!packagePath) return [];
+
+  const copied = [];
+  for (const entry of collectBundlePayloadEntries(packageInfo)) {
+    const sourcePath = join(repoRoot, packagePath, entry);
+    if (!existsSync(sourcePath)) {
+      throw new ValidationError(`declared package file not found for bundle payload: ${entry}`, {
+        code: 'bundle_payload_not_found',
+        path: sourcePath,
+      });
+    }
+
+    const targetPath = join(distRoot, normalize(entry));
+    cpSync(sourcePath, targetPath, { recursive: true });
+    copied.push(entry.replace(/\\/g, '/'));
+  }
+
+  return copied;
+}
+
 export function writeRuntimeArtifacts(repoRoot, {
   distRoot,
   packagePath,
@@ -206,9 +249,13 @@ export function writeRuntimeArtifacts(repoRoot, {
   }
 
   if (packageInfo) {
+    const bundledFiles = copyBundlePayload(repoRoot, distRoot, packageInfo);
     writeFileSync(
       join(distRoot, 'agentpack.json'),
-      `${JSON.stringify(buildRuntimeManifest(packageInfo, manifestExports), null, 2)}\n`
+      `${JSON.stringify({
+        ...buildRuntimeManifest(packageInfo, manifestExports),
+        bundledFiles,
+      }, null, 2)}\n`
     );
   }
 

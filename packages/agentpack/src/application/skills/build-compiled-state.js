@@ -102,6 +102,8 @@ export function buildCompiledPackageArtifact(repoRoot, resolved, { emitRuntime =
     packageVersion: pkg.packageVersion,
     packagePath: pkg.packagePath,
     packageRoot: pkg.packagePath,
+    packageFiles: pkg.packageMetadata?.files || null,
+    agentpackRoot: pkg.packageMetadata?.agentpackRoot || null,
     generated_at: new Date().toISOString(),
     root_skill: rootExport ? `skill:${rootExport.runtimeName || rootExport.declaredName || rootExport.name}` : null,
     root_export: rootExport?.id || null,

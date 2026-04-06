@@ -196,6 +196,7 @@ export function readPackageMetadata(packageDir) {
     dependencies: pkg.dependencies || {},
     devDependencies: pkg.devDependencies || {},
     files: Array.isArray(pkg.files) ? pkg.files : null,
+    agentpackRoot: typeof pkg.agentpack?.root === 'string' ? pkg.agentpack.root : null,
     repository: pkg.repository || null,
     publishConfigRegistry: pkg.publishConfig?.registry || null,
     exportedSkills: null,

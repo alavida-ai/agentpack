@@ -246,11 +246,17 @@ Ground this in [principles](source:principles){context="primary source material"
       const runtimeManifestPath = join(repo.root, 'workbenches', 'dashboard-creator', 'dist', 'agentpack.json');
       const rootRuntimePath = join(repo.root, 'workbenches', 'dashboard-creator', 'dist', 'dashboard-creator', 'SKILL.md');
       const dependencyRuntimePath = join(repo.root, 'workbenches', 'dashboard-creator', 'dist', 'foundation-primer', 'SKILL.md');
+      const scriptPath = join(repo.root, 'workbenches', 'dashboard-creator', 'dist', 'scripts', 'project.ts');
+      const libPath = join(repo.root, 'workbenches', 'dashboard-creator', 'dist', 'lib', 'client.ts');
+      const dataPath = join(repo.root, 'workbenches', 'dashboard-creator', 'dist', 'data', 'config.json');
 
       assert.equal(existsSync(runtimeManifestPath), true);
       assert.equal(existsSync(bundleManifestPath), true);
       assert.equal(existsSync(rootRuntimePath), true);
       assert.equal(existsSync(dependencyRuntimePath), true);
+      assert.equal(existsSync(scriptPath), true);
+      assert.equal(existsSync(libPath), true);
+      assert.equal(existsSync(dataPath), true);
 
       const runtimeManifest = JSON.parse(readFileSync(runtimeManifestPath, 'utf-8'));
       assert.deepEqual(runtimeManifest.exports.map((entry) => entry.runtimeName), ['dashboard-creator']);

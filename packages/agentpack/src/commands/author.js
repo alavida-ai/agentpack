@@ -3,6 +3,7 @@ import { buildCompiledStateUseCase } from '../application/skills/build-compiled-
 import { inspectSkillUseCase } from '../application/skills/inspect-skill.js';
 import { inspectStaleSkillUseCase, listStaleSkillsUseCase } from '../application/skills/list-stale-skills.js';
 import { materializeCompiledStateUseCase } from '../application/skills/materialize-compiled-state.js';
+import { syncPluginBundleUseCase } from '../application/skills/sync-plugin-bundle.js';
 import { cleanupSkillDevSession, startSkillDev, unlinkSkill } from '../lib/skills.js';
 import { output } from '../utils/output.js';
 
@@ -221,6 +222,28 @@ export function attachAuthoringCommands(cmd, { hide = false } = {}) {
       }
     });
   maybeHide(materializeCmd, hide);
+
+  const pluginSyncCmd = cmd
+    .command('plugin-sync')
+    .description('Copy one built package dist bundle into a plugin-local skills/<package> directory')
+    .argument('<target>', 'Packaged skill directory or SKILL.md path')
+    .argument('<plugin-dir>', 'Plugin directory containing .claude-plugin/plugin.json')
+    .action((target, pluginDir, opts, command) => {
+      const globalOpts = command.optsWithGlobals();
+      const result = syncPluginBundleUseCase(target, pluginDir);
+
+      if (globalOpts.json) {
+        output.json(result);
+        return;
+      }
+
+      output.write(`Package: ${result.packageName}`);
+      output.write(`Plugin Dir: ${result.pluginDir}`);
+      output.write(`Skills Root: ${result.skillsRoot}`);
+      output.write(`Target Dir: ${result.targetDir}`);
+      output.write(`Exports: ${result.exportCount}`);
+    });
+  maybeHide(pluginSyncCmd, hide);
 
   const inspectCmd = cmd
     .command('inspect')

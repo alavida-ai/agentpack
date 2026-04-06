@@ -357,6 +357,57 @@ Use the runtime helpers in this package.
       repo.cleanup();
     }
   });
+
+  it('builds runtime artifacts for a root package and keeps declared runtime payload', () => {
+    const repo = createScenario({
+      name: 'skills-build-root-package',
+      files: {
+        'package.json': `${JSON.stringify({
+          name: '@alavida/root-package',
+          version: '1.0.0',
+          files: ['SKILL.md', 'skills', 'wiki'],
+        }, null, 2)}\n`,
+        'SKILL.md': `---
+name: root-package
+description: Root package skill.
+---
+
+\`\`\`agentpack
+import childSkill from skill "@alavida/root-package:child"
+source handbook = "wiki/handbook.md"
+\`\`\`
+
+Use [child skill](skill:childSkill){context="delegated child workflow"}.
+Use [handbook](source:handbook){context="root package source material"}.
+`,
+        'skills/child/SKILL.md': `---
+name: root-package:child
+description: Child skill.
+---
+
+\`\`\`agentpack
+source handbook = "wiki/handbook.md"
+\`\`\`
+
+Use [handbook](source:handbook){context="child source material"}.
+`,
+        'wiki/handbook.md': '# Handbook\n',
+      },
+    });
+
+    try {
+      const result = runCLIJson(['author', 'build', 'SKILL.md'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr || result.stdout);
+      assert.equal(result.json.distPath, './dist');
+      assert.equal(existsSync(join(repo.root, 'dist', 'root-package', 'SKILL.md')), true);
+      assert.equal(existsSync(join(repo.root, 'dist', 'root-package:child', 'SKILL.md')), true);
+      assert.equal(existsSync(join(repo.root, 'dist', 'agentpack.json')), true);
+      assert.equal(existsSync(join(repo.root, 'dist', 'wiki', 'handbook.md')), true);
+    } finally {
+      repo.cleanup();
+    }
+  });
 });
 
 function compiledPath(repoRoot) {

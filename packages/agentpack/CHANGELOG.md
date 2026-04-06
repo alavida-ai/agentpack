@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.5
+
+### Patch Changes
+
+- [`5715843`](https://github.com/alavida-ai/agentpack/commit/5715843eae2bee0398ffefb0c14e8acb8b8219a9) Thanks [@alexandergirardet](https://github.com/alexandergirardet)! - Add plugin bundle sync for authored skill packages and carry declared runtime payload into built dist bundles.
+
 ## 0.2.4
 
 ### Patch Changes

@@ -3,6 +3,8 @@ import { materializeInstalledSkillsUseCase } from '../application/skills/runtime
 import { output } from '../utils/output.js';
 
 function renderMaterializeResult(result) {
+  output.write('Deprecated: use `agentpack author build <target>` plus SkillKit or a plugin that points to `./dist`.');
+  output.write('');
   output.write(`Action: ${result.action}`);
   output.write(`Runtimes: ${result.runtimes.join(', ')}`);
   output.write(`Direct Packages: ${result.directPackages.length}`);
@@ -16,9 +18,13 @@ export function materializeCommand() {
     .option('-r, --runtime <runtime>', 'Materialize only for the selected runtime', (value, acc = []) => [...acc, value], [])
     .action((opts, command) => {
       const globalOpts = command.optsWithGlobals();
-      const result = materializeInstalledSkillsUseCase({
-        runtimes: opts.runtime,
-      });
+      const result = {
+        ...materializeInstalledSkillsUseCase({
+          runtimes: opts.runtime,
+        }),
+        deprecated: true,
+        message: 'Deprecated: use `agentpack author build <target>` plus SkillKit or a plugin that points to `./dist`.',
+      };
 
       if (globalOpts.json) {
         output.json(result);

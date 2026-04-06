@@ -148,7 +148,20 @@ export function buildCompiledStateUseCase(target, {
       packageName: artifact.packageName,
       exportId: artifact.root_export,
     });
-    buildAuthoredRuntimeBundle(repoRoot, selection);
+    const bundle = buildAuthoredRuntimeBundle(repoRoot, selection);
+    const counts = countPackageEntries(artifact);
+
+    return {
+      repoRoot,
+      rootSkill: artifact.root_skill,
+      compiledPath: '.agentpack/compiled.json',
+      distPath: `${artifact.packagePath}/dist`,
+      bundleManifestPath: bundle.bundleManifestPath,
+      runtimeManifestPath: `${artifact.packagePath}/dist/agentpack.json`,
+      packageName: artifact.packageName,
+      artifact,
+      ...counts,
+    };
   }
 
   const counts = countPackageEntries(artifact);

@@ -129,10 +129,54 @@ export function attachPublishValidateCommand(cmd, { hide = false } = {}) {
   maybeHide(validateCmd, hide);
 }
 
+function withDeprecatedMetadata(result) {
+  return {
+    ...result,
+    deprecated: true,
+    message: 'Deprecated: use `agentpack validate` instead of `agentpack publish validate`.',
+  };
+}
+
+export function validateAction(target, command, { deprecated = false } = {}) {
+  const globalOpts = command.optsWithGlobals();
+  const result = validateSkillsUseCase(target, { verbose: globalOpts.verbose });
+  const payload = deprecated ? withDeprecatedMetadata(result) : result;
+
+  if (globalOpts.json) {
+    output.json(
+      target && payload.count === 1
+        ? {
+            ...payload.skills[0],
+            ...(deprecated ? {
+              deprecated: true,
+              message: payload.message,
+            } : {}),
+          }
+        : payload
+    );
+    if (!payload.valid) process.exitCode = EXIT_CODES.VALIDATION;
+    return;
+  }
+
+  if (deprecated) {
+    output.write('Deprecated: use `agentpack validate` instead of `agentpack publish validate`.');
+    output.write('');
+  }
+
+  renderValidationSummary(payload, target, { verbose: globalOpts.verbose });
+}
+
 export function publishCommand() {
   const cmd = new Command('publish')
     .description('Validate and prepare skill packages for release');
+  const validateCmd = cmd
+    .command('validate')
+    .description('Validate one packaged skill or all authored packaged skills')
+    .argument('[target]', 'Optional packaged skill directory, SKILL.md path, or package name')
+    .action((target, opts, command) => {
+      validateAction(target, command, { deprecated: true });
+    });
 
-  attachPublishValidateCommand(cmd);
+  maybeHide(validateCmd, false);
   return cmd;
 }

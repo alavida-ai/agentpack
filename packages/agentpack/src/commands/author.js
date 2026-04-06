@@ -194,10 +194,15 @@ export function attachAuthoringCommands(cmd, { hide = false } = {}) {
 
       output.write(`Root Skill: ${result.rootSkill}`);
       output.write(`Compiled Path: ${result.compiledPath}`);
+      if (result.distPath) output.write(`Dist Path: ${result.distPath}`);
       output.write(`Skills: ${result.skillCount}`);
       output.write(`Sources: ${result.sourceCount}`);
       output.write(`Occurrences: ${result.occurrenceCount}`);
       output.write(`Edges: ${result.edgeCount}`);
+      if (result.distPath) {
+        output.write('');
+        output.write('Next: point a Claude/OpenClaw plugin at `./dist`, or run `npx -y skillkit@latest install ./dist --yes --agent claude-code`.');
+      }
     });
   maybeHide(buildCmd, hide);
 
@@ -206,13 +211,19 @@ export function attachAuthoringCommands(cmd, { hide = false } = {}) {
     .description('Materialize runtime outputs from .agentpack/compiled.json')
     .action((opts, command) => {
       const globalOpts = command.optsWithGlobals();
-      const result = materializeCompiledStateUseCase();
+      const result = {
+        ...materializeCompiledStateUseCase(),
+        deprecated: true,
+        message: 'Deprecated: use `agentpack author build <target>` plus SkillKit or a plugin that points to `./dist`.',
+      };
 
       if (globalOpts.json) {
         output.json(result);
         return;
       }
 
+      output.write('Deprecated: use `agentpack author build <target>` plus SkillKit or a plugin that points to `./dist`.');
+      output.write('');
       output.write(`Root Skill: ${result.rootSkill}`);
       output.write(`Materialization Path: ${result.materializationPath}`);
       output.write(`Adapters: ${result.adapterCount}`);

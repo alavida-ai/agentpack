@@ -6,6 +6,7 @@ import { authorCommand } from './commands/author.js';
 import { materializeCommand } from './commands/materialize.js';
 import { publishCommand } from './commands/publish.js';
 import { skillsCommand } from './commands/skills.js';
+import { validateCommand } from './commands/validate.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json');
@@ -23,6 +24,7 @@ export function createProgram() {
     .option('--workbench <path>', 'Override workbench context (name or path)');
 
   program.addCommand(authorCommand());
+  program.addCommand(validateCommand());
   program.addCommand(materializeCommand());
   program.addCommand(publishCommand());
   program.addCommand(skillsCommand());

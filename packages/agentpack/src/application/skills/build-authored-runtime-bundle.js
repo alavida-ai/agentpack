@@ -4,6 +4,7 @@ import { readCompiledState } from '../../infrastructure/fs/compiled-state-reposi
 import { inferPackageRuntimeNamespace } from '../../domain/skills/skill-model.js';
 import { NotFoundError } from '../../utils/errors.js';
 import { writeRuntimeArtifacts } from './build-runtime-artifacts.js';
+import { copyPackageRuntimePayload } from './copy-runtime-payload.js';
 
 function buildCompiledRecord(packageState, skillState) {
   return {
@@ -88,6 +89,8 @@ export function buildAuthoredRuntimeBundle(repoRoot, selection) {
     manifestRuntimeNames: [...targetRuntimeNames],
     clear: true,
   });
+
+  copyPackageRuntimePayload(repoRoot, targetPackageState.packagePath, distRoot);
 
   const bundleManifest = {
     version: 1,

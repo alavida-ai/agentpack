@@ -12,12 +12,12 @@ agentpack treats agent skills the same way a compiler toolchain treats source co
 | Source files | `.ts` files | knowledge docs (`.md` files referenced as sources) |
 | Compiled output | `.js` files | `SKILL.md` (the authored skill artifact) |
 | Dependency manifest | `package.json` | `package.json` with root `SKILL.md` export and optional `skills/` subtree for named exports |
-| Lint / type-check | `tsc --noEmit`, eslint | `agentpack publish validate` |
+| Lint / type-check | `tsc --noEmit`, eslint | `agentpack validate` |
 | Build metadata | `.tsbuildinfo` | `.agentpack/compiled.json` (semantic graph) |
 | Stale detection | "source changed, rebuild" | `agentpack author stale` |
 | Publish | `npm publish` | `npm publish` |
 | Install + resolve | `npm install` | `npm install` |
-| Module resolution | Node resolves from `node_modules/` | `agentpack materialize` materializes into `.claude/skills/` |
+| Module resolution | Node resolves from `node_modules/` | plugins point at `./dist` or SkillKit installs `./dist` into agent skill folders |
 
 The key difference: the "compiler" for skills is a human or an agent, not a deterministic transform. But the lifecycle around it -- dependency resolution, staleness tracking, validation, packaging, distribution -- follows the same pipeline every compiler needs.
 
@@ -41,13 +41,13 @@ A skill moves through five stages from authoring to agent discovery.
     You write domain knowledge in source documents. Then you (or an agent) distill that knowledge into one or more exported `SKILL.md` files inside an npm package. Each `SKILL.md` captures what the agent should know and do. The `agentpack` declaration block binds source files with `source ... = "repo/path"` and imports other skills with `import ... from skill "@scope/package"`.
   </Step>
   <Step title="Validate">
-    Run `agentpack publish validate` to check that everything is structurally sound: discovered skill exports compile correctly, declared sources exist, imported skills align with package dependencies, and package metadata is complete. Validation produces compiled semantic state for future staleness detection.
+    Run `agentpack validate` to check that everything is structurally sound: discovered skill exports compile correctly, declared sources exist, imported skills align with package dependencies, and package metadata is complete. Validation produces compiled semantic state for future staleness detection.
   </Step>
   <Step title="Publish">
     The package directory is already a publishable npm package. Run `npm publish` to push it to your registry. A package can export one skill (root `SKILL.md`) or many (via `skills/**/SKILL.md`). Packages are the distribution unit; exported skills are the runtime modules inside them.
   </Step>
-  <Step title="Install and Materialize">
-    In a consumer repo, run `npm install @scope/package-name` to resolve and install the package. Then run `agentpack materialize` from the workspace package that declares the dependency. agentpack materializes the installed skill packages it finds for that workspace into `.claude/skills/` and `.agents/skills/`, and records the direct-package selection state in `.agentpack/install.json`.
+  <Step title="Build and Distribute">
+    Run `agentpack author build <target>` to emit a closure bundle into `dist/`. Then either point a Claude Code/OpenClaw plugin at `./dist`, or install that same bundle with SkillKit into Claude Code or Codex. If the built skill depends on bundled runtime payload folders such as `scripts/`, `lib/`, or `data/`, prefer the plugin path so the agent reads directly from `./dist`.
   </Step>
   <Step title="Agent uses it">
     The agent reads skills from `.claude/skills/` at session start. It sees the SKILL.md, understands the capability, and applies it during work. The agent does not know or care how the skill was packaged -- it just reads the file.
@@ -60,13 +60,16 @@ Without agentpack, skills are copy-pasted markdown files with no version history
 
 With agentpack, skills are versioned packages with tracked provenance. You know exactly which source documents a skill was built from, whether those sources have changed, and which other skills depend on it. When something drifts, the toolchain tells you -- before the agent ever sees stale knowledge.
 
-## Materialization: The Missing Step
+## Distribution: The Runtime Handoff
 
 In Node.js, `require('lodash')` works because Node resolves it from `node_modules/`. The package being in `node_modules/` is what makes it usable at runtime.
 
-For agents, the equivalent is `.claude/skills/`. A skill sitting in an npm registry or in `node_modules/` is invisible to the agent. **Materialization** is the step that copies resolved skill packages into `.claude/skills/` and `.agents/skills/` where the agent can actually discover and read them. Each target directory (`.claude/skills/`, `.agents/skills/`) is called an **adapter** — it's the bridge between agentpack's package model and a specific agent runtime's discovery mechanism. agentpack tracks which adapters own which materialized files in `.agentpack/materialization-state.json`.
+For agents, the equivalent is a runtime-visible skill folder or plugin payload. A skill sitting only in source form is invisible to the agent. agentpack's job is to emit a portable `dist/` bundle. Downstream tools then make that bundle visible to a runtime:
 
-This happens through `agentpack materialize` (for published packages) and `agentpack author dev` / `agentpack author materialize` (for local authoring). For authored packages, `agentpack author build <target>` now emits a closure bundle into the target package's `dist/` so plugin systems can point `"skills": "./dist/"` at one self-contained folder. Installed-package discovery still stays manifest-first through `dist/agentpack.json`; the authored-only `dist/.agentpack-bundle.json` exists only to drive local/plugin closure materialization.
+- Claude Code / OpenClaw plugin points `"skills": "./dist"`
+- SkillKit installs `./dist` into `.claude/skills/` or `.codex/skills/`
+
+Installed-package discovery through `dist/agentpack.json` remains available, but it is no longer the primary story.
 
 ## Local Development
 

@@ -49,6 +49,8 @@ describe('agentpack skills materialize', () => {
       assert.equal(result.exitCode, 0, result.stderr || result.stdout);
       assert.equal(result.json.rootSkill, 'skill:prd-agent');
       assert.equal(result.json.adapterCount, 2);
+      assert.equal(result.json.deprecated, true);
+      assert.match(result.json.message, /skillkit/i);
 
       const materializationState = readMaterializationState(repo.root);
       assert.ok(materializationState);
@@ -147,6 +149,7 @@ describe('agentpack skills materialize', () => {
 
       const result = runCLIJson(['author', 'materialize'], { cwd: repo.root });
       assert.equal(result.exitCode, 0, result.stderr || result.stdout);
+      assert.equal(result.json.deprecated, true);
 
       const bundleManifestPath = join(repo.root, 'workbenches', 'dashboard-creator', 'dist', '.agentpack-bundle.json');
       assert.equal(existsSync(bundleManifestPath), true);

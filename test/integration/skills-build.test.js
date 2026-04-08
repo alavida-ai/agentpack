@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createAuthoredPluginBundleFixture, createScenario, readCompiledState, runCLIJson } from './fixtures.js';
+import { createAuthoredPluginBundleFixture, createScenario, readCompiledState, runCLI, runCLIJson } from './fixtures.js';
 
 describe('agentpack skills build', () => {
   it('builds compiled state for a compiler-mode packaged skill', () => {
@@ -68,6 +68,44 @@ Ground this in [our PRD principles](source:principles){context="primary source m
         'dist/prd-agent/references/prd-principles.md'
       );
       assert.equal(compiledPath(repo.root), join(repo.root, '.agentpack', 'compiled.json'));
+      assert.equal(result.json.distPath, 'skills/prd-agent/dist');
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('shows plugin and SkillKit next steps after build', () => {
+    const repo = createScenario({
+      name: 'skills-build-next-steps',
+      packages: [
+        {
+          relPath: 'skills/runtime-agent',
+          packageJson: {
+            name: '@alavida/runtime-agent',
+            version: '1.0.0',
+            files: ['SKILL.md'],
+          },
+          skillMd: `---
+name: runtime-agent
+description: Runtime payload skill.
+---
+
+\`\`\`agentpack
+\`\`\`
+
+Use the runtime helpers in this package.
+`,
+        },
+      ],
+    });
+
+    try {
+      const result = runCLI(['author', 'build', 'skills/runtime-agent'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr || result.stdout);
+      assert.match(result.stdout, /Dist Path: skills\/runtime-agent\/dist/);
+      assert.match(result.stdout, /plugin/i);
+      assert.match(result.stdout, /skillkit@latest install \.\/dist --yes --agent claude-code/i);
     } finally {
       repo.cleanup();
     }
@@ -274,6 +312,104 @@ Ground this in [principles](source:principles){context="primary source material"
         '@alavida-ai/dashboard-creator',
         '@alavida-ai/foundation-primer',
       ]);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('copies declared package runtime payload folders into dist for plugin and skillkit distribution', () => {
+    const repo = createScenario({
+      name: 'skills-build-runtime-payload',
+      packages: [
+        {
+          relPath: 'skills/runtime-agent',
+          packageJson: {
+            name: '@alavida/runtime-agent',
+            version: '1.0.0',
+            files: ['SKILL.md', 'scripts', 'lib', 'data'],
+          },
+          files: {
+            'SKILL.md': `---
+name: runtime-agent
+description: Runtime payload skill.
+---
+
+\`\`\`agentpack
+\`\`\`
+
+Use the runtime helpers in this package.
+`,
+            'scripts/run.ts': 'export const run = () => "ok";\n',
+            'lib/helpers.ts': 'export const helper = () => "helper";\n',
+            'data/config.json': '{\n  "mode": "runtime"\n}\n',
+          },
+        },
+      ],
+    });
+
+    try {
+      const result = runCLIJson(['author', 'build', 'skills/runtime-agent'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr || result.stdout);
+      assert.equal(existsSync(join(repo.root, 'skills', 'runtime-agent', 'dist', 'runtime-agent', 'SKILL.md')), true);
+      assert.equal(existsSync(join(repo.root, 'skills', 'runtime-agent', 'dist', 'scripts', 'run.ts')), true);
+      assert.equal(existsSync(join(repo.root, 'skills', 'runtime-agent', 'dist', 'lib', 'helpers.ts')), true);
+      assert.equal(existsSync(join(repo.root, 'skills', 'runtime-agent', 'dist', 'data', 'config.json')), true);
+      assert.equal(
+        readFileSync(join(repo.root, 'skills', 'runtime-agent', 'dist', 'data', 'config.json'), 'utf-8'),
+        '{\n  "mode": "runtime"\n}\n'
+      );
+    } finally {
+      repo.cleanup();
+    }
+  });
+
+  it('builds runtime artifacts for a root package and keeps declared runtime payload', () => {
+    const repo = createScenario({
+      name: 'skills-build-root-package',
+      files: {
+        'package.json': `${JSON.stringify({
+          name: '@alavida/root-package',
+          version: '1.0.0',
+          files: ['SKILL.md', 'skills', 'wiki'],
+        }, null, 2)}\n`,
+        'SKILL.md': `---
+name: root-package
+description: Root package skill.
+---
+
+\`\`\`agentpack
+import childSkill from skill "@alavida/root-package:child"
+source handbook = "wiki/handbook.md"
+\`\`\`
+
+Use [child skill](skill:childSkill){context="delegated child workflow"}.
+Use [handbook](source:handbook){context="root package source material"}.
+`,
+        'skills/child/SKILL.md': `---
+name: root-package:child
+description: Child skill.
+---
+
+\`\`\`agentpack
+source handbook = "wiki/handbook.md"
+\`\`\`
+
+Use [handbook](source:handbook){context="child source material"}.
+`,
+        'wiki/handbook.md': '# Handbook\n',
+      },
+    });
+
+    try {
+      const result = runCLIJson(['author', 'build', 'SKILL.md'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr || result.stdout);
+      assert.equal(result.json.distPath, './dist');
+      assert.equal(existsSync(join(repo.root, 'dist', 'root-package', 'SKILL.md')), true);
+      assert.equal(existsSync(join(repo.root, 'dist', 'root-package:child', 'SKILL.md')), true);
+      assert.equal(existsSync(join(repo.root, 'dist', 'agentpack.json')), true);
+      assert.equal(existsSync(join(repo.root, 'dist', 'wiki', 'handbook.md')), true);
     } finally {
       repo.cleanup();
     }

@@ -184,7 +184,7 @@ export function writeRuntimeArtifacts(repoRoot, {
   manifestRuntimeNames = null,
   clear = true,
 } = {}) {
-  if (!distRoot || !packagePath) return {
+  if (!distRoot || packagePath == null) return {
     runtimeEntries: new Map(),
     manifestExports: [],
   };
@@ -287,7 +287,7 @@ export function buildRuntimeArtifacts(repoRoot, resolved) {
   const packageDir = resolved?.package?.packageDir;
   const packagePath = resolved?.package?.packagePath;
   const exportNodes = resolved?.package?.exports || [];
-  if (!packageDir || !packagePath) return new Map();
+  if (!packageDir || packagePath == null) return new Map();
 
   const { runtimeEntries } = writeRuntimeArtifacts(repoRoot, {
     distRoot: join(packageDir, 'dist'),

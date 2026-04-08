@@ -11,6 +11,11 @@ import { collectAuthoredDependencyPackageDirs } from './collect-authored-depende
 import { computeRuntimeSelectionFromCompiledState } from './compute-runtime-selection.js';
 import { buildAuthoredRuntimeBundle } from './build-authored-runtime-bundle.js';
 
+function normalizeDistPath(packagePath) {
+  if (!packagePath || packagePath === '.' || packagePath === '/') return './dist';
+  return `${packagePath.replace(/\/+$/, '')}/dist`;
+}
+
 function buildSourceFileRecord(repoRoot, entry) {
   const absolutePath = join(repoRoot, entry.sourcePath);
   if (!existsSync(absolutePath)) {
@@ -150,7 +155,20 @@ export function buildCompiledStateUseCase(target, {
       packageName: artifact.packageName,
       exportId: artifact.root_export,
     });
-    buildAuthoredRuntimeBundle(repoRoot, selection);
+    const bundle = buildAuthoredRuntimeBundle(repoRoot, selection);
+    const counts = countPackageEntries(artifact);
+
+    return {
+      repoRoot,
+      rootSkill: artifact.root_skill,
+      compiledPath: '.agentpack/compiled.json',
+      distPath: normalizeDistPath(artifact.packagePath),
+      bundleManifestPath: bundle.bundleManifestPath,
+      runtimeManifestPath: `${normalizeDistPath(artifact.packagePath)}/agentpack.json`.replace(/\/+/g, '/'),
+      packageName: artifact.packageName,
+      artifact,
+      ...counts,
+    };
   }
 
   const counts = countPackageEntries(artifact);

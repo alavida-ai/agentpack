@@ -32,6 +32,8 @@ describe('agentpack materialize', () => {
       const materialize = runCLIJson(['materialize'], { cwd: fixture.consumer.root });
       assert.equal(materialize.exitCode, 0, materialize.stderr || materialize.stdout);
       assert.equal(materialize.json.action, 'materialize');
+      assert.equal(materialize.json.deprecated, true);
+      assert.match(materialize.json.message, /skillkit/i);
       assert.deepEqual(materialize.json.directPackages, ['@alavida-ai/prd-development']);
 
       assert.equal(existsSync(join(fixture.consumer.root, '.claude', 'skills', 'prd-development')), true);

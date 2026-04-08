@@ -5,7 +5,7 @@ description: "Publish package-backed skills to GitHub Packages and install them 
 
 ## What you'll learn
 
-You'll walk through the full publish-to-enable cycle: validating and publishing a skill package, installing it with npm in a consumer repo, and enabling it for agent discovery with agentpack.
+You'll walk through the full publish-and-distribute cycle: validating and publishing a skill package, building a portable `dist` bundle, and consuming that bundle through plugins or SkillKit.
 
 ## Prerequisites
 
@@ -22,7 +22,8 @@ You'll walk through the full publish-to-enable cycle: validating and publishing 
 Always validate before you publish. This ensures the package contract and exported skills are structurally sound.
 
 ```bash
-agentpack publish validate domains/brand/skills/copywriting
+agentpack validate domains/brand/skills/copywriting
+agentpack author build domains/brand/skills/copywriting
 ```
 
 ```
@@ -30,10 +31,10 @@ Skill: @acme/brand-copywriting
 Status: valid
 ```
 
-Validation checks that discovered skill exports compile, source paths resolve, skill imports align with package dependencies, and package metadata is complete.
+Validation checks that discovered skill exports compile, source paths resolve, skill imports align with package dependencies, and package metadata is complete. `author build` emits the portable `dist` bundle used by plugins and SkillKit. For Claude Code packages that rely on bundled runtime payload files beyond `SKILL.md`, prefer plugins pointing at `./dist`.
 
 <Note>
-  `agentpack publish validate` checks the agentpack package contract only. If you also want optional TanStack Intent ecosystem metadata, follow the current upstream TanStack Intent docs separately; agentpack does not validate or consume those fields.
+  `agentpack validate` checks the agentpack package contract only. If you also want optional TanStack Intent ecosystem metadata, follow the current upstream TanStack Intent docs separately; agentpack does not validate or consume those fields.
 </Note>
 
 </Step>
@@ -68,85 +69,36 @@ A consumer repo is any repo that uses published skills but does not author them.
 
 See [Authentication](/authentication) for details, manual `.npmrc` setup, and CI configuration.
 
-## Installing and enabling skills in a consumer repo
+## Consuming the built bundle
 
 <Steps>
 
-<Step title="Install the package with npm">
+<Step title="Use a plugin">
 
 ```bash
-npm install @acme/brand-copywriting
+{
+  "skills": "./dist"
+}
 ```
 
-npm resolves the full dependency graph and places the package in `node_modules`.
+For Claude Code or OpenClaw-style plugin workflows, point the plugin at the built `dist` directory.
 
 </Step>
 
-<Step title="Materialize installed skills for agent discovery">
+<Step title="Or install with SkillKit">
 
 ```bash
-agentpack materialize
+npx -y skillkit@latest install ./dist --yes --agent claude-code
+npx -y skillkit@latest install ./dist --yes --agent codex
 ```
 
-agentpack reads the workspace package's dependencies, resolves installed skill packages from `node_modules`, and materializes their exported runtime skills into `.claude/skills/` and `.agents/skills/`. The selected direct-package state is recorded in `.agentpack/install.json`.
+SkillKit consumes the built `dist` bundle directly and installs it into runtime-specific skill folders.
 
 </Step>
 
-<Step title="Verify the installation">
+<Step title="Verify the built bundle exists">
 
-```bash
-agentpack skills list
-```
-
-Shows installed packages, their exports, and which runtimes they are currently materialized for.
-
-</Step>
-
-<Step title="Check overall status">
-
-```bash
-agentpack skills status
-```
-
-Reports installed vs enabled counts, selection issues, runtime drift, and orphaned materializations.
-
-</Step>
-
-</Steps>
-
-## Managing installed skills
-
-<Steps>
-
-<Step title="Check for updates">
-
-```bash
-npm outdated
-```
-
-Use npm to check for newer versions of installed skill packages.
-
-</Step>
-
-<Step title="Update a package">
-
-```bash
-npm install @acme/brand-copywriting@latest
-agentpack materialize
-```
-
-Update the package with npm, then rerun materialization to refresh the runtime links.
-
-</Step>
-
-<Step title="Remove a package">
-
-```bash
-agentpack skills disable @acme/brand-copywriting
-npm uninstall @acme/brand-copywriting
-```
-
-Disable the skill first to clean up materialized links, then remove the package with npm.
+Check that `dist/` exists in the package you intend to distribute. If a plugin points at `./dist`, the distributed artifact must contain `dist/`.
 
 </Step>
 
@@ -156,18 +108,13 @@ Disable the skill first to clean up materialized links, then remove the package 
 
 | Step | Command | Who |
 |---|---|---|
-| Validate | `agentpack publish validate <path>` | Skill author |
+| Validate | `agentpack validate <path>` | Skill author |
+| Build bundle | `agentpack author build <path>` | Skill author |
 | Publish | `npm publish` | Skill author |
-| Configure registry | Create `.npmrc` | Consumer team (once) |
-| Install | `npm install <package>` | Consumer |
-| Materialize | `agentpack materialize` | Consumer |
-| Check health | `agentpack skills status` | Consumer |
-| Check updates | `npm outdated` | Consumer |
-| Update | `npm install <package>@latest` | Consumer |
-| Disable | `agentpack skills disable <package>` | Consumer |
-| Remove | `npm uninstall <package>` | Consumer |
+| Plugin distribution | point plugin `"skills"` at `./dist` | Consumer |
+| Skill folder distribution | `skillkit install ./dist` | Consumer |
 
-npm handles versioning, package resolution, registry authentication, install, and uninstall. agentpack handles the agent-specific parts: skill discovery, runtime enable/disable, materialization, and health inspection.
+npm handles versioning, package resolution, registry authentication, install, and uninstall. agentpack handles compilation, validation, staleness, and portable bundle generation. Plugins or SkillKit handle downstream runtime installation.
 
 ## Publisher package.json
 
@@ -203,15 +150,12 @@ For automated publishing in GitHub Actions:
     npm publish -w domains/brand/skills/copywriting
 ```
 
-For automated install and materialization in CI:
+For automated bundle installation in CI:
 
 ```yaml .github/workflows/enable-skills.yml
-- name: Install and materialize skills
-  env:
-    NODE_AUTH_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN }}
+- name: Install built skills with SkillKit
   run: |
-    npm install @acme/brand-copywriting
-    agentpack materialize
+    npx -y skillkit@latest install ./dist --yes --agent claude-code
 ```
 
 <Note>

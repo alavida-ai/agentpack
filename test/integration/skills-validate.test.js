@@ -11,6 +11,24 @@ import {
 } from './fixtures.js';
 
 describe('agentpack skills validate', () => {
+  it('validates one packaged skill successfully through the top-level validate command', () => {
+    const repo = createValidateFixture();
+
+    try {
+      const result = runCLI(['validate', 'domains/value/skills/copywriting'], { cwd: repo.root });
+
+      assert.equal(result.exitCode, 0, result.stderr);
+      assert.match(result.stdout, /Skill: @alavida\/value-copywriting/);
+      assert.match(result.stdout, /Status: valid/);
+      assert.match(result.stdout, /Issues: 0/);
+      assert.match(result.stdout, /Next Steps:/);
+      assert.match(result.stdout, /npm version patch/);
+      assert.match(result.stdout, /npm publish/);
+    } finally {
+      repo.cleanup();
+    }
+  });
+
   it('validates one packaged skill successfully', () => {
     const repo = createValidateFixture();
 
@@ -18,6 +36,7 @@ describe('agentpack skills validate', () => {
       const result = runCLI(['publish', 'validate', 'domains/value/skills/copywriting'], { cwd: repo.root });
 
       assert.equal(result.exitCode, 0, result.stderr);
+      assert.match(result.stdout, /deprecated/i);
       assert.match(result.stdout, /Skill: @alavida\/value-copywriting/);
       assert.match(result.stdout, /Status: valid/);
       assert.match(result.stdout, /Issues: 0/);
@@ -99,6 +118,15 @@ Use [integration](source:integration){context="source material"}.
     const repo = createValidateFixture();
 
     try {
+      const validateResult = runCLIJson(
+        ['validate', 'domains/value/skills/copywriting'],
+        { cwd: repo.root }
+      );
+      assert.equal(validateResult.exitCode, 0, validateResult.stderr);
+      assert.equal(validateResult.json.valid, true);
+      assert.equal(validateResult.json.nextSteps[0].command, 'npm version patch');
+      assert.equal(validateResult.json.nextSteps[1].command, 'npm publish');
+
       const result = runCLIJson(
         ['publish', 'validate', 'domains/value/skills/copywriting'],
         { cwd: repo.root }
@@ -106,6 +134,7 @@ Use [integration](source:integration){context="source material"}.
 
       assert.equal(result.exitCode, 0, result.stderr);
       assert.equal(result.json.valid, true);
+      assert.equal(result.json.deprecated, true);
       assert.equal(result.json.nextSteps[0].command, 'npm version patch');
       assert.equal(result.json.nextSteps[1].command, 'npm publish');
     } finally {
